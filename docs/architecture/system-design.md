@@ -3,12 +3,17 @@
 ## 1. 总体架构
 
 ```text
-apps/web
-  -> apps/api
-  -> packages/ai_agents
-  -> packages/data_sources
-  -> packages/scoring
-  -> PostgreSQL / Redis
+Application Layer
+        |
+Agent Layer
+        |
+Workflow Layer
+        |
+Model Layer
+        |
+Knowledge Layer
+        |
+Data Layer
 ```
 
 ## 2. 后端
@@ -20,6 +25,7 @@ apps/web
 * REST API
 * 参数校验
 * 数据源调用
+* 实时走势 API
 * Agent 编排
 * 评分计算
 * 研究报告生成
@@ -32,6 +38,7 @@ apps/web
 前端职责：
 
 * 股票查询
+* 实时走势图
 * AI 选股列表
 * 股票分析页
 * 评分展示
@@ -52,7 +59,27 @@ apps/web
 * Finnhub
 * Polygon
 
-## 5. AI Agent 层
+## 5. Model Layer
+
+模型层位于 `packages/model_layer`，是独立于 Agent 的核心层。
+
+Model Layer 负责：
+
+* OpenAI / Claude / Gemini / DeepSeek / Qwen / Llama / 本地模型适配
+* 模型统一请求和响应
+* 模型路由
+* fallback
+* token 和成本统计
+* 输出校验
+* 模型审计字段
+
+Agent、Workflow、API 和 Data Source 不得直接调用具体模型 SDK。
+
+详细标准见：
+
+* `docs/standards/MODEL_STANDARD.md`
+
+## 6. AI Agent 层
 
 Agent 位于 `packages/ai_agents`，至少包括：
 
@@ -62,7 +89,9 @@ Agent 位于 `packages/ai_agents`，至少包括：
 * Scoring Agent
 * Report Agent
 
-## 6. 审计日志
+Agent 只负责任务定义和业务推理目标，不负责模型供应商适配。
+
+## 7. 审计日志
 
 所有 AI 输出必须写入 `audit_logs`。
 
@@ -76,4 +105,3 @@ Agent 位于 `packages/ai_agents`，至少包括：
 * 风险提示
 
 本系统仅用于投资研究辅助，不构成任何投资建议。
-

@@ -38,11 +38,14 @@ AI 相关功能必须按以下结构开发：
 ```text
 Policy Guard
   -> Data Context Builder
-  -> Model Provider Adapter
+  -> Workflow Executor
+  -> Model Layer
   -> Agent Executor
   -> Output Validator
   -> Audit Logger
 ```
+
+模型供应商适配不属于 Agent Layer，必须放入独立 Model Layer。
 
 每个 AI Agent 必须明确：
 
@@ -59,14 +62,17 @@ Policy Guard
 
 系统不得绑定单一模型。
 
-模型调用必须经过统一接口，支持：
+模型调用必须经过 `packages/model_layer` 统一接口，支持：
 
 * OpenAI
 * Claude
 * Gemini
 * DeepSeek
 * Qwen
+* Llama
 * 本地模型
+
+模型层标准以 `docs/standards/MODEL_STANDARD.md` 为准。
 
 ## 5. AI 输出校验
 

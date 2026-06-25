@@ -13,3 +13,5 @@
 * 版本管理标准
 * 敏捷迭代与即开发即使用标准
 * 基础 CI 和治理测试
+* 实时走势 API 和前端趋势图 MVP
+* 独立 Model Layer 标准、目录和 mock provider

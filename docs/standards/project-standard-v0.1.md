@@ -96,6 +96,8 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统。
 
 系统不得绑定单一模型。
 
+模型设计不得放在 AI Agent 内部，必须建立独立 Model Layer。
+
 必须支持：
 
 * OpenAI
@@ -103,6 +105,7 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统。
 * Gemini
 * DeepSeek
 * Qwen
+* Llama
 * 本地模型
 
 通过统一接口调用。
@@ -132,6 +135,7 @@ openstock-ai/
 ├── packages/
 │   ├── data_sources/
 │   ├── ai_agents/
+│   ├── model_layer/
 │   ├── scoring/
 │   ├── backtesting/
 │   └── brokers/
@@ -375,4 +379,3 @@ Codex / Claude Code / Cursor 必须遵守：
 OpenStock AI 是一个开源投资研究辅助工具。
 
 本项目不提供任何形式的投资顾问服务，不构成证券买卖建议。用户应自行判断投资风险，并对自己的投资行为负责。
-
