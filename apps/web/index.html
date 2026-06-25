@@ -447,7 +447,7 @@
       <aside>
         <div class="section-title">每日美股候选池</div>
         <div class="side-actions">
-          <button id="scan-universe-button">扫描最活跃 20 只</button>
+          <button id="scan-universe-button">扫描最活跃 100 只</button>
         </div>
         <div class="muted" id="universe-meta">Most Active · US</div>
         <div class="stock-list" id="stock-list"></div>
@@ -663,7 +663,7 @@
         renderStockList();
       }
 
-      async function loadMostActiveUniverse(limit = 20) {
+      async function loadMostActiveUniverse(limit = 100) {
         scanUniverseButton.disabled = true;
         universeMeta.textContent = "正在扫描 Most Active Universe...";
         try {
@@ -678,7 +678,7 @@
 
       function renderStockList() {
         stockList.innerHTML = "";
-        state.stocks.slice(0, 20).forEach((stock) => {
+        state.stocks.forEach((stock) => {
           const button = document.createElement("button");
           button.className = `stock-item${stock.symbol === state.symbol ? " active" : ""}`;
           const rank = stock.rank ? `#${stock.rank}` : (stock.sector || "");
@@ -836,7 +836,7 @@
       });
 
       refreshButton.addEventListener("click", loadMarket);
-      scanUniverseButton.addEventListener("click", () => loadMostActiveUniverse(20));
+      scanUniverseButton.addEventListener("click", () => loadMostActiveUniverse(100));
       rangeInput.addEventListener("change", loadMarket);
       intervalInput.addEventListener("change", loadMarket);
       window.addEventListener("resize", () => state.lastTrend && drawChart(state.lastTrend.points || []));
@@ -846,7 +846,7 @@
       document.getElementById("action-watch").addEventListener("click", () => alert(`${state.symbol} 已作为本地观察动作记录，持久化将在数据库版本接入。`));
       document.getElementById("action-backtest").addEventListener("click", () => alert("模拟回测将在 backtesting 模块接入。"));
 
-      loadMostActiveUniverse(20).then(loadMarket);
+      loadMostActiveUniverse(100).then(loadMarket);
       window.setInterval(loadMarket, 60000);
     </script>
   </body>
