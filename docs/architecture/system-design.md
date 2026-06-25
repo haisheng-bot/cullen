@@ -15,6 +15,8 @@ Algorithm Layer
         |
 Model Layer
         |
+News / Policy Layer
+        |
 Knowledge Layer
         |
 Data Layer
@@ -30,6 +32,7 @@ Data Layer
 * 参数校验
 * 美股搜索和报价接口
 * 每日候选池扫描
+* 新闻、政策和披露查询
 * 数据源调用
 * 实时走势 API
 * Agent 编排
@@ -120,7 +123,22 @@ Agent、Workflow、API 和 Data Source 不得直接调用具体模型 SDK。
 
 * `docs/standards/MODEL_STANDARD.md`
 
-## 8. AI Agent 层
+## 8. News / Policy Layer
+
+新闻政策层位于 `packages/news_layer`，负责公司新闻、SEC 披露、政策和治理事件。
+
+第一阶段接入：
+
+* Yahoo Finance RSS
+* SEC EDGAR
+* 3 年查询窗口
+* 内部任免披露候选
+
+详细标准见：
+
+* `docs/standards/NEWS_POLICY_STANDARD.md`
+
+## 9. AI Agent 层
 
 Agent 位于 `packages/ai_agents`，至少包括：
 
@@ -132,7 +150,7 @@ Agent 位于 `packages/ai_agents`，至少包括：
 
 Agent 只负责任务定义和业务推理目标，不负责模型供应商适配。
 
-## 9. 审计日志
+## 10. 审计日志
 
 所有 AI 输出必须写入 `audit_logs`。
 

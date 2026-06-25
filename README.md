@@ -21,12 +21,14 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI
 额外完成的扩展能力（超出原始路线图，但已落地并有测试）：
 
 * Universe Layer：每日扫描美股最活跃 Top 100 候选池（`packages/universe_layer`）
+* News / Policy Layer：最近新闻、SEC 披露、政策和内部任免线索（`packages/news_layer`）
 * Algorithm Layer：独立于 Model Layer 的可解释推荐算法（`packages/algorithm_layer`）
 
 ## 文档入口
 
 * [项目标准文档 v0.1](docs/standards/project-standard-v0.1.md)
 * [Universe Layer 标准](docs/standards/UNIVERSE_STANDARD.md)
+* [News / Policy Layer 标准](docs/standards/NEWS_POLICY_STANDARD.md)
 * [Algorithm Layer 标准](docs/standards/ALGORITHM_STANDARD.md)
 * [Model Layer 标准](docs/standards/MODEL_STANDARD.md)
 * [需求分析 v0.1](docs/product/requirements-analysis.md)
@@ -69,6 +71,7 @@ http://127.0.0.1:8000/
 * 美股关注列表、搜索、报价和实时走势
 * 每日扫描美股交易最活跃 100 只股票
 * 独立 Algorithm Layer 返回的推荐评分
+* 最近新闻、政策、SEC 披露和 3 年查询入口
 * 项目开发界面，展示版本、架构层和当前状态
 * 常用分析维度解读，包括成交量、相对成交量、P/E、RSI、均线、波动率等
 * 风险提示和研究辅助边界
@@ -81,6 +84,7 @@ GET http://127.0.0.1:8000/stocks/search?q=AAPL
 GET http://127.0.0.1:8000/stocks/universe/most-active?limit=100
 GET http://127.0.0.1:8000/stocks/AAPL/quote
 GET http://127.0.0.1:8000/stocks/AAPL/recommendation
+GET http://127.0.0.1:8000/stocks/AAPL/news?years=3&limit=30
 GET http://127.0.0.1:8000/stocks/AAPL/trend?range=1d&interval=1m
 GET http://127.0.0.1:8000/stocks/AAPL/history?range=10y&interval=1d
 GET http://127.0.0.1:8000/stocks/AAPL/filings?forms=10-K,10-Q,8-K&limit=10

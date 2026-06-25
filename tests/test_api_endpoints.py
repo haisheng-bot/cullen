@@ -9,6 +9,7 @@ from packages.data_sources.market_trend import TrendPoint, TrendResponse
 from packages.data_sources.price_history import HistoryPoint, HistoryResponse
 from packages.data_sources.fred import FREDObservation, FREDSeriesResponse
 from packages.data_sources.sec_filings import Filing, FilingListResponse
+from packages.news_layer.schemas import NewsItem, NewsPolicyResponse
 from packages.universe_layer.schemas import UniverseResult, UniverseStock
 
 
@@ -93,6 +94,28 @@ class FakeFREDClient:
         )
 
 
+class FakeNewsPolicyClient:
+    def fetch(self, symbol: str, years: int = 3, limit: int = 30) -> NewsPolicyResponse:
+        return NewsPolicyResponse(
+            symbol=symbol,
+            years=years,
+            items=[
+                NewsItem(
+                    title="Apple executive update",
+                    summary="SEC 8-K governance disclosure.",
+                    url="https://www.sec.gov/example",
+                    source="SEC EDGAR",
+                    published_at="2026-06-25T00:00:00+00:00",
+                    category="management_change",
+                    symbols=[symbol],
+                )
+            ][:limit],
+            sources=["SEC EDGAR"],
+            generated_at="2026-06-25T13:32:00+00:00",
+            coverage_note="test coverage note",
+        )
+
+
 class FakeUniverseScanner:
     def scan(self, limit: int = 100) -> UniverseResult:
         return UniverseResult(
@@ -116,11 +139,13 @@ class ApiEndpointsTest(unittest.TestCase):
         self.original_history_client = main.history_client
         self.original_sec_filing_client = main.sec_filing_client
         self.original_fred_client = main.fred_client
+        self.original_news_policy_client = main.news_policy_client
         self.original_universe_scanner = main.universe_scanner
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
         main.sec_filing_client = FakeSECFilingClient()
         main.fred_client = FakeFREDClient()
+        main.news_policy_client = FakeNewsPolicyClient()
         main.universe_scanner = FakeUniverseScanner()
 
     def tearDown(self) -> None:
@@ -128,6 +153,7 @@ class ApiEndpointsTest(unittest.TestCase):
         main.history_client = self.original_history_client
         main.sec_filing_client = self.original_sec_filing_client
         main.fred_client = self.original_fred_client
+        main.news_policy_client = self.original_news_policy_client
         main.universe_scanner = self.original_universe_scanner
 
     def test_popular_stocks_endpoint(self) -> None:
@@ -171,6 +197,13 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("FEDFUNDS", payload["series_id"])
         self.assertEqual(2, len(payload["observations"]))
         self.assertEqual(5.33, payload["observations"][0]["value"])
+
+    def test_news_policy_endpoint(self) -> None:
+        payload = main.get_stock_news_policy("AAPL", years=3, limit=10)
+
+        self.assertEqual("AAPL", payload["symbol"])
+        self.assertEqual(3, payload["years"])
+        self.assertEqual("management_change", payload["items"][0]["category"])
 
     def test_recommendation_endpoint(self) -> None:
         payload = main.get_stock_recommendation("AAPL")

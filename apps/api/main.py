@@ -17,6 +17,7 @@ from packages.data_sources.fred import FREDClient, FREDError
 from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
 from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
 from packages.db.session import check_database_connection
+from packages.news_layer.news_policy import NewsPolicyClient, NewsPolicyError
 from packages.universe_layer.most_active import MostActiveUniverseScanner
 
 
@@ -38,6 +39,7 @@ trend_client = YahooFinanceChartClient()
 history_client = YahooFinanceHistoryClient()
 sec_filing_client = SECFilingClient()
 fred_client = FREDClient()
+news_policy_client = NewsPolicyClient()
 recommendation_algorithm = TrendRecommendationAlgorithm()
 universe_scanner = MostActiveUniverseScanner()
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
@@ -188,6 +190,21 @@ def get_stock_sec_filings(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SECFilingError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/stocks/{symbol}/news")
+def get_stock_news_policy(
+    symbol: str,
+    years: int = Query(3, ge=1, le=3),
+    limit: int = Query(30, ge=1, le=100),
+) -> dict:
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+        return news_policy_client.fetch(normalized_symbol, years=years, limit=limit).to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except NewsPolicyError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 

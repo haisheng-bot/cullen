@@ -422,6 +422,43 @@
         line-height: 1.45;
       }
 
+      .news-list {
+        display: grid;
+        gap: 8px;
+        max-height: 360px;
+        overflow-y: auto;
+        padding-right: 3px;
+      }
+
+      .news-item {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-2);
+        padding: 9px;
+      }
+
+      .news-title {
+        color: var(--text);
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.35;
+        text-decoration: none;
+      }
+
+      .news-meta {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .news-summary {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
       .status {
         min-height: 20px;
         margin-top: 10px;
@@ -637,6 +674,10 @@
           <div class="note" id="research-note">请选择美股并刷新走势。当前页面只做研究辅助，不下单、不承诺收益。</div>
           <div class="note">本系统仅用于投资研究辅助，不构成任何投资建议。</div>
         </div>
+
+        <div class="section-title">Policy & News · 3Y Archive</div>
+        <div class="news-list" id="news-list"></div>
+        <div class="note" id="news-coverage-note">Recent news and 3-year SEC disclosure traces will appear here.</div>
       </aside>
     </div>
 
@@ -657,6 +698,12 @@
       const ctx = canvas.getContext("2d");
 
       const fmt = (value) => value === null || value === undefined ? "--" : Number(value).toFixed(2);
+      const escapeHtml = (value) => String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 
       async function request(path) {
         const response = await fetch(`${API}${path}`);
@@ -723,11 +770,13 @@
             request(`/stocks/${state.symbol}/trend?range=${rangeInput.value}&interval=${intervalInput.value}`),
           ]);
           const recommendation = await request(`/stocks/${state.symbol}/recommendation`);
+          const news = await request(`/stocks/${state.symbol}/news?years=3&limit=60`);
           state.lastTrend = trend;
           renderQuote(quote);
           drawChart(trend.points || []);
           renderMetrics(trend);
           renderRecommendation(recommendation);
+          renderNews(news);
           statusEl.textContent = `${state.symbol} 行情已更新`;
         } catch (error) {
           statusEl.textContent = `读取失败：${error.message}`;
@@ -783,6 +832,24 @@
 
         const risks = (recommendation.risks || []).join(" ");
         document.getElementById("research-note").textContent = `${recommendation.symbol} 算法推荐等级：${recommendation.recommendation}。${risks}`;
+      }
+
+      function renderNews(news) {
+        const list = document.getElementById("news-list");
+        list.innerHTML = "";
+        (news.items || []).forEach((item) => {
+          const card = document.createElement("div");
+          card.className = "news-item";
+          const date = item.published_at ? new Date(item.published_at).toLocaleDateString() : "";
+          const summary = item.summary ? `<div class="news-summary">${escapeHtml(item.summary)}</div>` : "";
+          card.innerHTML = `
+            <a class="news-title" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">${escapeHtml(item.title)}</a>
+            <div class="news-meta">${escapeHtml(item.category)} · ${escapeHtml(item.source)} · ${escapeHtml(date)}</div>
+            ${summary}
+          `;
+          list.appendChild(card);
+        });
+        document.getElementById("news-coverage-note").textContent = news.coverage_note;
       }
 
       function resizeCanvas() {

@@ -176,13 +176,35 @@ limit     返回条数上限，默认 10，最大 50
 }
 ```
 
-### 2.6 实时走势
+### 2.6 新闻、政策和披露
+
+```text
+GET /stocks/{symbol}/news?years=3&limit=30
+```
+
+用途：
+
+* 展示最近公司新闻
+* 展示政策、监管披露和 SEC 文件线索
+* 支持查询 3 年窗口
+* 标记内部任免和治理相关披露候选
+
+第一阶段数据源：
+
+* Yahoo Finance RSS：最近新闻
+* SEC EDGAR：3 年内监管披露、8-K、10-K、10-Q
+
+说明：
+
+完整 3 年所有新闻需要后续接入归档新闻源或付费数据源。当前接口先提供统一结构和公开源能力。
+
+### 2.7 实时走势
 
 ```text
 GET /stocks/{symbol}/trend?range=1d&interval=1m
 ```
 
-### 2.7 推荐算法
+### 2.8 推荐算法
 
 ```text
 GET /stocks/{symbol}/recommendation

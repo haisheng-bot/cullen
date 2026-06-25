@@ -27,6 +27,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             "packages/data_sources",
             "packages/ai_agents",
             "packages/universe_layer",
+            "packages/news_layer",
             "packages/algorithm_layer",
             "packages/model_layer",
             "packages/scoring",
@@ -36,6 +37,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             "docs/standards/MODEL_STANDARD.md",
             "docs/standards/ALGORITHM_STANDARD.md",
             "docs/standards/UNIVERSE_STANDARD.md",
+            "docs/standards/NEWS_POLICY_STANDARD.md",
             "docs/standards/version-management.md",
             "docs/standards/github-collaboration.md",
             "docs/standards/agile-iteration.md",
@@ -55,6 +57,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             "docs/standards/MODEL_STANDARD.md",
             "docs/standards/ALGORITHM_STANDARD.md",
             "docs/standards/UNIVERSE_STANDARD.md",
+            "docs/standards/NEWS_POLICY_STANDARD.md",
             "docs/standards/github-collaboration.md",
             "docs/standards/agile-iteration.md",
             "docs/standards/AI_TOOL_COLLABORATION.md",
@@ -115,6 +118,18 @@ class ProjectGovernanceTest(unittest.TestCase):
         removed_terms = ["stock-group", "chunkStocks", "details.open", "slice(0, 20)"]
         present = [term for term in removed_terms if term in html]
         self.assertEqual([], present)
+
+    def test_project_interface_includes_news_policy_panel(self) -> None:
+        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+
+        required_terms = [
+            "Policy & News",
+            "news-list",
+            "/news?years=3",
+            "coverage_note",
+        ]
+        missing = [term for term in required_terms if term not in html]
+        self.assertEqual([], missing)
 
 
 if __name__ == "__main__":
