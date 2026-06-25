@@ -215,18 +215,26 @@
 
       .chart-inspector {
         display: grid;
-        grid-template-columns: repeat(8, minmax(0, 1fr));
+        grid-template-columns: repeat(8, minmax(168px, 1fr));
         gap: 8px;
         margin-top: 10px;
+        overflow-x: auto;
+        padding-bottom: 2px;
       }
 
       .chart-inspector .metric {
+        min-width: 168px;
+        min-height: 58px;
         padding: 8px;
         background: #fbfdff;
       }
 
       .chart-inspector .value {
         font-size: 14px;
+        line-height: 1.15;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .metrics {
