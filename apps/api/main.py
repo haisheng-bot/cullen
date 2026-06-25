@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+from pydantic import BaseModel, Field
 
 from packages.ai_agents.sec_filing_agent import SECFilingAgent
 from packages.algorithm_layer.recommendation import TrendRecommendationAlgorithm
@@ -15,6 +16,14 @@ from packages.algorithm_layer.schemas import (
     RecommendationInput,
     TechnicalSeriesInput,
 )
+from packages.backtesting.engine import PortfolioBacktestEngine
+from packages.backtesting.schemas import (
+    AllocationConfig,
+    EntryRules,
+    ExitRules,
+    RiskControls,
+    StrategyConfig,
+)
 from packages.data_sources.market_trend import (
     MarketTrendError,
     YahooFinanceChartClient,
@@ -24,6 +33,8 @@ from packages.data_sources.fred import FREDClient, FREDError
 from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
 from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
 from packages.data_sources.sec_financials import SECFinancialsClient, SECFinancialsError
+from packages.db.backtest_runs import write_backtest_run
+from packages.db.price_history_cache import get_or_fetch_closes
 from packages.db.session import check_database_connection, session_scope
 from packages.db.stock_scores import get_score_history, write_screening_result
 from packages.model_layer.factory import build_default_router
@@ -122,6 +133,29 @@ screening_workflow = StockScreeningWorkflow(
     financial_factors_fetcher=_fetch_financial_factors,
     technical_series_fetcher=_fetch_technical_series,
     news_signals_fetcher=_fetch_news_signals,
+)
+
+
+def _fetch_cached_closes(symbol: str) -> list[tuple[str, float]]:
+    with session_scope() as session:
+        return get_or_fetch_closes(session, history_client, symbol, range_="10y", interval="1d")
+
+
+def _fetch_shares_outstanding(symbol: str) -> float | None:
+    """Best-effort, latest known share count (not point-in-time) — see
+    docs/standards/PORTFOLIO_STRATEGY_STANDARD.md for why that's an
+    acceptable approximation for market_cap_weighted allocation.
+    """
+    try:
+        facts = sec_financials_client.fetch_financial_facts(symbol)
+    except SECFinancialsError:
+        return None
+    return facts.latest.shares_outstanding if facts.latest else None
+
+
+backtest_engine = PortfolioBacktestEngine(
+    history_fetcher=_fetch_cached_closes,
+    shares_outstanding_fetcher=_fetch_shares_outstanding,
 )
 
 POPULAR_US_STOCKS = [
@@ -360,3 +394,81 @@ def get_fred_observations(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except FREDError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+class AllocationConfigRequest(BaseModel):
+    method: str = "equal_weight"
+    max_position_weight: float = 0.25
+    min_cash_weight: float = 0.10
+
+
+class EntryRulesRequest(BaseModel):
+    min_technical_score: int = 60
+    min_momentum_percent: float | None = None
+    require_ma_cross: str | None = None
+
+
+class ExitRulesRequest(BaseModel):
+    max_technical_score: int = 40
+    stop_loss_percent: float | None = 0.08
+    require_ma_cross: str | None = None
+
+
+class RiskControlsRequest(BaseModel):
+    max_portfolio_drawdown: float | None = 0.12
+    max_sector_exposure: float | None = None
+
+
+class BacktestRunRequest(BaseModel):
+    """Request body for POST /backtests/run. Mirrors
+    packages.backtesting.schemas.StrategyConfig field-for-field; the engine
+    itself stays a plain dataclass, framework-free like every other layer.
+    """
+
+    strategy_name: str
+    symbols: list[str]
+    start_date: str
+    end_date: str
+    initial_cash: float = 10_000.0
+    rebalance_frequency: str = "monthly"
+    benchmark_symbol: str = "SPY"
+    allocation: AllocationConfigRequest = Field(default_factory=AllocationConfigRequest)
+    entry_rules: EntryRulesRequest = Field(default_factory=EntryRulesRequest)
+    exit_rules: ExitRulesRequest = Field(default_factory=ExitRulesRequest)
+    risk: RiskControlsRequest = Field(default_factory=RiskControlsRequest)
+    sector_map: dict[str, str] = Field(default_factory=dict)
+
+
+def _to_strategy_config(request: BacktestRunRequest) -> StrategyConfig:
+    return StrategyConfig(
+        strategy_name=request.strategy_name,
+        symbols=[symbol.upper() for symbol in request.symbols],
+        start_date=request.start_date,
+        end_date=request.end_date,
+        initial_cash=request.initial_cash,
+        rebalance_frequency=request.rebalance_frequency,
+        benchmark_symbol=request.benchmark_symbol.upper(),
+        allocation=AllocationConfig(**request.allocation.model_dump()),
+        entry_rules=EntryRules(**request.entry_rules.model_dump()),
+        exit_rules=ExitRules(**request.exit_rules.model_dump()),
+        risk=RiskControls(**request.risk.model_dump()),
+        sector_map=request.sector_map,
+    )
+
+
+def _persist_backtest_run(config: StrategyConfig, result) -> None:
+    with session_scope() as session:
+        write_backtest_run(session, config, result)
+
+
+@app.post("/backtests/run")
+def run_backtest(request: BacktestRunRequest) -> dict:
+    config = _to_strategy_config(request)
+    try:
+        result = backtest_engine.run(config)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PriceHistoryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    _persist_backtest_run(config, result)
+    return result.to_dict()

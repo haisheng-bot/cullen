@@ -56,3 +56,37 @@ class StockScore(Base):
     screened_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )
+
+
+class PriceHistoryCache(Base):
+    """Cached daily OHLC-close history per symbol, so a multi-year
+    Portfolio Strategy Engine backtest doesn't re-fetch the same symbol
+    from Yahoo Finance on every run (see packages/db/price_history_cache.py).
+    """
+
+    __tablename__ = "price_history_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    symbol: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+    range: Mapped[str] = mapped_column(String(8), nullable=False)
+    interval: Mapped[str] = mapped_column(String(8), nullable=False)
+    points: Mapped[list] = mapped_column(JSON, default=list)
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class BacktestRun(Base):
+    """One row per Portfolio Strategy Engine backtest run
+    (`POST /backtests/run`), per docs/standards/PORTFOLIO_STRATEGY_STANDARD.md.
+    """
+
+    __tablename__ = "backtest_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    strategy_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    config: Mapped[dict] = mapped_column(JSON, default=dict)
+    result: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )

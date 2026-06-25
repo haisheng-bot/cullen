@@ -38,6 +38,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             "docs/standards/ALGORITHM_STANDARD.md",
             "docs/standards/UNIVERSE_STANDARD.md",
             "docs/standards/NEWS_POLICY_STANDARD.md",
+            "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md",
             "docs/standards/version-management.md",
             "docs/standards/github-collaboration.md",
             "docs/standards/agile-iteration.md",
@@ -58,6 +59,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             "docs/standards/ALGORITHM_STANDARD.md",
             "docs/standards/UNIVERSE_STANDARD.md",
             "docs/standards/NEWS_POLICY_STANDARD.md",
+            "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md",
             "docs/standards/github-collaboration.md",
             "docs/standards/agile-iteration.md",
             "docs/standards/AI_TOOL_COLLABORATION.md",
@@ -131,6 +133,43 @@ class ProjectGovernanceTest(unittest.TestCase):
         removed_terms = ["stock-group", "chunkStocks", "details.open", "slice(0, 20)"]
         present = [term for term in removed_terms if term in html]
         self.assertEqual([], present)
+
+    def test_project_interface_includes_portfolio_strategy_workflow(self) -> None:
+        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        standard = (ROOT / "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md").read_text(encoding="utf-8")
+
+        required_html_terms = [
+            "Portfolio Strategy Workflow",
+            "股票池 Universe",
+            "策略库 Strategy Library",
+            "配置约束 Constraints",
+            "运行回测 Backtest",
+            "AI 自动分析结果",
+            "Portfolio Recommendation",
+            "workflow-strategy",
+            "target-return",
+            "max-drawdown",
+            "max-position",
+            "run-backtest-button",
+            "postJson(\"/backtests/run\"",
+            "buildBacktestPayload",
+            "renderBacktestResult",
+        ]
+        missing_html = [term for term in required_html_terms if term not in html]
+        self.assertEqual([], missing_html)
+
+        required_standard_terms = [
+            "股票池（Universe）",
+            "选择策略（Strategy Library）",
+            "配置约束（收益目标、最大回撤、仓位限制）",
+            "运行回测（Backtest）",
+            "AI 自动分析结果（收益、风险、原因）",
+            "生成投资组合建议（Portfolio Recommendation）",
+            "portfolio-strategy-v0.1",
+            "POST /backtests/run",
+        ]
+        missing_standard = [term for term in required_standard_terms if term not in standard]
+        self.assertEqual([], missing_standard)
 
     def test_project_interface_includes_us_concept_preview(self) -> None:
         html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")

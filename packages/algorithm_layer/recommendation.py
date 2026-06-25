@@ -13,9 +13,8 @@ from packages.algorithm_layer.schemas import (
 )
 from packages.algorithm_layer.technical_indicators import (
     MIN_CLOSES_FOR_INDICATORS,
-    calculate_momentum_percent,
-    calculate_rsi,
-    detect_ma_cross,
+    technical_indicator_score,
+    trend_score,
 )
 
 NO_DATA_SCORE = 50
@@ -162,10 +161,6 @@ def _percent_change(current: float, baseline: float) -> float:
     return (current - baseline) / baseline * 100
 
 
-def _trend_score(change_percent: float) -> int:
-    return max(0, min(100, round(60 + change_percent * 8)))
-
-
 def _risk_score(volatility_percent: float) -> int:
     return max(20, min(95, round(95 - volatility_percent * 18)))
 
@@ -252,66 +247,17 @@ def _news_sentiment_score(news_signals: list[NewsSignalInput]) -> tuple[int, str
     return score, explanation
 
 
-_CROSS_LABELS = {
-    "golden_cross": "金叉",
-    "death_cross": "死叉",
-    "bullish": "多头排列",
-    "bearish": "空头排列",
-    "flat": "走势平缓",
-}
-
-_CROSS_SCORES = {
-    "golden_cross": 80,
-    "bullish": 65,
-    "flat": 50,
-    "bearish": 35,
-    "death_cross": 20,
-}
-
-
-def _rsi_score(rsi: float) -> int:
-    """Maps RSI-14 to a 0-100 score. 30-70 is treated as the healthy
-    momentum band (linear around neutral 50); above 70 is capped to reflect
-    overbought pullback risk, below 30 is floored to reflect oversold risk.
-    """
-    if rsi >= 80:
-        return 45
-    if rsi >= 70:
-        return 65
-    if rsi >= 55:
-        return round(50 + (rsi - 55) * (65 - 50) / (70 - 55))
-    if rsi >= 40:
-        return round(35 + (rsi - 40) * (50 - 35) / (55 - 40))
-    if rsi >= 20:
-        return round(20 + (rsi - 20) * (35 - 20) / (40 - 20))
-    return 20
-
-
 def _technical_score(
     technical_series: TechnicalSeriesInput | None,
     trend_change_percent: float,
     day_change_percent: float,
 ) -> tuple[int, str]:
     if technical_series is not None and len(technical_series.closes) >= MIN_CLOSES_FOR_INDICATORS:
-        closes = technical_series.closes
-        momentum_percent = calculate_momentum_percent(closes, lookback=10) or 0.0
-        rsi = calculate_rsi(closes, period=14) or 50.0
-        cross_state = detect_ma_cross(closes, short_period=5, long_period=20)
+        return technical_indicator_score(technical_series.closes)
 
-        momentum_score = _trend_score(momentum_percent)
-        rsi_score = _rsi_score(rsi)
-        cross_score = _CROSS_SCORES[cross_state]
-
-        composite = round(momentum_score * 0.4 + rsi_score * 0.3 + cross_score * 0.3)
-        explanation = (
-            f"动量(10日) {momentum_percent:+.2f}%，RSI(14) {rsi:.1f}，"
-            f"均线(5/20)状态：{_CROSS_LABELS[cross_state]}"
-        )
-        return max(0, min(100, composite)), explanation
-
-    trend_score = _trend_score(trend_change_percent)
-    day_score = _trend_score(day_change_percent)
-    composite = round(trend_score * 0.6 + day_score * 0.4)
+    trend_score_value = trend_score(trend_change_percent)
+    day_score_value = trend_score(day_change_percent)
+    composite = round(trend_score_value * 0.6 + day_score_value * 0.4)
     explanation = (
         f"日线数据不足（需 {MIN_CLOSES_FOR_INDICATORS} 个交易日以上），暂以区间走势 "
         f"{trend_change_percent:.2f}% 与相对前收盘 {day_change_percent:.2f}% 估算"

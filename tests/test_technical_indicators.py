@@ -6,6 +6,9 @@ from packages.algorithm_layer.technical_indicators import (
     calculate_sma,
     calculate_sma_series,
     detect_ma_cross,
+    rsi_score,
+    technical_indicator_score,
+    trend_score,
 )
 
 
@@ -49,6 +52,34 @@ class TechnicalIndicatorsTest(unittest.TestCase):
 
     def test_calculate_momentum_percent_returns_none_when_insufficient_data(self) -> None:
         self.assertIsNone(calculate_momentum_percent([1, 2, 3], lookback=10))
+
+    def test_trend_score_centers_on_fifty_at_zero_percent(self) -> None:
+        self.assertEqual(60, trend_score(0.0))
+        self.assertEqual(100, trend_score(5.0))
+        self.assertEqual(0, trend_score(-7.5))
+
+    def test_rsi_score_bands(self) -> None:
+        self.assertEqual(20, rsi_score(10.0))
+        self.assertEqual(50, rsi_score(55.0))
+        self.assertEqual(65, rsi_score(70.0))
+        self.assertEqual(45, rsi_score(90.0))
+
+    def test_technical_indicator_score_matches_hand_computed_components(self) -> None:
+        # 30 days flat at 100 then a sharp 10% jump on the last close: golden
+        # cross (short MA pulled above long MA by the jump), strong positive
+        # momentum, and a high RSI from the one large gain.
+        closes = [100.0] * 29 + [110.0]
+
+        score, explanation = technical_indicator_score(closes)
+
+        momentum_percent = calculate_momentum_percent(closes, lookback=10)
+        rsi = calculate_rsi(closes, period=14)
+        cross_state = detect_ma_cross(closes, short_period=5, long_period=20)
+        expected = round(trend_score(momentum_percent) * 0.4 + rsi_score(rsi) * 0.3 + 80 * 0.3)
+        self.assertEqual("golden_cross", cross_state)
+        self.assertEqual(max(0, min(100, expected)), score)
+        self.assertIn("RSI(14)", explanation)
+        self.assertIn("均线(5/20)状态：金叉", explanation)
 
 
 if __name__ == "__main__":

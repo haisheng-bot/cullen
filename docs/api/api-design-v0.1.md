@@ -485,6 +485,81 @@ limit  返回条数上限，默认 30，最大 200
 
 已用真实数据做过线上联调：调用一次 `/stocks/screening` 后再读取 `/stocks/SOFI/score-history`，记录正确落库并可读出。
 
+### 4.3 Portfolio Strategy 回测
+
+```text
+POST /backtests/run
+```
+
+用途：
+
+* 承载 Portfolio Strategy 六步流程：Universe → Strategy Library → Constraints → Backtest → AI Analysis → Portfolio Recommendation
+* 对人工选择的美股组合进行历史回测
+* 返回收益、风险、贡献股票、交易记录、策略建议和风险提示
+* 为操作界面的组合策略选择、约束配置和组合建议提供统一接口
+
+请求体必须包含：
+
+```json
+{
+  "strategy_name": "Core Watch · 技术评分加权",
+  "symbols": ["AAPL", "MSFT", "NVDA"],
+  "start_date": "2023-06-25",
+  "end_date": "2026-06-25",
+  "initial_cash": 10000,
+  "rebalance_frequency": "monthly",
+  "benchmark_symbol": "SPY",
+  "allocation": {
+    "method": "technical_score_weighted",
+    "max_position_weight": 0.25,
+    "min_cash_weight": 0.1
+  },
+  "entry_rules": {
+    "min_technical_score": 60,
+    "min_momentum_percent": 0,
+    "require_ma_cross": null
+  },
+  "exit_rules": {
+    "max_technical_score": 40,
+    "stop_loss_percent": 0.08,
+    "require_ma_cross": null
+  },
+  "risk": {
+    "max_portfolio_drawdown": 0.12,
+    "max_sector_exposure": null
+  },
+  "sector_map": {
+    "AAPL": "Technology",
+    "MSFT": "Technology",
+    "NVDA": "Technology"
+  }
+}
+```
+
+响应必须包含：
+
+* total_return_percent
+* annualized_return_percent
+* max_drawdown_percent
+* sharpe_ratio
+* benchmark_total_return_percent
+* alpha_percent
+* beta
+* contributions
+* trades
+* suggestions
+* risks
+* source
+* algorithm_version
+* generated_at
+* risk_disclaimer
+
+合规说明：
+
+* 回测结果只代表历史模拟，不代表未来收益。
+* 组合建议必须人工复核，不允许默认自动下单。
+* 本系统仅用于投资研究辅助，不构成任何投资建议。
+
 ## 5. 响应要求
 
 所有 AI 分析接口必须返回：

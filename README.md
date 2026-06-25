@@ -15,14 +15,15 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI
 * **M2 数据源**：完成。yfinance 风格历史日线、SEC EDGAR 财报申报、FRED 宏观数据（需自备免费 Key）、Yahoo 实时走势均已接入并有测试覆盖。
 * **M3 AI 分析**：部分完成。Model Layer 统一接口、Output Validator、Agent 基类和 SEC Filing Agent 已落地并端到端联调；News Agent / Report Agent 尚未开发。
 * **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.2.2`，已接入 SEC 真实财务数据和真实技术指标：基本面（净利润率+ROC）/成长性/估值（P/E+EV/EBIT）/技术面（RSI/均线金死叉/动量）/风险五因子），并通过新增的 Workflow Layer（`stocks/screening`）实现批量选股排序；基于大模型的 AI Scoring Agent、研究报告生成尚未开发（`packages/scoring` 仍为空）。
-* **M5 前端展示**：部分完成。美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分）已可用，独立的股票深度分析页和研究报告页尚未开发。
-* 尚未开始：模拟交易与回测（`packages/backtesting`、`packages/brokers` 仍为空）。
+* **M5 前端展示**：部分完成。美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分、组合策略工作流）已可用，独立的股票深度分析页和研究报告页尚未开发。
+* **M6 Portfolio Strategy / Backtesting**：部分完成。`packages/backtesting` 已提供价格技术面回测、仓位分配、风险约束和 `/backtests/run` API；券商接口 `packages/brokers` 尚未开发。
 
 额外完成的扩展能力（超出原始路线图，但已落地并有测试）：
 
 * Universe Layer：每日扫描美股最活跃 Top 100 候选池（`packages/universe_layer`）
 * News / Policy Layer：最近新闻、SEC 披露、政策和内部任免线索（`packages/news_layer`）
 * Algorithm Layer：独立于 Model Layer 的可解释推荐算法（`packages/algorithm_layer`）
+* Portfolio Strategy：Universe → Strategy Library → Constraints → Backtest → AI Analysis → Portfolio Recommendation（`packages/backtesting`）
 
 ## 文档入口
 
@@ -31,6 +32,7 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI
 * [News / Policy Layer 标准](docs/standards/NEWS_POLICY_STANDARD.md)
 * [Algorithm Layer 标准](docs/standards/ALGORITHM_STANDARD.md)
 * [Model Layer 标准](docs/standards/MODEL_STANDARD.md)
+* [Portfolio Strategy 标准](docs/standards/PORTFOLIO_STRATEGY_STANDARD.md)
 * [需求分析 v0.1](docs/product/requirements-analysis.md)
 * [系统设计框架](docs/architecture/system-design.md)
 * [AI 开发架构标准](docs/architecture/ai-development-architecture.md)
@@ -70,6 +72,7 @@ http://127.0.0.1:8000/
 
 * 美股关注列表、搜索、报价和实时走势
 * 每日扫描美股交易最活跃 100 只股票
+* 组合策略工作流：选择组合、配置收益目标/最大回撤/仓位限制、运行回测、生成组合建议
 * 独立 Algorithm Layer 返回的推荐评分
 * 最近新闻、政策、SEC 披露和 3 年查询入口
 * 项目开发界面，展示版本、架构层和当前状态
@@ -91,6 +94,7 @@ GET http://127.0.0.1:8000/stocks/AAPL/history?range=10y&interval=1d
 GET http://127.0.0.1:8000/stocks/AAPL/filings?forms=10-K,10-Q,8-K&limit=10
 GET http://127.0.0.1:8000/stocks/AAPL/sec-summary
 GET http://127.0.0.1:8000/macro/FEDFUNDS/observations?limit=10
+POST http://127.0.0.1:8000/backtests/run
 ```
 
 FRED 接口需要先在 `.env` 设置免费的 `FRED_API_KEY`（注册地址：https://fred.stlouisfed.org/docs/api/api_key.html），否则返回 503。

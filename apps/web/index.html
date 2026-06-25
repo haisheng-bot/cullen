@@ -259,6 +259,152 @@
         line-height: 1;
       }
 
+      .workflow-panel {
+        margin-top: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #f8fafc;
+        padding: 10px;
+      }
+
+      .workflow-steps {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+
+      .workflow-step {
+        display: grid;
+        grid-template-columns: 22px 1fr;
+        gap: 8px;
+        align-items: start;
+        border: 1px solid #e1e7f0;
+        border-radius: 8px;
+        background: white;
+        padding: 8px;
+      }
+
+      .step-index {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        background: #172033;
+        color: white;
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .step-title {
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .step-copy {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .strategy-grid,
+      .constraint-grid,
+      .backtest-results {
+        display: grid;
+        gap: 8px;
+      }
+
+      .constraint-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .strategy-field,
+      .constraint-field {
+        min-width: 0;
+      }
+
+      .strategy-field label,
+      .constraint-field label {
+        display: block;
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .strategy-field select,
+      .constraint-field input,
+      .constraint-field select {
+        width: 100%;
+        height: 31px;
+        border: 1px solid #c8d3e2;
+        border-radius: 6px;
+        background: white;
+        padding: 0 8px;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .run-backtest-button {
+        width: 100%;
+        height: 34px;
+        margin-top: 10px;
+        border: 1px solid #172033;
+        border-radius: 6px;
+        background: #172033;
+        color: white;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .run-backtest-button:disabled {
+        cursor: progress;
+        opacity: 0.65;
+      }
+
+      .result-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .result-card {
+        border: 1px solid #e1e7f0;
+        border-radius: 8px;
+        background: white;
+        padding: 8px;
+      }
+
+      .result-label {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .result-value {
+        margin-top: 4px;
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .workflow-note {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .workflow-list {
+        margin: 8px 0 0;
+        padding-left: 16px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
       .symbol { font-weight: 750; }
       .name, .sector, .muted { color: var(--muted); font-size: 12px; }
 
@@ -729,6 +875,96 @@
           </div>
           <div class="portfolio-list" id="portfolio-list"></div>
         </div>
+
+        <div class="workflow-panel">
+          <div class="section-title">Portfolio Strategy Workflow</div>
+          <div class="workflow-steps">
+            <div class="workflow-step">
+              <span class="step-index">1</span>
+              <div>
+                <div class="step-title">股票池 Universe</div>
+                <div class="step-copy" id="workflow-universe-summary">Most Active Top 100 · 选择组合后运行回测</div>
+              </div>
+            </div>
+            <div class="workflow-step">
+              <span class="step-index">2</span>
+              <div>
+                <div class="step-title">策略库 Strategy Library</div>
+                <div class="strategy-grid">
+                  <div class="strategy-field">
+                    <label for="workflow-strategy">策略类型</label>
+                    <select id="workflow-strategy">
+                      <option value="technical_score_weighted">技术评分加权</option>
+                      <option value="equal_weight">等权组合</option>
+                      <option value="volatility_weighted">低波动加权</option>
+                      <option value="market_cap_weighted">市值加权</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="workflow-step">
+              <span class="step-index">3</span>
+              <div>
+                <div class="step-title">配置约束 Constraints</div>
+                <div class="constraint-grid">
+                  <div class="constraint-field">
+                    <label for="target-return">收益目标</label>
+                    <input id="target-return" type="number" value="12" min="-50" max="100" step="1" />
+                  </div>
+                  <div class="constraint-field">
+                    <label for="max-drawdown">最大回撤</label>
+                    <input id="max-drawdown" type="number" value="12" min="1" max="80" step="1" />
+                  </div>
+                  <div class="constraint-field">
+                    <label for="max-position">单票仓位</label>
+                    <input id="max-position" type="number" value="25" min="1" max="100" step="1" />
+                  </div>
+                  <div class="constraint-field">
+                    <label for="min-cash">现金比例</label>
+                    <input id="min-cash" type="number" value="10" min="0" max="80" step="1" />
+                  </div>
+                  <div class="constraint-field">
+                    <label for="backtest-years">回测年限</label>
+                    <select id="backtest-years">
+                      <option value="1">1 年</option>
+                      <option value="3" selected>3 年</option>
+                      <option value="5">5 年</option>
+                    </select>
+                  </div>
+                  <div class="constraint-field">
+                    <label for="initial-cash">初始资金</label>
+                    <input id="initial-cash" type="number" value="10000" min="1000" max="10000000" step="1000" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="workflow-step">
+              <span class="step-index">4</span>
+              <div>
+                <div class="step-title">运行回测 Backtest</div>
+                <div class="step-copy" id="backtest-selection-summary">当前组合：Core Watch · 3 stocks</div>
+                <button class="run-backtest-button" id="run-backtest-button" type="button">Run Backtest</button>
+              </div>
+            </div>
+            <div class="workflow-step">
+              <span class="step-index">5</span>
+              <div>
+                <div class="step-title">AI 自动分析结果</div>
+                <div class="backtest-results" id="backtest-results">
+                  <div class="workflow-note">等待回测结果：收益、风险、贡献、原因会在这里展示。</div>
+                </div>
+              </div>
+            </div>
+            <div class="workflow-step">
+              <span class="step-index">6</span>
+              <div>
+                <div class="step-title">Portfolio Recommendation</div>
+                <div class="workflow-note" id="portfolio-recommendation">先选择组合并运行回测。本系统仅用于投资研究辅助，不构成任何投资建议。</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </aside>
 
       <main>
@@ -907,6 +1143,18 @@
       const portfolioStrategy = document.getElementById("portfolio-strategy");
       const portfolioList = document.getElementById("portfolio-list");
       const addPortfolioButton = document.getElementById("add-portfolio-button");
+      const workflowStrategy = document.getElementById("workflow-strategy");
+      const targetReturnInput = document.getElementById("target-return");
+      const maxDrawdownInput = document.getElementById("max-drawdown");
+      const maxPositionInput = document.getElementById("max-position");
+      const minCashInput = document.getElementById("min-cash");
+      const backtestYearsInput = document.getElementById("backtest-years");
+      const initialCashInput = document.getElementById("initial-cash");
+      const runBacktestButton = document.getElementById("run-backtest-button");
+      const backtestResults = document.getElementById("backtest-results");
+      const portfolioRecommendation = document.getElementById("portfolio-recommendation");
+      const backtestSelectionSummary = document.getElementById("backtest-selection-summary");
+      const workflowUniverseSummary = document.getElementById("workflow-universe-summary");
       const universeMeta = document.getElementById("universe-meta");
       const rangeInput = document.getElementById("range");
       const intervalInput = document.getElementById("interval");
@@ -970,6 +1218,19 @@
         return response.json();
       }
 
+      async function postJson(path, payload) {
+        const response = await fetch(`${API}${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${response.status}`);
+        }
+        return response.json();
+      }
+
       async function requestOptional(path) {
         try {
           return await request(path);
@@ -993,6 +1254,7 @@
           const data = await request(`/stocks/universe/most-active?limit=${limit}`);
           state.stocks = data.items;
           universeMeta.textContent = `${data.universe_name} · ${data.items.length} · ${data.source}`;
+          workflowUniverseSummary.textContent = `${data.universe_name} · ${data.items.length} stocks · ${data.source}`;
         } finally {
           scanUniverseButton.disabled = false;
         }
@@ -1020,11 +1282,13 @@
           state.portfolios[strategy] = [...symbols, state.symbol];
         }
         renderPortfolioList();
+        renderBacktestSelectionSummary();
       }
 
       function removeSymbolFromPortfolio(strategy, symbol) {
         state.portfolios[strategy] = (state.portfolios[strategy] || []).filter((item) => item !== symbol);
         renderPortfolioList();
+        renderBacktestSelectionSummary();
       }
 
       function renderPortfolioList() {
@@ -1055,6 +1319,130 @@
             removeSymbolFromPortfolio(button.dataset.strategy, button.dataset.symbol);
           });
         });
+      }
+
+      function activePortfolioName() {
+        return portfolioStrategy.value;
+      }
+
+      function activePortfolioSymbols() {
+        return [...new Set((state.portfolios[activePortfolioName()] || []).map((symbol) => symbol.toUpperCase()))];
+      }
+
+      function renderBacktestSelectionSummary() {
+        const symbols = activePortfolioSymbols();
+        backtestSelectionSummary.textContent = `当前组合：${activePortfolioName()} · ${symbols.length} stocks`;
+      }
+
+      function yearsAgoDate(years) {
+        const date = new Date();
+        date.setFullYear(date.getFullYear() - years);
+        return date.toISOString().slice(0, 10);
+      }
+
+      function todayDate() {
+        return new Date().toISOString().slice(0, 10);
+      }
+
+      function percentInputToRatio(input) {
+        return Math.max(0, Number(input.value || 0)) / 100;
+      }
+
+      function buildBacktestPayload() {
+        const symbols = activePortfolioSymbols();
+        const years = Number(backtestYearsInput.value || 3);
+        return {
+          strategy_name: `${activePortfolioName()} · ${workflowStrategy.options[workflowStrategy.selectedIndex].text}`,
+          symbols,
+          start_date: yearsAgoDate(years),
+          end_date: todayDate(),
+          initial_cash: Number(initialCashInput.value || 10000),
+          rebalance_frequency: "monthly",
+          benchmark_symbol: "SPY",
+          allocation: {
+            method: workflowStrategy.value,
+            max_position_weight: percentInputToRatio(maxPositionInput),
+            min_cash_weight: percentInputToRatio(minCashInput),
+          },
+          entry_rules: {
+            min_technical_score: workflowStrategy.value === "equal_weight" ? 50 : 60,
+            min_momentum_percent: workflowStrategy.value === "technical_score_weighted" ? 0 : null,
+            require_ma_cross: null,
+          },
+          exit_rules: {
+            max_technical_score: 40,
+            stop_loss_percent: 0.08,
+            require_ma_cross: null,
+          },
+          risk: {
+            max_portfolio_drawdown: percentInputToRatio(maxDrawdownInput),
+            max_sector_exposure: null,
+          },
+          sector_map: Object.fromEntries(
+            state.stocks
+              .filter((stock) => symbols.includes(stock.symbol))
+              .map((stock) => [stock.symbol, stock.sector || "Unknown"])
+          ),
+        };
+      }
+
+      function targetReturnStatus(result) {
+        const target = Number(targetReturnInput.value || 0);
+        const annualized = Number(result.annualized_return_percent || 0);
+        return annualized >= target
+          ? `达到年化收益目标 ${target.toFixed(0)}%。`
+          : `未达到年化收益目标 ${target.toFixed(0)}%，需要继续调低风险或调整股票池。`;
+      }
+
+      function renderBacktestResult(result) {
+        const cards = [
+          ["Total Return", formatPercent(result.total_return_percent)],
+          ["Annualized", formatPercent(result.annualized_return_percent)],
+          ["Max Drawdown", formatPercent(result.max_drawdown_percent)],
+          ["Sharpe", result.sharpe_ratio === null || result.sharpe_ratio === undefined ? "--" : Number(result.sharpe_ratio).toFixed(2)],
+          ["Alpha vs SPY", formatPercent(result.alpha_percent)],
+          ["Trades", String((result.trades || []).length)],
+        ];
+        const suggestions = (result.suggestions || []).slice(0, 3);
+        const risks = (result.risks || []).slice(0, 3);
+        backtestResults.innerHTML = `
+          <div class="result-grid">
+            ${cards.map(([label, value]) => `
+              <div class="result-card">
+                <div class="result-label">${escapeHtml(label)}</div>
+                <div class="result-value">${escapeHtml(value)}</div>
+              </div>
+            `).join("")}
+          </div>
+          <ul class="workflow-list">
+            <li>${escapeHtml(targetReturnStatus(result))}</li>
+            <li>最佳贡献：${escapeHtml(result.best_contributor || "--")}；最大拖累：${escapeHtml(result.worst_contributor || "--")}。</li>
+            <li>数据来源：${escapeHtml(result.source)}；算法版本：${escapeHtml(result.algorithm_version)}。</li>
+          </ul>
+          <ul class="workflow-list">
+            ${suggestions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+            ${risks.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+          </ul>
+        `;
+        portfolioRecommendation.textContent = `${result.strategy_name}：基于历史回测，建议继续人工复核 ${result.symbols.join(", ")} 的仓位、行业集中度和回撤承受能力。${result.risk_disclaimer}`;
+      }
+
+      async function runPortfolioBacktest() {
+        const symbols = activePortfolioSymbols();
+        if (symbols.length < 2) {
+          backtestResults.innerHTML = `<div class="workflow-note">请先在当前组合中至少加入 2 只股票，再运行回测。</div>`;
+          return;
+        }
+        runBacktestButton.disabled = true;
+        backtestResults.innerHTML = `<div class="workflow-note">正在运行回测：Universe → Strategy → Constraints → Backtest → AI Analysis...</div>`;
+        try {
+          const result = await postJson("/backtests/run", buildBacktestPayload());
+          renderBacktestResult(result);
+        } catch (error) {
+          backtestResults.innerHTML = `<div class="workflow-note">回测失败：${escapeHtml(error.message)}</div>`;
+        } finally {
+          runBacktestButton.disabled = false;
+        }
       }
 
       function matchesConcept(stock, concept) {
@@ -1643,6 +2031,8 @@
       refreshButton.addEventListener("click", loadMarket);
       scanUniverseButton.addEventListener("click", () => loadMostActiveUniverse(100));
       addPortfolioButton.addEventListener("click", addCurrentSymbolToPortfolio);
+      portfolioStrategy.addEventListener("change", renderBacktestSelectionSummary);
+      runBacktestButton.addEventListener("click", runPortfolioBacktest);
       rangeInput.addEventListener("change", loadMarket);
       intervalInput.addEventListener("change", loadMarket);
       window.addEventListener("resize", () => state.lastTrend && drawChart(state.lastTrend.points || []));
@@ -1666,6 +2056,7 @@
       document.getElementById("action-backtest").addEventListener("click", () => alert("模拟回测将在 backtesting 模块接入。"));
 
       renderPortfolioList();
+      renderBacktestSelectionSummary();
       loadMostActiveUniverse(100).then(loadMarket);
       window.setInterval(loadMarket, 60000);
     </script>
