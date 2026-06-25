@@ -131,6 +131,20 @@ class ProjectGovernanceTest(unittest.TestCase):
         missing = [term for term in required_terms if term not in html]
         self.assertEqual([], missing)
 
+    def test_chart_interface_has_sliding_crosshair_metrics(self) -> None:
+        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+
+        required_terms = [
+            "chart-inspector",
+            "pointermove",
+            "updateChartHover",
+            "inspect-volume",
+            "inspect-turnover",
+            "Turnover",
+        ]
+        missing = [term for term in required_terms if term not in html]
+        self.assertEqual([], missing)
+
 
 if __name__ == "__main__":
     unittest.main()

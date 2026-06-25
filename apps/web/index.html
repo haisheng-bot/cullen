@@ -209,6 +209,24 @@
         border: 1px solid #edf0f5;
         border-radius: 6px;
         background: #fbfdff;
+        cursor: crosshair;
+        touch-action: none;
+      }
+
+      .chart-inspector {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .chart-inspector .metric {
+        padding: 8px;
+        background: #fbfdff;
+      }
+
+      .chart-inspector .value {
+        font-size: 14px;
       }
 
       .metrics {
@@ -473,11 +491,11 @@
         }
         .topbar, aside, main, .rightbar { grid-column: 1; }
         canvas { height: 330px; }
-        .metrics, .layer-grid, .guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .metrics, .layer-grid, .guide-grid, .chart-inspector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
       @media (max-width: 560px) {
-        .metrics, .layer-grid, .guide-grid { grid-template-columns: 1fr; }
+        .metrics, .layer-grid, .guide-grid, .chart-inspector { grid-template-columns: 1fr; }
       }
     </style>
   </head>
@@ -540,6 +558,13 @@
 
         <section class="card chart-card">
           <canvas id="chart"></canvas>
+          <div class="chart-inspector">
+            <div class="metric"><div class="label">Time</div><div class="value" id="inspect-time">--</div></div>
+            <div class="metric"><div class="label">Price</div><div class="value" id="inspect-price">--</div></div>
+            <div class="metric"><div class="label">Change</div><div class="value" id="inspect-change">--</div></div>
+            <div class="metric"><div class="label">Volume</div><div class="value" id="inspect-volume">--</div></div>
+            <div class="metric"><div class="label">Turnover</div><div class="value" id="inspect-turnover">--</div></div>
+          </div>
           <div class="status" id="status">准备读取行情...</div>
         </section>
 
@@ -683,7 +708,7 @@
 
     <script>
       const API = window.location.origin;
-      const state = { symbol: "AAPL", stocks: [], lastTrend: null };
+      const state = { symbol: "AAPL", stocks: [], lastTrend: null, chartHoverIndex: null };
 
       const stockList = document.getElementById("stock-list");
       const searchForm = document.getElementById("search-form");
@@ -698,6 +723,19 @@
       const ctx = canvas.getContext("2d");
 
       const fmt = (value) => value === null || value === undefined ? "--" : Number(value).toFixed(2);
+      const formatCompactNumber = (value) => {
+        if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+        return Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 }).format(Number(value));
+      };
+      const formatMoney = (value) => {
+        if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+        return `$${formatCompactNumber(value)}`;
+      };
+      const formatChartTime = (timestamp) => {
+        if (!timestamp) return "--";
+        const date = new Date(timestamp);
+        return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      };
       const escapeHtml = (value) => String(value || "")
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
@@ -772,9 +810,11 @@
           const recommendation = await request(`/stocks/${state.symbol}/recommendation`);
           const news = await request(`/stocks/${state.symbol}/news?years=3&limit=60`);
           state.lastTrend = trend;
+          state.chartHoverIndex = null;
           renderQuote(quote);
           drawChart(trend.points || []);
           renderMetrics(trend);
+          renderInspector(trend.points?.at(-1), trend.points?.[0]);
           renderRecommendation(recommendation);
           renderNews(news);
           statusEl.textContent = `${state.symbol} 行情已更新`;
@@ -860,7 +900,62 @@
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       }
 
-      function drawChart(points) {
+      function renderInspector(point, firstPoint) {
+        if (!point) return;
+        const base = state.lastTrend?.previous_close || firstPoint?.close || point.close;
+        const change = point.close - base;
+        const changePercent = base ? (change / base) * 100 : 0;
+        const volume = point.volume;
+        const turnover = volume ? point.close * volume : null;
+        const cls = change >= 0 ? "positive" : "negative";
+        const sign = change >= 0 ? "+" : "";
+        document.getElementById("inspect-time").textContent = formatChartTime(point.timestamp);
+        document.getElementById("inspect-price").textContent = fmt(point.close);
+        const changeEl = document.getElementById("inspect-change");
+        changeEl.className = `value ${cls}`;
+        changeEl.textContent = `${sign}${fmt(change)} (${sign}${fmt(changePercent)}%)`;
+        document.getElementById("inspect-volume").textContent = formatCompactNumber(volume);
+        document.getElementById("inspect-turnover").textContent = formatMoney(turnover);
+      }
+
+      function chartLayout(width, height) {
+        const pad = { top: 24, right: 56, bottom: 30, left: 58 };
+        const priceHeight = Math.max(210, Math.floor((height - pad.top - pad.bottom) * 0.72));
+        const volumeTop = pad.top + priceHeight + 22;
+        const volumeHeight = Math.max(58, height - volumeTop - pad.bottom);
+        return {
+          pad,
+          priceTop: pad.top,
+          priceHeight,
+          volumeTop,
+          volumeHeight,
+          width: width - pad.left - pad.right,
+          right: width - pad.right,
+          bottom: height - pad.bottom,
+        };
+      }
+
+      function pointX(index, points, layout) {
+        return layout.pad.left + (layout.width * index) / Math.max(points.length - 1, 1);
+      }
+
+      function drawRoundedRect(context, x, y, width, height, radius) {
+        if (context.roundRect) {
+          context.roundRect(x, y, width, height, radius);
+          return;
+        }
+        context.moveTo(x + radius, y);
+        context.lineTo(x + width - radius, y);
+        context.quadraticCurveTo(x + width, y, x + width, y + radius);
+        context.lineTo(x + width, y + height - radius);
+        context.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        context.lineTo(x + radius, y + height);
+        context.quadraticCurveTo(x, y + height, x, y + height - radius);
+        context.lineTo(x, y + radius);
+        context.quadraticCurveTo(x, y, x + radius, y);
+      }
+
+      function drawChart(points, hoverIndex = state.chartHoverIndex) {
         resizeCanvas();
         const rect = canvas.getBoundingClientRect();
         const w = rect.width;
@@ -868,41 +963,124 @@
         ctx.clearRect(0, 0, w, h);
         if (!points.length) return;
 
-        const pad = { top: 24, right: 20, bottom: 30, left: 56 };
+        const layout = chartLayout(w, h);
         const values = points.map((p) => p.close);
         const min = Math.min(...values);
         const max = Math.max(...values);
         const span = max - min || 1;
-        const pw = w - pad.left - pad.right;
-        const ph = h - pad.top - pad.bottom;
+        const volumes = points.map((p) => p.volume || 0);
+        const maxVolume = Math.max(...volumes, 1);
+        const first = points[0];
+        const last = points[points.length - 1];
+        const lineColor = last.close >= first.close ? "#0f8b57" : "#c43b38";
 
         ctx.strokeStyle = "#e4eaf2";
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let i = 0; i <= 4; i++) {
-          const y = pad.top + (ph / 4) * i;
-          ctx.moveTo(pad.left, y);
-          ctx.lineTo(w - pad.right, y);
+          const y = layout.priceTop + (layout.priceHeight / 4) * i;
+          ctx.moveTo(layout.pad.left, y);
+          ctx.lineTo(layout.right, y);
         }
+        ctx.moveTo(layout.pad.left, layout.volumeTop);
+        ctx.lineTo(layout.right, layout.volumeTop);
+        ctx.moveTo(layout.pad.left, layout.bottom);
+        ctx.lineTo(layout.right, layout.bottom);
         ctx.stroke();
 
         ctx.fillStyle = "#607086";
         ctx.font = "12px system-ui";
         for (let i = 0; i <= 4; i++) {
           const value = max - (span / 4) * i;
-          ctx.fillText(value.toFixed(2), 10, pad.top + (ph / 4) * i + 4);
+          const y = layout.priceTop + (layout.priceHeight / 4) * i + 4;
+          ctx.fillText(value.toFixed(2), 10, y);
+          ctx.fillText(value.toFixed(2), layout.right + 8, y);
         }
+        ctx.fillText(formatCompactNumber(maxVolume), 10, layout.volumeTop + 12);
+        ctx.fillText("VOL", layout.right + 8, layout.volumeTop + 12);
 
-        ctx.strokeStyle = values[values.length - 1] >= values[0] ? "#0f8b57" : "#c43b38";
+        const barWidth = Math.max(2, layout.width / Math.max(points.length, 1) * 0.62);
+        points.forEach((point, index) => {
+          const x = pointX(index, points, layout);
+          const volumeHeight = ((point.volume || 0) / maxVolume) * layout.volumeHeight;
+          const prior = points[Math.max(index - 1, 0)];
+          ctx.fillStyle = point.close >= prior.close ? "rgba(15, 139, 87, 0.34)" : "rgba(196, 59, 56, 0.34)";
+          ctx.fillRect(x - barWidth / 2, layout.bottom - volumeHeight, barWidth, volumeHeight);
+        });
+
+        ctx.strokeStyle = lineColor;
         ctx.lineWidth = 2;
         ctx.beginPath();
         points.forEach((point, index) => {
-          const x = pad.left + (pw * index) / Math.max(points.length - 1, 1);
-          const y = pad.top + ph - ((point.close - min) / span) * ph;
+          const x = pointX(index, points, layout);
+          const y = layout.priceTop + layout.priceHeight - ((point.close - min) / span) * layout.priceHeight;
           if (index === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         });
         ctx.stroke();
+
+        const selectedIndex = Number.isInteger(hoverIndex) ? Math.max(0, Math.min(hoverIndex, points.length - 1)) : points.length - 1;
+        const selected = points[selectedIndex];
+        const selectedX = pointX(selectedIndex, points, layout);
+        const selectedY = layout.priceTop + layout.priceHeight - ((selected.close - min) / span) * layout.priceHeight;
+
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = "rgba(23, 32, 51, 0.45)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(selectedX, layout.priceTop);
+        ctx.lineTo(selectedX, layout.bottom);
+        ctx.moveTo(layout.pad.left, selectedY);
+        ctx.lineTo(layout.right, selectedY);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = lineColor;
+        ctx.beginPath();
+        ctx.arc(selectedX, selectedY, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        const base = state.lastTrend?.previous_close || first.close;
+        const change = selected.close - base;
+        const sign = change >= 0 ? "+" : "";
+        const turnover = selected.volume ? selected.close * selected.volume : null;
+        const tooltipLines = [
+          formatChartTime(selected.timestamp),
+          `Price ${fmt(selected.close)}`,
+          `Change ${sign}${fmt(change)}`,
+          `Vol ${formatCompactNumber(selected.volume)}`,
+          `Turnover ${formatMoney(turnover)}`,
+        ];
+        const tooltipWidth = 168;
+        const tooltipHeight = 104;
+        const tooltipX = selectedX + tooltipWidth + 18 > layout.right ? selectedX - tooltipWidth - 14 : selectedX + 14;
+        const tooltipY = Math.max(layout.priceTop + 4, Math.min(selectedY - 18, layout.bottom - tooltipHeight));
+        ctx.fillStyle = "rgba(17, 24, 39, 0.92)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        drawRoundedRect(ctx, tooltipX, tooltipY, tooltipWidth, tooltipHeight, 7);
+        ctx.fill();
+        ctx.stroke();
+        tooltipLines.forEach((line, index) => {
+          ctx.fillStyle = index === 2 ? (change >= 0 ? "#6ee7b7" : "#fca5a5") : "#f8fafc";
+          ctx.font = index === 1 ? "700 12px system-ui" : "12px system-ui";
+          ctx.fillText(line, tooltipX + 10, tooltipY + 20 + index * 17);
+        });
+
+        renderInspector(selected, first);
+      }
+
+      function updateChartHover(event) {
+        if (!state.lastTrend?.points?.length) return;
+        const points = state.lastTrend.points;
+        const rect = canvas.getBoundingClientRect();
+        const layout = chartLayout(rect.width, rect.height);
+        const clientX = event.touches?.[0]?.clientX ?? event.clientX;
+        const boundedX = Math.max(layout.pad.left, Math.min(clientX - rect.left, layout.right));
+        state.chartHoverIndex = Math.round(((boundedX - layout.pad.left) / Math.max(layout.width, 1)) * (points.length - 1));
+        drawChart(points, state.chartHoverIndex);
       }
 
       searchForm.addEventListener("submit", async (event) => {
@@ -918,6 +1096,16 @@
       rangeInput.addEventListener("change", loadMarket);
       intervalInput.addEventListener("change", loadMarket);
       window.addEventListener("resize", () => state.lastTrend && drawChart(state.lastTrend.points || []));
+      canvas.addEventListener("pointermove", updateChartHover);
+      canvas.addEventListener("pointerdown", updateChartHover);
+      canvas.addEventListener("pointerleave", () => {
+        state.chartHoverIndex = null;
+        if (state.lastTrend?.points?.length) drawChart(state.lastTrend.points);
+      });
+      canvas.addEventListener("touchmove", (event) => {
+        event.preventDefault();
+        updateChartHover(event);
+      }, { passive: false });
 
       document.getElementById("action-report").addEventListener("click", () => alert("研究报告功能将在下一轮接入 Model Layer。"));
       document.getElementById("action-score").addEventListener("click", loadMarket);
