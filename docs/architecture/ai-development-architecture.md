@@ -14,6 +14,8 @@ Codex / Claude Code / Cursor 在本项目中必须遵守：
 * 外部 API 调用必须封装
 * 投资结论必须带风险提示
 * 新增模块必须更新 docs
+* 每次迭代必须保持项目可运行或可测试
+* 不能把未实现功能描述为已发布功能
 
 ## 2. AI 开发流程
 
@@ -21,13 +23,39 @@ Codex / Claude Code / Cursor 在本项目中必须遵守：
 读取需求和标准文档
   -> 明确修改范围
   -> 在 develop 或 feature/* 分支开发
+  -> 先更新设计或接口约定
   -> 编写测试
   -> 运行检查
   -> 更新 docs
+  -> 更新 CHANGELOG
   -> 提交 Pull Request
 ```
 
-## 3. 模型调用架构
+## 3. AI 架构开发要求
+
+AI 相关功能必须按以下结构开发：
+
+```text
+Policy Guard
+  -> Data Context Builder
+  -> Model Provider Adapter
+  -> Agent Executor
+  -> Output Validator
+  -> Audit Logger
+```
+
+每个 AI Agent 必须明确：
+
+* 输入数据
+* 输出结构
+* 使用模型
+* 数据来源
+* 风险提示
+* 错误处理
+* audit_logs 写入字段
+* 测试用例
+
+## 4. 模型调用架构
 
 系统不得绑定单一模型。
 
@@ -40,7 +68,7 @@ Codex / Claude Code / Cursor 在本项目中必须遵守：
 * Qwen
 * 本地模型
 
-## 4. AI 输出校验
+## 5. AI 输出校验
 
 AI 输出必须检查：
 
@@ -53,3 +81,17 @@ AI 输出必须检查：
 
 本系统仅用于投资研究辅助，不构成任何投资建议。
 
+## 6. 即开发即使用要求
+
+AI 开发工具完成一个功能后，必须留下可执行入口或验证方式。
+
+允许的验证方式包括：
+
+* API 测试
+* 单元测试
+* 集成测试
+* 本地脚本
+* 前端页面
+* 示例输入输出
+
+没有验证方式的功能不得标记为完成。

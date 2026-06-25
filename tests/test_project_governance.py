@@ -26,6 +26,9 @@ class ProjectGovernanceTest(unittest.TestCase):
             "packages/backtesting",
             "packages/brokers",
             "docs/standards/project-standard-v0.1.md",
+            "docs/standards/version-management.md",
+            "docs/standards/github-collaboration.md",
+            "docs/standards/agile-iteration.md",
             "docs/product/requirements-analysis.md",
             "docs/architecture/system-design.md",
             "docs/architecture/ai-development-architecture.md",
@@ -38,6 +41,8 @@ class ProjectGovernanceTest(unittest.TestCase):
         docs = [
             "README.md",
             "docs/standards/project-standard-v0.1.md",
+            "docs/standards/github-collaboration.md",
+            "docs/standards/agile-iteration.md",
             "docs/product/requirements-analysis.md",
             "docs/architecture/system-design.md",
             "docs/architecture/ai-development-architecture.md",
@@ -49,4 +54,3 @@ class ProjectGovernanceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
