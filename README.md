@@ -39,24 +39,27 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI
 python3 -m unittest discover -s tests
 ```
 
-## 实时走势 MVP
+## 美股操作界面 MVP
 
 启动 API：
 
 ```bash
-python3 -m uvicorn apps.api.main:app --reload
+.venv311/bin/python -m uvicorn apps.api.main:app --reload
 ```
 
-接口：
+打开界面：
 
 ```text
+http://127.0.0.1:8000/
+```
+
+主要接口：
+
+```text
+GET http://127.0.0.1:8000/stocks/popular
+GET http://127.0.0.1:8000/stocks/search?q=AAPL
+GET http://127.0.0.1:8000/stocks/AAPL/quote
 GET http://127.0.0.1:8000/stocks/AAPL/trend?range=1d&interval=1m
-```
-
-前端页面：
-
-```text
-apps/web/realtime-trend.html
 ```
 
 ## Git 分支规范

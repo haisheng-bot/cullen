@@ -19,6 +19,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             ".github/workflows/ci.yml",
             ".github/pull_request_template.md",
             "apps/api/main.py",
+            "apps/web/index.html",
             "apps/web/realtime-trend.html",
             "apps/api",
             "apps/web",

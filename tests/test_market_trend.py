@@ -57,6 +57,8 @@ class MarketTrendTest(unittest.TestCase):
         self.assertEqual(2, len(response.points))
         self.assertEqual(210.1, response.points[0].close)
         self.assertEqual(211.25, response.points[1].close)
+        self.assertEqual(211.25, response.to_quote_dict()["latest_point_price"])
+        self.assertIn("change_percent", response.to_quote_dict())
 
     def test_parse_yahoo_chart_payload_reports_api_errors(self) -> None:
         payload = {"chart": {"result": None, "error": {"description": "not found"}}}

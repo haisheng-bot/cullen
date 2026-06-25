@@ -39,6 +39,28 @@ class TrendResponse:
     analysis_time: str
     risk_disclaimer: str = RISK_DISCLAIMER
 
+    @property
+    def latest_price(self) -> float:
+        return self.points[-1].close
+
+    @property
+    def price_change(self) -> float | None:
+        baseline = self.previous_close
+        if baseline in (None, 0):
+            baseline = self.points[0].close if self.points else None
+        if baseline in (None, 0):
+            return None
+        return round(self.latest_price - float(baseline), 4)
+
+    @property
+    def price_change_percent(self) -> float | None:
+        baseline = self.previous_close
+        if baseline in (None, 0):
+            baseline = self.points[0].close if self.points else None
+        if baseline in (None, 0):
+            return None
+        return round((self.latest_price - float(baseline)) / float(baseline) * 100, 4)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "symbol": self.symbol,
@@ -49,6 +71,21 @@ class TrendResponse:
             "regular_market_price": self.regular_market_price,
             "previous_close": self.previous_close,
             "points": [point.__dict__ for point in self.points],
+            "source": self.source,
+            "analysis_time": self.analysis_time,
+            "risk_disclaimer": self.risk_disclaimer,
+        }
+
+    def to_quote_dict(self) -> dict[str, Any]:
+        return {
+            "symbol": self.symbol,
+            "price": self.regular_market_price or self.latest_price,
+            "latest_point_price": self.latest_price,
+            "change": self.price_change,
+            "change_percent": self.price_change_percent,
+            "currency": self.currency,
+            "exchange_name": self.exchange_name,
+            "previous_close": self.previous_close,
             "source": self.source,
             "analysis_time": self.analysis_time,
             "risk_disclaimer": self.risk_disclaimer,
@@ -141,4 +178,3 @@ def parse_yahoo_chart_payload(
         source=YahooFinanceChartClient.source_name,
         analysis_time=datetime.now(timezone.utc).isoformat(),
     )
-

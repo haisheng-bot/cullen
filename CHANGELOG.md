@@ -16,3 +16,4 @@
 * 实时走势 API 和前端趋势图 MVP
 * 独立 Model Layer 标准、目录和 mock provider
 * AI 开发工具协作标准，支持 Codex、Claude Code、Cursor 混用开发
+* 美股操作界面 MVP，包含热门美股、搜索、报价和实时走势

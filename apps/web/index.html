@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenStock AI 工作台</title>
+    <style>
+      :root {
+        --bg: #eef2f7;
+        --panel: #ffffff;
+        --panel-2: #f8fafc;
+        --line: #d9e1ec;
+        --text: #172033;
+        --muted: #607086;
+        --green: #0f8b57;
+        --red: #c43b38;
+        --blue: #1d4ed8;
+        --amber: #9a6700;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); }
+      button, input, select { font: inherit; }
+
+      .app {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr) 320px;
+        grid-template-rows: 56px minmax(0, 1fr);
+      }
+
+      .topbar {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 18px;
+        background: #111827;
+        color: white;
+        border-bottom: 1px solid #0b1220;
+      }
+
+      .brand { font-size: 18px; font-weight: 700; min-width: 160px; }
+      .market-badge {
+        padding: 4px 8px;
+        border: 1px solid #344157;
+        border-radius: 6px;
+        color: #cbd5e1;
+        font-size: 12px;
+      }
+
+      .search {
+        flex: 1;
+        display: flex;
+        max-width: 520px;
+      }
+
+      .search input {
+        width: 100%;
+        height: 36px;
+        border: 1px solid #344157;
+        border-radius: 6px 0 0 6px;
+        padding: 0 12px;
+        background: #1f2937;
+        color: white;
+        outline: none;
+      }
+
+      .search button {
+        height: 36px;
+        border: 1px solid var(--blue);
+        border-radius: 0 6px 6px 0;
+        padding: 0 14px;
+        background: var(--blue);
+        color: white;
+        cursor: pointer;
+      }
+
+      aside, main, .rightbar { min-width: 0; }
+      aside {
+        background: var(--panel);
+        border-right: 1px solid var(--line);
+        padding: 12px;
+        overflow: auto;
+      }
+
+      main {
+        padding: 14px;
+        overflow: auto;
+      }
+
+      .rightbar {
+        background: var(--panel);
+        border-left: 1px solid var(--line);
+        padding: 12px;
+        overflow: auto;
+      }
+
+      .section-title {
+        margin: 8px 0 10px;
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .stock-list {
+        display: grid;
+        gap: 6px;
+      }
+
+      .stock-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 4px;
+        width: 100%;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        background: transparent;
+        padding: 9px;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .stock-item:hover, .stock-item.active {
+        background: #edf4ff;
+        border-color: #b8cef7;
+      }
+
+      .symbol { font-weight: 750; }
+      .name, .sector, .muted { color: var(--muted); font-size: 12px; }
+
+      .quote-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: end;
+        margin-bottom: 12px;
+      }
+
+      .quote-symbol { font-size: 30px; font-weight: 800; }
+      .quote-price { font-size: 30px; font-weight: 800; text-align: right; }
+      .positive { color: var(--green); }
+      .negative { color: var(--red); }
+
+      .toolbar, .card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 10px;
+        margin-bottom: 12px;
+      }
+
+      .toolbar select, .toolbar button {
+        height: 34px;
+        border-radius: 6px;
+        border: 1px solid #c8d3e2;
+        background: white;
+        padding: 0 10px;
+      }
+
+      .toolbar button {
+        background: #172033;
+        color: white;
+        border-color: #172033;
+        cursor: pointer;
+      }
+
+      .chart-card { padding: 14px; }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 430px;
+        border: 1px solid #edf0f5;
+        border-radius: 6px;
+        background: #fbfdff;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 10px;
+      }
+
+      .metric .label { color: var(--muted); font-size: 12px; }
+      .metric .value { margin-top: 5px; font-weight: 750; font-size: 16px; }
+
+      .action-stack { display: grid; gap: 8px; margin-bottom: 12px; }
+      .action-stack button {
+        height: 38px;
+        border: 1px solid #c8d3e2;
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        text-align: left;
+        padding: 0 10px;
+      }
+
+      .analysis {
+        display: grid;
+        gap: 10px;
+      }
+
+      .score {
+        display: grid;
+        grid-template-columns: 72px 1fr;
+        gap: 10px;
+        align-items: center;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-2);
+      }
+
+      .score-number {
+        display: grid;
+        place-items: center;
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: #e9f7ef;
+        color: var(--green);
+        font-weight: 850;
+        font-size: 22px;
+      }
+
+      .note {
+        border: 1px solid #f1d28a;
+        background: #fff8e6;
+        color: var(--amber);
+        border-radius: 8px;
+        padding: 10px;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .status {
+        min-height: 20px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      @media (max-width: 980px) {
+        .app {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto auto auto auto;
+        }
+        .topbar, aside, main, .rightbar { grid-column: 1; }
+        canvas { height: 330px; }
+        .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">OpenStock AI</div>
+        <div class="market-badge">US Securities</div>
+        <form class="search" id="search-form">
+          <input id="search-input" placeholder="搜索美股代码：AAPL / NVDA / TSLA" />
+          <button type="submit">查询</button>
+        </form>
+      </header>
+
+      <aside>
+        <div class="section-title">美股关注列表</div>
+        <div class="stock-list" id="stock-list"></div>
+      </aside>
+
+      <main>
+        <section class="quote-row">
+          <div>
+            <div class="quote-symbol" id="quote-symbol">AAPL</div>
+            <div class="muted" id="quote-meta">NASDAQ · USD</div>
+          </div>
+          <div>
+            <div class="quote-price" id="quote-price">--</div>
+            <div id="quote-change" class="muted">--</div>
+          </div>
+        </section>
+
+        <section class="toolbar">
+          <label>
+            范围
+            <select id="range">
+              <option value="1d">1日</option>
+              <option value="5d">5日</option>
+              <option value="1mo">1月</option>
+              <option value="3mo">3月</option>
+              <option value="6mo">6月</option>
+              <option value="1y">1年</option>
+            </select>
+          </label>
+          <label>
+            间隔
+            <select id="interval">
+              <option value="1m">1m</option>
+              <option value="5m">5m</option>
+              <option value="15m">15m</option>
+              <option value="60m">60m</option>
+              <option value="1d">1d</option>
+            </select>
+          </label>
+          <button id="refresh-button">刷新走势</button>
+        </section>
+
+        <section class="card chart-card">
+          <canvas id="chart"></canvas>
+          <div class="status" id="status">准备读取行情...</div>
+        </section>
+
+        <section class="metrics">
+          <div class="metric"><div class="label">数据源</div><div class="value" id="metric-source">--</div></div>
+          <div class="metric"><div class="label">最新点数</div><div class="value" id="metric-points">--</div></div>
+          <div class="metric"><div class="label">前收盘</div><div class="value" id="metric-prev">--</div></div>
+          <div class="metric"><div class="label">更新时间</div><div class="value" id="metric-time">--</div></div>
+        </section>
+      </main>
+
+      <aside class="rightbar">
+        <div class="section-title">研究操作</div>
+        <div class="action-stack">
+          <button id="action-report">生成研究报告</button>
+          <button id="action-score">刷新 AI 评分</button>
+          <button id="action-watch">加入观察清单</button>
+          <button id="action-backtest">模拟回测</button>
+        </div>
+
+        <div class="section-title">AI 研究评分</div>
+        <div class="analysis">
+          <div class="score">
+            <div class="score-number" id="score-number">--</div>
+            <div>
+              <div class="symbol" id="score-label">等待数据</div>
+              <div class="muted">初版评分会结合基本面、成长性、估值、技术面、新闻情绪和风险控制。</div>
+            </div>
+          </div>
+          <div class="note" id="research-note">请选择美股并刷新走势。当前页面只做研究辅助，不下单、不承诺收益。</div>
+          <div class="note">本系统仅用于投资研究辅助，不构成任何投资建议。</div>
+        </div>
+      </aside>
+    </div>
+
+    <script>
+      const API = window.location.origin;
+      const state = { symbol: "AAPL", stocks: [], lastTrend: null };
+
+      const stockList = document.getElementById("stock-list");
+      const searchForm = document.getElementById("search-form");
+      const searchInput = document.getElementById("search-input");
+      const rangeInput = document.getElementById("range");
+      const intervalInput = document.getElementById("interval");
+      const refreshButton = document.getElementById("refresh-button");
+      const statusEl = document.getElementById("status");
+      const canvas = document.getElementById("chart");
+      const ctx = canvas.getContext("2d");
+
+      const fmt = (value) => value === null || value === undefined ? "--" : Number(value).toFixed(2);
+
+      async function request(path) {
+        const response = await fetch(`${API}${path}`);
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${response.status}`);
+        }
+        return response.json();
+      }
+
+      async function loadStocks(query = "") {
+        const data = await request(query ? `/stocks/search?q=${encodeURIComponent(query)}` : "/stocks/popular");
+        state.stocks = data.items;
+        renderStockList();
+      }
+
+      function renderStockList() {
+        stockList.innerHTML = "";
+        state.stocks.forEach((stock) => {
+          const button = document.createElement("button");
+          button.className = `stock-item${stock.symbol === state.symbol ? " active" : ""}`;
+          button.innerHTML = `<span><span class="symbol">${stock.symbol}</span><br><span class="name">${stock.name}</span></span><span class="sector">${stock.sector}</span>`;
+          button.addEventListener("click", () => selectSymbol(stock.symbol));
+          stockList.appendChild(button);
+        });
+      }
+
+      async function selectSymbol(symbol) {
+        state.symbol = symbol.toUpperCase();
+        document.getElementById("quote-symbol").textContent = state.symbol;
+        renderStockList();
+        await loadMarket();
+      }
+
+      function normalizeInterval() {
+        if (rangeInput.value !== "1d" && ["1m"].includes(intervalInput.value)) {
+          intervalInput.value = "5m";
+        }
+      }
+
+      async function loadMarket() {
+        normalizeInterval();
+        refreshButton.disabled = true;
+        statusEl.textContent = `正在读取 ${state.symbol} 美股行情...`;
+        try {
+          const [quote, trend] = await Promise.all([
+            request(`/stocks/${state.symbol}/quote`),
+            request(`/stocks/${state.symbol}/trend?range=${rangeInput.value}&interval=${intervalInput.value}`),
+          ]);
+          state.lastTrend = trend;
+          renderQuote(quote);
+          drawChart(trend.points || []);
+          renderMetrics(trend);
+          renderResearchHint(quote, trend);
+          statusEl.textContent = `${state.symbol} 行情已更新`;
+        } catch (error) {
+          statusEl.textContent = `读取失败：${error.message}`;
+        } finally {
+          refreshButton.disabled = false;
+        }
+      }
+
+      function renderQuote(quote) {
+        document.getElementById("quote-symbol").textContent = quote.symbol;
+        document.getElementById("quote-meta").textContent = `${quote.exchange_name || "US"} · ${quote.currency || "USD"}`;
+        document.getElementById("quote-price").textContent = fmt(quote.price);
+        const change = quote.change || 0;
+        const cls = change >= 0 ? "positive" : "negative";
+        const sign = change >= 0 ? "+" : "";
+        const changeEl = document.getElementById("quote-change");
+        changeEl.className = cls;
+        changeEl.textContent = `${sign}${fmt(change)} (${sign}${fmt(quote.change_percent)}%)`;
+      }
+
+      function renderMetrics(trend) {
+        document.getElementById("metric-source").textContent = trend.source;
+        document.getElementById("metric-points").textContent = trend.points.length;
+        document.getElementById("metric-prev").textContent = fmt(trend.previous_close);
+        document.getElementById("metric-time").textContent = new Date(trend.analysis_time).toLocaleTimeString();
+      }
+
+      function renderResearchHint(quote, trend) {
+        const points = trend.points || [];
+        const start = points[0]?.close || quote.previous_close || quote.price;
+        const end = points[points.length - 1]?.close || quote.price;
+        const momentum = end >= start ? "偏强" : "偏弱";
+        const baseScore = Math.max(45, Math.min(88, Math.round(66 + ((end - start) / start) * 600)));
+        document.getElementById("score-number").textContent = baseScore;
+        document.getElementById("score-label").textContent = baseScore >= 85 ? "强关注" : baseScore >= 70 ? "观察" : baseScore >= 50 ? "中性" : "回避";
+        document.getElementById("research-note").textContent = `${quote.symbol} 当前短线走势${momentum}。该评分只是前端 MVP 根据走势生成的占位研究提示，正式版本将接入 Model Layer、财报、新闻和评分模型。`;
+      }
+
+      function resizeCanvas() {
+        const ratio = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = Math.floor(rect.width * ratio);
+        canvas.height = Math.floor(rect.height * ratio);
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      }
+
+      function drawChart(points) {
+        resizeCanvas();
+        const rect = canvas.getBoundingClientRect();
+        const w = rect.width;
+        const h = rect.height;
+        ctx.clearRect(0, 0, w, h);
+        if (!points.length) return;
+
+        const pad = { top: 24, right: 20, bottom: 30, left: 56 };
+        const values = points.map((p) => p.close);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const span = max - min || 1;
+        const pw = w - pad.left - pad.right;
+        const ph = h - pad.top - pad.bottom;
+
+        ctx.strokeStyle = "#e4eaf2";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i <= 4; i++) {
+          const y = pad.top + (ph / 4) * i;
+          ctx.moveTo(pad.left, y);
+          ctx.lineTo(w - pad.right, y);
+        }
+        ctx.stroke();
+
+        ctx.fillStyle = "#607086";
+        ctx.font = "12px system-ui";
+        for (let i = 0; i <= 4; i++) {
+          const value = max - (span / 4) * i;
+          ctx.fillText(value.toFixed(2), 10, pad.top + (ph / 4) * i + 4);
+        }
+
+        ctx.strokeStyle = values[values.length - 1] >= values[0] ? "#0f8b57" : "#c43b38";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        points.forEach((point, index) => {
+          const x = pad.left + (pw * index) / Math.max(points.length - 1, 1);
+          const y = pad.top + ph - ((point.close - min) / span) * ph;
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+
+      searchForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const query = searchInput.value.trim().toUpperCase();
+        if (!query) return loadStocks();
+        await loadStocks(query);
+        await selectSymbol(query);
+      });
+
+      refreshButton.addEventListener("click", loadMarket);
+      rangeInput.addEventListener("change", loadMarket);
+      intervalInput.addEventListener("change", loadMarket);
+      window.addEventListener("resize", () => state.lastTrend && drawChart(state.lastTrend.points || []));
+
+      document.getElementById("action-report").addEventListener("click", () => alert("研究报告功能将在下一轮接入 Model Layer。"));
+      document.getElementById("action-score").addEventListener("click", loadMarket);
+      document.getElementById("action-watch").addEventListener("click", () => alert(`${state.symbol} 已作为本地观察动作记录，持久化将在数据库版本接入。`));
+      document.getElementById("action-backtest").addEventListener("click", () => alert("模拟回测将在 backtesting 模块接入。"));
+
+      loadStocks().then(loadMarket);
+      window.setInterval(loadMarket, 60000);
+    </script>
+  </body>
+</html>

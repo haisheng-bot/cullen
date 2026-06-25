@@ -6,6 +6,9 @@
 
 ```text
 GET /stocks/{symbol}
+GET /stocks/popular
+GET /stocks/search
+GET /stocks/{symbol}/quote
 GET /stocks/{symbol}/financials
 GET /stocks/{symbol}/news
 GET /stocks/{symbol}/score
@@ -15,6 +18,37 @@ POST /backtests/run
 ```
 
 ## 2. 实时走势 API
+
+### 2.1 美股列表
+
+```text
+GET /stocks/popular
+GET /stocks/search?q=AAPL
+```
+
+用途：
+
+* 提供美股操作界面的默认关注列表
+* 支持按股票代码、公司名、行业搜索
+* 第一阶段使用内置热门美股列表，后续接入证券主数据服务
+
+### 2.2 单股报价
+
+```text
+GET /stocks/{symbol}/quote
+```
+
+用途：
+
+* 返回美股当前报价
+* 返回涨跌额和涨跌幅
+* 支撑操作台顶部报价区
+
+数据来源：
+
+* Yahoo Finance chart API
+
+### 2.3 实时走势
 
 ```text
 GET /stocks/{symbol}/trend?range=1d&interval=1m

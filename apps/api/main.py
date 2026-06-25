@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from packages.data_sources.market_trend import (
     MarketTrendError,
@@ -25,11 +28,72 @@ app.add_middleware(
 )
 
 trend_client = YahooFinanceChartClient()
+WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
+
+POPULAR_US_STOCKS = [
+    {"symbol": "AAPL", "name": "Apple Inc.", "sector": "Technology"},
+    {"symbol": "MSFT", "name": "Microsoft Corporation", "sector": "Technology"},
+    {"symbol": "NVDA", "name": "NVIDIA Corporation", "sector": "Semiconductors"},
+    {"symbol": "TSLA", "name": "Tesla, Inc.", "sector": "Consumer Discretionary"},
+    {"symbol": "AMZN", "name": "Amazon.com, Inc.", "sector": "Consumer Discretionary"},
+    {"symbol": "GOOGL", "name": "Alphabet Inc.", "sector": "Communication Services"},
+    {"symbol": "META", "name": "Meta Platforms, Inc.", "sector": "Communication Services"},
+    {"symbol": "BRK-B", "name": "Berkshire Hathaway Inc.", "sector": "Financials"},
+    {"symbol": "JPM", "name": "JPMorgan Chase & Co.", "sector": "Financials"},
+    {"symbol": "LLY", "name": "Eli Lilly and Company", "sector": "Health Care"},
+]
+
+app.mount("/static", StaticFiles(directory=WEB_ROOT), name="static")
+
+
+@app.get("/")
+def web_app() -> FileResponse:
+    return FileResponse(WEB_ROOT / "index.html")
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "openstock-ai-api"}
+
+
+@app.get("/stocks/popular")
+def get_popular_us_stocks() -> dict:
+    return {
+        "market": "US",
+        "items": POPULAR_US_STOCKS,
+        "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。",
+    }
+
+
+@app.get("/stocks/search")
+def search_us_stocks(q: str = Query("", max_length=32)) -> dict:
+    keyword = q.strip().upper()
+    items = [
+        item
+        for item in POPULAR_US_STOCKS
+        if not keyword
+        or keyword in item["symbol"]
+        or keyword in item["name"].upper()
+        or keyword in item["sector"].upper()
+    ]
+    return {
+        "market": "US",
+        "query": q,
+        "items": items,
+        "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。",
+    }
+
+
+@app.get("/stocks/{symbol}/quote")
+def get_stock_quote(symbol: str) -> dict:
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+        trend = trend_client.fetch_trend(normalized_symbol, range_="1d", interval="1m")
+        return trend.to_quote_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except MarketTrendError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @app.get("/stocks/{symbol}/trend")
@@ -45,4 +109,3 @@ def get_stock_trend(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except MarketTrendError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-
