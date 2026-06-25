@@ -7,6 +7,7 @@ if importlib.util.find_spec("fastapi") is None:
 from apps.api import main
 from packages.data_sources.market_trend import TrendPoint, TrendResponse
 from packages.data_sources.price_history import HistoryPoint, HistoryResponse
+from packages.data_sources.sec_filings import Filing, FilingListResponse
 from packages.universe_layer.schemas import UniverseResult, UniverseStock
 
 
@@ -46,6 +47,32 @@ class FakeHistoryClient:
         )
 
 
+class FakeSECFilingClient:
+    def list_filings(
+        self, symbol: str, forms: tuple[str, ...] = ("10-K", "10-Q", "8-K"), limit: int = 10
+    ) -> FilingListResponse:
+        return FilingListResponse(
+            symbol=symbol,
+            cik="0000320193",
+            company_name="Apple Inc.",
+            filings=[
+                Filing(
+                    form="10-K",
+                    filing_date="2025-11-01",
+                    report_date="2025-09-30",
+                    accession_number="0000320193-25-000100",
+                    primary_document="aapl-10k.htm",
+                    document_url=(
+                        "https://www.sec.gov/Archives/edgar/data/320193/"
+                        "000032019325000100/aapl-10k.htm"
+                    ),
+                )
+            ][:limit],
+            source="test-source",
+            analysis_time="2026-06-25T13:32:00+00:00",
+        )
+
+
 class FakeUniverseScanner:
     def scan(self, limit: int = 100) -> UniverseResult:
         return UniverseResult(
@@ -67,14 +94,17 @@ class ApiEndpointsTest(unittest.TestCase):
     def setUp(self) -> None:
         self.original_client = main.trend_client
         self.original_history_client = main.history_client
+        self.original_sec_filing_client = main.sec_filing_client
         self.original_universe_scanner = main.universe_scanner
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
+        main.sec_filing_client = FakeSECFilingClient()
         main.universe_scanner = FakeUniverseScanner()
 
     def tearDown(self) -> None:
         main.trend_client = self.original_client
         main.history_client = self.original_history_client
+        main.sec_filing_client = self.original_sec_filing_client
         main.universe_scanner = self.original_universe_scanner
 
     def test_popular_stocks_endpoint(self) -> None:
@@ -103,6 +133,14 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("10y", payload["range"])
         self.assertEqual(2, len(payload["points"]))
         self.assertEqual(95.0, payload["points"][0]["open"])
+
+    def test_sec_filings_endpoint(self) -> None:
+        payload = main.get_stock_sec_filings("AAPL", forms="10-K,10-Q,8-K", limit=10)
+
+        self.assertEqual("AAPL", payload["symbol"])
+        self.assertEqual("0000320193", payload["cik"])
+        self.assertEqual(1, len(payload["filings"]))
+        self.assertEqual("10-K", payload["filings"][0]["form"])
 
     def test_recommendation_endpoint(self) -> None:
         payload = main.get_stock_recommendation("AAPL")

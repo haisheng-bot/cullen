@@ -45,7 +45,7 @@
 ### M2 数据源
 
 * yfinance（近 10 年免费历史日 / 周 / 月线，`packages/data_sources/price_history.py`） [verified]
-* SEC EDGAR
+* SEC EDGAR（按代码解析 CIK，读取 10-K / 10-Q / 8-K 列表，`packages/data_sources/sec_filings.py`） [verified]
 * FRED
 * 实时走势 API 接入 [usable]
 

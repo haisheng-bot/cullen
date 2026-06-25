@@ -80,6 +80,7 @@ GET http://127.0.0.1:8000/stocks/AAPL/quote
 GET http://127.0.0.1:8000/stocks/AAPL/recommendation
 GET http://127.0.0.1:8000/stocks/AAPL/trend?range=1d&interval=1m
 GET http://127.0.0.1:8000/stocks/AAPL/history?range=10y&interval=1d
+GET http://127.0.0.1:8000/stocks/AAPL/filings?forms=10-K,10-Q,8-K&limit=10
 ```
 
 ## 模型层基础

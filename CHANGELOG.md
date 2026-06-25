@@ -25,3 +25,4 @@
 * 操作界面增加常用分析维度解读区域
 * 后端基础：统一配置管理、数据库连接层、audit_logs 表，以及 Docker Compose（Postgres + Redis）和数据库初始化脚本
 * yfinance 风格免费历史日线数据源（近 10 年日 / 周 / 月线 OHLCV），接入 `/stocks/{symbol}/history`
+* SEC EDGAR 财报申报读取（免费，按代码解析 CIK，列出 10-K / 10-Q / 8-K 原文链接），接入 `/stocks/{symbol}/filings`

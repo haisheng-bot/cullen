@@ -12,6 +12,7 @@ GET /stocks/universe/most-active
 GET /stocks/{symbol}/quote
 GET /stocks/{symbol}/recommendation
 GET /stocks/{symbol}/history
+GET /stocks/{symbol}/filings
 GET /stocks/{symbol}/financials
 GET /stocks/{symbol}/news
 GET /stocks/{symbol}/score
@@ -88,7 +89,7 @@ GET /stocks/{symbol}/history?range=10y&interval=1d
 用途：
 
 * 提供近 10 年的免费历史日 / 周 / 月线（开高低收量）
-* 用于长周期回测和趋势研究，区别于 2.5 节的分钟级实时走势
+* 用于长周期回测和趋势研究，区别于 2.6 节的分钟级实时走势
 
 数据来源：
 
@@ -127,13 +128,60 @@ interval  间隔：1d, 1wk, 1mo
 }
 ```
 
-### 2.5 实时走势
+### 2.5 SEC 财报读取（SEC EDGAR，免费）
+
+```text
+GET /stocks/{symbol}/filings?forms=10-K,10-Q,8-K&limit=10
+```
+
+用途：
+
+* 按股票代码解析 SEC CIK，并读取最近的 10-K / 10-Q / 8-K 等申报文件列表
+* 提供官方文档原文链接，供 AI 财报总结（M3 SEC Filing Agent）和人工核查使用
+* 免费、无需 API Key，但请求需带描述性 User-Agent（SEC 公平访问要求）
+
+数据来源：
+
+* SEC EDGAR（`www.sec.gov` 股票代码映射 + `data.sec.gov` 申报记录接口）
+
+请求参数：
+
+```text
+symbol    美股代码，例如 AAPL
+forms     逗号分隔的表单类型，默认 10-K,10-Q,8-K
+limit     返回条数上限，默认 10，最大 50
+```
+
+响应示例：
+
+```json
+{
+  "symbol": "AAPL",
+  "cik": "0000320193",
+  "company_name": "Apple Inc.",
+  "filings": [
+    {
+      "form": "10-Q",
+      "filing_date": "2026-05-01",
+      "report_date": "2026-03-28",
+      "accession_number": "0000320193-26-000013",
+      "primary_document": "aapl-20260328.htm",
+      "document_url": "https://www.sec.gov/Archives/edgar/data/320193/000032019326000013/aapl-20260328.htm"
+    }
+  ],
+  "source": "SEC EDGAR",
+  "analysis_time": "2026-06-25T13:31:00+00:00",
+  "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
+}
+```
+
+### 2.6 实时走势
 
 ```text
 GET /stocks/{symbol}/trend?range=1d&interval=1m
 ```
 
-### 2.6 推荐算法
+### 2.7 推荐算法
 
 ```text
 GET /stocks/{symbol}/recommendation
