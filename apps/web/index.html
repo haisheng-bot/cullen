@@ -199,6 +199,65 @@
       .metric .label { color: var(--muted); font-size: 12px; }
       .metric .value { margin-top: 5px; font-weight: 750; font-size: 16px; }
 
+      .project-board {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .project-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+
+      .project-title {
+        font-weight: 800;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        height: 24px;
+        padding: 0 8px;
+        border-radius: 999px;
+        background: #e9f7ef;
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 750;
+        white-space: nowrap;
+      }
+
+      .layer-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .layer {
+        border: 1px solid #e1e7f0;
+        border-radius: 8px;
+        background: #fbfdff;
+        padding: 9px;
+        min-height: 74px;
+      }
+
+      .layer-name {
+        font-size: 13px;
+        font-weight: 800;
+        margin-bottom: 4px;
+      }
+
+      .layer-status {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
       .action-stack { display: grid; gap: 8px; margin-bottom: 12px; }
       .action-stack button {
         height: 38px;
@@ -304,7 +363,11 @@
         }
         .topbar, aside, main, .rightbar { grid-column: 1; }
         canvas { height: 330px; }
-        .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .metrics, .layer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+
+      @media (max-width: 560px) {
+        .metrics, .layer-grid { grid-template-columns: 1fr; }
       }
     </style>
   </head>
@@ -371,6 +434,42 @@
           <div class="metric"><div class="label">最新点数</div><div class="value" id="metric-points">--</div></div>
           <div class="metric"><div class="label">前收盘</div><div class="value" id="metric-prev">--</div></div>
           <div class="metric"><div class="label">更新时间</div><div class="value" id="metric-time">--</div></div>
+        </section>
+
+        <section class="project-board">
+          <div class="project-head">
+            <div>
+              <div class="project-title">项目开发界面</div>
+              <div class="muted">OpenStock AI · v0.1.0 · 即开发即使用</div>
+            </div>
+            <span class="status-pill">MVP 可用</span>
+          </div>
+          <div class="layer-grid">
+            <div class="layer">
+              <div class="layer-name">Application</div>
+              <div class="layer-status">美股操作界面、报价、走势、推荐展示已接入。</div>
+            </div>
+            <div class="layer">
+              <div class="layer-name">Algorithm Layer</div>
+              <div class="layer-status">algorithm-v0.1，趋势型推荐算法，可单独测试。</div>
+            </div>
+            <div class="layer">
+              <div class="layer-name">Model Layer</div>
+              <div class="layer-status">LiteLLM-compatible provider 已建立，真实模型待配置。</div>
+            </div>
+            <div class="layer">
+              <div class="layer-name">Data Layer</div>
+              <div class="layer-status">Yahoo Finance chart API 已接入，美股为主。</div>
+            </div>
+            <div class="layer">
+              <div class="layer-name">Workflow / Agent</div>
+              <div class="layer-status">标准已定义，后续接入 LangGraph 与 Agent SDK。</div>
+            </div>
+            <div class="layer">
+              <div class="layer-name">Governance</div>
+              <div class="layer-status">GitHub、版本、AI 工具协作、敏捷迭代标准已建立。</div>
+            </div>
+          </div>
         </section>
       </main>
 

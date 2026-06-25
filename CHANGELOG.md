@@ -20,3 +20,4 @@
 * 双击启动脚本 `open-app.command`
 * 独立 Algorithm Layer 和趋势型推荐算法，并接入操作界面
 * LiteLLM-compatible Model Layer provider 和标准
+* 项目开发界面，展示版本、架构层和当前可用状态

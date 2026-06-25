@@ -63,6 +63,21 @@ class ProjectGovernanceTest(unittest.TestCase):
         missing = [path for path in docs if DISCLAIMER not in (ROOT / path).read_text(encoding="utf-8")]
         self.assertEqual([], missing)
 
+    def test_project_interface_tracks_architecture_layers(self) -> None:
+        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+
+        required_terms = [
+            "项目开发界面",
+            "Application",
+            "Algorithm Layer",
+            "Model Layer",
+            "Data Layer",
+            "Workflow / Agent",
+            "Governance",
+        ]
+        missing = [term for term in required_terms if term not in html]
+        self.assertEqual([], missing)
+
 
 if __name__ == "__main__":
     unittest.main()
