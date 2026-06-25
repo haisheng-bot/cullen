@@ -116,6 +116,14 @@ class ProjectGovernanceTest(unittest.TestCase):
             "loadMostActiveUniverse(100)",
             "state.stocks.forEach",
             "overflow-y: auto",
+            "height: 1086px",
+            "height: 48px",
+            "组合策略选择",
+            "portfolio-strategy",
+            "portfolio-list",
+            "addCurrentSymbolToPortfolio",
+            "renderPortfolioList",
+            "removeSymbolFromPortfolio",
         ]
         missing = [term for term in required_terms if term not in html]
         self.assertEqual([], missing)
