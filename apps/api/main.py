@@ -6,11 +6,14 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
+from packages.algorithm_layer.recommendation import TrendRecommendationAlgorithm
+from packages.algorithm_layer.schemas import AlgorithmPoint, RecommendationInput
 from packages.data_sources.market_trend import (
     MarketTrendError,
     YahooFinanceChartClient,
     normalize_symbol,
 )
+from packages.db.session import check_database_connection
 
 
 app = FastAPI(
@@ -28,6 +31,7 @@ app.add_middleware(
 )
 
 trend_client = YahooFinanceChartClient()
+recommendation_algorithm = TrendRecommendationAlgorithm()
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
 
 POPULAR_US_STOCKS = [
@@ -54,6 +58,11 @@ def web_app() -> FileResponse:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "openstock-ai-api"}
+
+
+@app.get("/health/db")
+def health_db() -> dict[str, str]:
+    return {"status": "ok" if check_database_connection() else "unavailable"}
 
 
 @app.get("/stocks/popular")
@@ -90,6 +99,29 @@ def get_stock_quote(symbol: str) -> dict:
         normalized_symbol = normalize_symbol(symbol)
         trend = trend_client.fetch_trend(normalized_symbol, range_="1d", interval="1m")
         return trend.to_quote_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except MarketTrendError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/stocks/{symbol}/recommendation")
+def get_stock_recommendation(symbol: str) -> dict:
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+        trend = trend_client.fetch_trend(normalized_symbol, range_="1d", interval="1m")
+        algorithm_input = RecommendationInput(
+            symbol=trend.symbol,
+            latest_price=trend.regular_market_price or trend.latest_price,
+            previous_close=trend.previous_close,
+            points=[
+                AlgorithmPoint(timestamp=point.timestamp, close=point.close, volume=point.volume)
+                for point in trend.points
+            ],
+            source=trend.source,
+            analysis_time=trend.analysis_time,
+        )
+        return recommendation_algorithm.recommend(algorithm_input).to_dict()
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except MarketTrendError as exc:

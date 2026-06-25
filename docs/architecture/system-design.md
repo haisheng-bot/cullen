@@ -9,6 +9,8 @@ Agent Layer
         |
 Workflow Layer
         |
+Algorithm Layer
+        |
 Model Layer
         |
 Knowledge Layer
@@ -29,6 +31,7 @@ Data Layer
 * 实时走势 API
 * Agent 编排
 * 评分计算
+* 推荐算法调用
 * 研究报告生成
 * audit_logs 写入
 
@@ -61,7 +64,24 @@ Data Layer
 * Finnhub
 * Polygon
 
-## 5. Model Layer
+## 5. Algorithm Layer
+
+算法层位于 `packages/algorithm_layer`，独立于 API、前端、Agent 和 Model Layer。
+
+Algorithm Layer 负责：
+
+* 推荐算法
+* 股票评分
+* 因子计算
+* 推荐等级
+* 风险因子
+* 候选股排序
+
+详细标准见：
+
+* `docs/standards/ALGORITHM_STANDARD.md`
+
+## 6. Model Layer
 
 模型层位于 `packages/model_layer`，是独立于 Agent 的核心层。
 
@@ -81,7 +101,7 @@ Agent、Workflow、API 和 Data Source 不得直接调用具体模型 SDK。
 
 * `docs/standards/MODEL_STANDARD.md`
 
-## 6. AI Agent 层
+## 7. AI Agent 层
 
 Agent 位于 `packages/ai_agents`，至少包括：
 
@@ -93,7 +113,7 @@ Agent 位于 `packages/ai_agents`，至少包括：
 
 Agent 只负责任务定义和业务推理目标，不负责模型供应商适配。
 
-## 7. 审计日志
+## 8. 审计日志
 
 所有 AI 输出必须写入 `audit_logs`。
 

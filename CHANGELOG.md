@@ -18,3 +18,4 @@
 * AI 开发工具协作标准，支持 Codex、Claude Code、Cursor 混用开发
 * 美股操作界面 MVP，包含热门美股、搜索、报价和实时走势
 * 双击启动脚本 `open-app.command`
+* 独立 Algorithm Layer 和趋势型推荐算法，并接入操作界面

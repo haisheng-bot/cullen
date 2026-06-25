@@ -135,6 +135,7 @@ openstock-ai/
 ├── packages/
 │   ├── data_sources/
 │   ├── ai_agents/
+│   ├── algorithm_layer/
 │   ├── model_layer/
 │   ├── scoring/
 │   ├── backtesting/

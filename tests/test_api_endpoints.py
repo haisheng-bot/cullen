@@ -54,6 +54,14 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("AAPL", payload["symbol"])
         self.assertEqual(2, len(payload["points"]))
 
+    def test_recommendation_endpoint(self) -> None:
+        payload = main.get_stock_recommendation("AAPL")
+
+        self.assertEqual("AAPL", payload["symbol"])
+        self.assertIn(payload["recommendation"], {"强关注", "观察", "中性", "回避"})
+        self.assertEqual("algorithm-v0.1", payload["algorithm_version"])
+        self.assertTrue(payload["factors"])
+
 
 if __name__ == "__main__":
     unittest.main()

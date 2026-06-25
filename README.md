@@ -23,6 +23,7 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI
 ## 文档入口
 
 * [项目标准文档 v0.1](docs/standards/project-standard-v0.1.md)
+* [Algorithm Layer 标准](docs/standards/ALGORITHM_STANDARD.md)
 * [Model Layer 标准](docs/standards/MODEL_STANDARD.md)
 * [需求分析 v0.1](docs/product/requirements-analysis.md)
 * [系统设计框架](docs/architecture/system-design.md)
@@ -65,6 +66,7 @@ http://127.0.0.1:8000/
 GET http://127.0.0.1:8000/stocks/popular
 GET http://127.0.0.1:8000/stocks/search?q=AAPL
 GET http://127.0.0.1:8000/stocks/AAPL/quote
+GET http://127.0.0.1:8000/stocks/AAPL/recommendation
 GET http://127.0.0.1:8000/stocks/AAPL/trend?range=1d&interval=1m
 ```
 

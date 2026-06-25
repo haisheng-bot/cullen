@@ -9,6 +9,7 @@ GET /stocks/{symbol}
 GET /stocks/popular
 GET /stocks/search
 GET /stocks/{symbol}/quote
+GET /stocks/{symbol}/recommendation
 GET /stocks/{symbol}/financials
 GET /stocks/{symbol}/news
 GET /stocks/{symbol}/score
@@ -53,6 +54,27 @@ GET /stocks/{symbol}/quote
 ```text
 GET /stocks/{symbol}/trend?range=1d&interval=1m
 ```
+
+### 2.4 推荐算法
+
+```text
+GET /stocks/{symbol}/recommendation
+```
+
+用途：
+
+* 调用独立 Algorithm Layer
+* 返回股票评分和推荐等级
+* 展示因子分、推荐理由和风险
+
+第一阶段算法：
+
+* `algorithm-v0.1`
+* 基于实时走势、前收盘、波动和成交量活跃度
+
+说明：
+
+推荐算法仅用于研究关注优先级，不构成买卖建议。
 
 用途：
 
