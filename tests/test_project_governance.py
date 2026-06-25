@@ -146,11 +146,11 @@ class ProjectGovernanceTest(unittest.TestCase):
         missing = [term for term in required_terms if term not in html]
         self.assertEqual([], missing)
 
-    def test_concept_preview_is_between_project_board_and_screener_guide(self) -> None:
+    def test_main_analysis_sections_follow_requested_order(self) -> None:
         html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
 
-        self.assertLess(html.index("项目开发界面"), html.index("美国概念板块预览"))
-        self.assertLess(html.index("美国概念板块预览"), html.index("常用分析维度解读"))
+        self.assertLess(html.index("常用分析维度解读"), html.index("美国概念板块预览"))
+        self.assertLess(html.index("美国概念板块预览"), html.index("项目开发界面"))
 
     def test_project_interface_includes_news_policy_panel(self) -> None:
         html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
