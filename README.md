@@ -70,6 +70,16 @@ GET http://127.0.0.1:8000/stocks/AAPL/recommendation
 GET http://127.0.0.1:8000/stocks/AAPL/trend?range=1d&interval=1m
 ```
 
+## 模型层基础
+
+Model Layer 采用 LiteLLM-compatible 设计。真实模型供应商只允许通过：
+
+```text
+packages/model_layer/providers/litellm_provider.py
+```
+
+Agent、Workflow、Algorithm Layer 和 API 不得直接调用模型 SDK。
+
 ## Git 分支规范
 
 ```text

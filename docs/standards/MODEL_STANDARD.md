@@ -10,6 +10,24 @@ Model Layer 是 OpenStock AI 的核心基础层之一。
 
 本系统仅用于投资研究辅助，不构成任何投资建议。
 
+## 1.1 标准基础
+
+OpenStock AI 的 Model Layer 采用 LiteLLM-compatible 设计。
+
+LiteLLM 用作模型网关和统一模型接口的参考基础，Model Layer 必须兼容以下能力：
+
+* OpenAI-compatible chat completion interface
+* 多模型供应商路由
+* fallback
+* token usage 统计
+* 成本估算
+* 请求日志
+* 本地模型接入
+* provider 隔离
+* 不让 Agent、Workflow、API 直接接触模型 SDK
+
+第一阶段不要求强制安装 LiteLLM，但所有真实模型 provider 必须按 LiteLLM-compatible 接口设计。
+
 ## 2. 架构位置
 
 OpenStock AI 的核心分层如下：
@@ -89,20 +107,17 @@ packages/model_layer/
 packages/model_layer/
 ├── __init__.py
 ├── base.py
+├── config.py
 ├── registry.py
 ├── router.py
 ├── schemas.py
 ├── providers/
-│   ├── openai_provider.py
-│   ├── claude_provider.py
-│   ├── gemini_provider.py
-│   ├── deepseek_provider.py
-│   ├── qwen_provider.py
-│   └── local_provider.py
+│   ├── litellm_provider.py
+│   └── mock_provider.py
 └── tests/
 ```
 
-第一阶段可以先实现接口和 mock provider，不要求一次性接入所有真实模型。
+第一阶段可以先实现接口、mock provider 和 LiteLLM-compatible provider，不要求一次性接入所有真实模型。
 
 ## 5. 支持模型
 
@@ -117,6 +132,14 @@ packages/model_layer/
 * 本地模型
 
 Agent、Workflow、API、Data Source 不得硬编码这些供应商 SDK 调用。
+
+真实模型调用统一通过：
+
+```text
+packages/model_layer/providers/litellm_provider.py
+```
+
+禁止在 Agent、Workflow、Algorithm Layer 或 API 中直接 import OpenAI、Anthropic、Google、DeepSeek、Qwen、Ollama 等 SDK。
 
 ## 6. 统一模型请求
 
@@ -176,6 +199,8 @@ Model Router 负责选择具体模型。
 * API Key 可用性
 * fallback 策略
 
+Router 输出必须仍然是统一的 `ModelResponse`，不得把 LiteLLM 原始响应泄漏到上层。
+
 ## 9. Agent 与 Model Layer 边界
 
 Agent 可以定义任务目标、准备任务输入、请求 Workflow 执行、使用 ModelResponse 的结果。
@@ -207,6 +232,20 @@ Workflow 不可以直接依赖某个模型 SDK，不可以把 provider 细节暴
 * 将 key 写入 commit
 
 `.env.example` 只能保留空值示例。
+
+模型配置建议使用：
+
+```text
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GOOGLE_API_KEY=
+DEEPSEEK_API_KEY=
+QWEN_API_KEY=
+OLLAMA_BASE_URL=
+OPENSTOCK_DEFAULT_MODEL=
+```
+
+所有 key 由 LiteLLM provider 或运行环境读取，不得进入代码和测试。
 
 ## 12. 审计要求
 
@@ -256,6 +295,7 @@ Model Layer 每个 provider、router 和 schema 必须有测试。
 * ModelRequest 结构
 * ModelResponse 结构
 * mock provider
+* LiteLLM-compatible provider
 * router fallback
 * 风险提示检查
 * 禁止词检查
@@ -266,8 +306,8 @@ Model Layer 每个 provider、router 和 schema 必须有测试。
 Model Layer 单独记录能力版本。
 
 ```text
-model-layer-v0.1  接口标准和 mock provider
-model-layer-v0.2  OpenAI / 本地模型适配
+model-layer-v0.1  接口标准、mock provider、LiteLLM-compatible provider
+model-layer-v0.2  LiteLLM 真实 provider 配置和本地模型适配
 model-layer-v0.3  Claude / Gemini / DeepSeek / Qwen 适配
 model-layer-v0.4  模型路由和 fallback
 model-layer-v0.5  成本统计和评测
@@ -275,4 +315,3 @@ model-layer-v1.0  稳定模型抽象层
 ```
 
 任何模型层破坏性变更必须同步更新 docs、CHANGELOG 和 tests。
-
