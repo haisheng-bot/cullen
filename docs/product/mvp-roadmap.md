@@ -60,7 +60,7 @@
 
 ### M4 评分与报告
 
-* 规则化推荐评分（Algorithm Layer，`algorithm-v0.2.2`，已接入真实 SEC 财务数据和真实技术指标：基本面（净利润率+ROC）/成长性/估值（P/E+EV/EBIT）/技术面（RSI/均线金死叉/动量）/风险五因子） [verified]
+* 规则化推荐评分（Algorithm Layer，`algorithm-v0.3`，已接入真实 SEC 财务数据、真实技术指标和规则化新闻情绪：基本面（净利润率+ROC）/成长性/估值（P/E+EV/EBIT）/技术面（RSI/均线金死叉/动量）/新闻情绪/风险六因子） [verified]
 * AI 选股批量排序（Workflow Layer，`packages/workflow_layer/stock_screening.py`，并发扫描候选池并按分排序，`/stocks/screening`） [verified]
 * 选股结果落库存历史（`stock_scores` 表 + `/stocks/{symbol}/score-history`，支持按时间对比同一只股票的评分变化） [verified]
 * Scoring Agent（基于 Model Layer 的 AI 评分，区别于上面的规则算法） [planned]

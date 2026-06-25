@@ -147,7 +147,7 @@ algorithm-v0.1    趋势型推荐算法 [released]
 algorithm-v0.2    加入财务和估值因子（基于 SEC XBRL company facts） [released]
 algorithm-v0.2.1  技术面因子升级为真实技术指标（RSI/均线金死叉/动量） [released]
 algorithm-v0.2.2  基本面/估值因子加入 Magic Formula 指标（ROC、EV/EBIT） [released]
-algorithm-v0.3    加入新闻情绪因子 [planned]
+algorithm-v0.3    加入新闻情绪因子 [released]
 algorithm-v0.4    加入风险模型 [planned]
 algorithm-v1.0    稳定推荐算法 [planned]
 ```
@@ -166,7 +166,7 @@ technical (技术面)                20%
 volatility_risk (风险，区间波动)  10%
 ```
 
-这是 `project-standard-v0.1.md` 第 6 节目标权重（基本面30+成长性20+估值20+技术面10+新闻情绪10+风险10）在新闻情绪因子尚未接入前的过渡分配：技术面权重临时从 10% 提到 20% 吸收新闻情绪的份额，v0.3 接入新闻情绪因子后会重新拆分。
+这是 `project-standard-v0.1.md` 第 6 节目标权重（基本面30+成长性20+估值20+技术面10+新闻情绪10+风险10）在新闻情绪因子尚未接入前的过渡分配。v0.3 已接入新闻情绪因子，技术面权重回到 10%，新闻情绪使用 10%。
 
 财务数据来自 SEC EDGAR XBRL company facts（`packages/data_sources/sec_financials.py`），免费、无需 Key。当某只股票缺少可用财务数据（例如新上市公司、非标准 XBRL 标签）时，三个因子退化为中性分（50分）并在 `risks` 字段中明确提示，不会导致接口报错。
 
@@ -196,3 +196,22 @@ valuation    = P/E 50% + EV/EBIT 50%
 
 两个新指标都依赖 SEC XBRL 的 `OperatingIncomeLoss`/`AssetsCurrent`/`LiabilitiesCurrent`/`PropertyPlantAndEquipmentNet`/`CashAndCashEquivalentsAtCarryingValue`/`LongTermDebtNoncurrent` 等标签，覆盖率低于营收/净利润（部分行业，例如金融类公司，不一定有标准的 `OperatingIncomeLoss`）。任一指标缺数据时该因子自动退化为只用另一个指标，并在 `explanation` 中注明"缺 ROC 数据"/"缺企业价值数据"；两个都缺时退化为中性分 50，跟 v0.2 行为一致，不影响接口可用性。
 
+### 9.4 algorithm-v0.3 新闻情绪因子说明
+
+v0.3 接入 News / Policy Layer，新增 `news_sentiment` 因子，权重 10%。
+
+```text
+fundamentals       30%
+growth             20%
+valuation          20%
+technical          10%
+news_sentiment     10%
+volatility_risk    10%
+```
+
+第一阶段新闻情绪为规则化估算：
+
+* 输入来自 Yahoo Finance RSS 最近新闻和 SEC EDGAR 披露线索。
+* 使用正向/负向关键词和治理、政策、任免类披露进行打分。
+* 没有新闻信号时按 50 分中性处理，并在风险提示中说明。
+* 后续可替换为 FinBERT、LLM 或专业新闻情绪数据源，算法输入接口保持不变。

@@ -6,6 +6,7 @@ from packages.algorithm_layer.base import RecommendationAlgorithm
 from packages.algorithm_layer.schemas import (
     FactorScore,
     FinancialFactorsInput,
+    NewsSignalInput,
     RecommendationInput,
     RecommendationResult,
     TechnicalSeriesInput,
@@ -21,15 +22,14 @@ NO_DATA_SCORE = 50
 
 
 class TrendRecommendationAlgorithm(RecommendationAlgorithm):
-    """algorithm-v0.2.2: fundamentals/valuation factors enriched with
-    Magic Formula-style metrics (ROC and EV/EBIT earnings yield) alongside
-    the existing net margin and P/E, since they capture capital efficiency
-    and cheapness that net margin/P/E alone miss. Technical factor (RSI-14/
-    MA(5,20) cross/10-day momentum) unchanged from v0.2.1. See
-    docs/standards/ALGORITHM_STANDARD.md section 9 for the version roadmap.
+    """algorithm-v0.3: adds a replaceable news sentiment factor on top of
+    the v0.2.2 financial/valuation/technical factors. The first v0.3
+    implementation uses rule-based public news and SEC disclosure signals;
+    it can later be replaced by FinBERT or an LLM without changing the
+    RecommendationInput contract.
     """
 
-    algorithm_version = "algorithm-v0.2.2"
+    algorithm_version = "algorithm-v0.3"
 
     def recommend(self, data: RecommendationInput) -> RecommendationResult:
         if not data.points:
@@ -50,6 +50,7 @@ class TrendRecommendationAlgorithm(RecommendationAlgorithm):
         fundamentals_score, fundamentals_explanation = _fundamentals_score(data.financial_factors)
         growth_score, growth_explanation = _growth_score(data.financial_factors)
         valuation_score, valuation_explanation = _valuation_score(data.financial_factors, latest_price)
+        news_score, news_explanation = _news_sentiment_score(data.news_signals)
 
         factors = [
             FactorScore(
@@ -73,8 +74,14 @@ class TrendRecommendationAlgorithm(RecommendationAlgorithm):
             FactorScore(
                 name="technical",
                 score=technical_score,
-                weight=0.20,
+                weight=0.10,
                 explanation=technical_explanation,
+            ),
+            FactorScore(
+                name="news_sentiment",
+                score=news_score,
+                weight=0.10,
+                explanation=news_explanation,
             ),
             FactorScore(
                 name="volatility_risk",
@@ -87,7 +94,7 @@ class TrendRecommendationAlgorithm(RecommendationAlgorithm):
         total_score = round(sum(factor.score * factor.weight for factor in factors))
         recommendation = recommendation_label(total_score)
         reasons = build_reasons(trend_change_percent, day_change_percent, volatility_percent)
-        risks = build_risks(volatility_percent, recommendation, data.financial_factors)
+        risks = build_risks(volatility_percent, recommendation, data.financial_factors, data.news_signals)
 
         return RecommendationResult(
             symbol=data.symbol,
@@ -135,10 +142,13 @@ def build_risks(
     volatility_percent: float,
     recommendation: str,
     financial_factors: FinancialFactorsInput | None,
+    news_signals: list[NewsSignalInput],
 ) -> list[str]:
-    risks = ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。"]
+    risks = ["新闻情绪为规则化初版估算，估值评分为绝对档位启发式，非行业相对。"]
     if financial_factors is None:
         risks.append("未提供财务数据，基本面/成长性/估值三项暂以中性分计入。")
+    if not news_signals:
+        risks.append("未提供新闻/披露信号，新闻情绪暂以中性分计入。")
     if volatility_percent >= 2.5:
         risks.append("短线波动较大，评分可能快速变化。")
     if recommendation in {"强关注", "观察"}:
@@ -167,6 +177,79 @@ def _volatility_percent(closes: list[float]) -> float:
     if average_close == 0:
         return 0.0
     return (max(closes) - min(closes)) / average_close * 100
+
+
+_POSITIVE_NEWS_TERMS = {
+    "beat",
+    "beats",
+    "raise",
+    "raises",
+    "raised",
+    "upgrade",
+    "upgraded",
+    "growth",
+    "record",
+    "approval",
+    "approved",
+    "launch",
+    "launched",
+    "partnership",
+    "contract",
+    "wins",
+    "strong",
+    "profit",
+    "revenue",
+    "buyback",
+    "dividend",
+    "surges",
+}
+
+_NEGATIVE_NEWS_TERMS = {
+    "miss",
+    "misses",
+    "cut",
+    "cuts",
+    "downgrade",
+    "downgraded",
+    "lawsuit",
+    "probe",
+    "investigation",
+    "resign",
+    "resignation",
+    "bankruptcy",
+    "layoff",
+    "warning",
+    "recall",
+    "antitrust",
+    "fraud",
+    "loss",
+    "plunges",
+    "risk",
+    "risks",
+}
+
+
+def _news_sentiment_score(news_signals: list[NewsSignalInput]) -> tuple[int, str]:
+    if not news_signals:
+        return NO_DATA_SCORE, "未提供新闻/披露信号，暂以中性分计入。"
+
+    positive_hits = 0
+    negative_hits = 0
+    disclosure_risk_hits = 0
+    for signal in news_signals:
+        text = f"{signal.title} {signal.summary}".lower()
+        positive_hits += sum(1 for term in _POSITIVE_NEWS_TERMS if term in text)
+        negative_hits += sum(1 for term in _NEGATIVE_NEWS_TERMS if term in text)
+        if signal.category in {"management_change", "governance", "policy"}:
+            disclosure_risk_hits += 1
+
+    raw_score = 50 + positive_hits * 5 - negative_hits * 6 - disclosure_risk_hits * 2
+    score = max(20, min(85, round(raw_score)))
+    explanation = (
+        f"基于 {len(news_signals)} 条新闻/SEC 披露信号，正向词 {positive_hits}，"
+        f"负向词 {negative_hits}，治理/政策披露 {disclosure_risk_hits} 条（规则化估算）"
+    )
+    return score, explanation
 
 
 _CROSS_LABELS = {

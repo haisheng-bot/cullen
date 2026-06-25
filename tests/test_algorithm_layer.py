@@ -5,6 +5,7 @@ from packages.algorithm_layer.schemas import (
     AlgorithmPoint,
     RISK_DISCLAIMER,
     FinancialFactorsInput,
+    NewsSignalInput,
     RecommendationInput,
     TechnicalSeriesInput,
 )
@@ -34,18 +35,27 @@ class AlgorithmLayerTest(unittest.TestCase):
         result = TrendRecommendationAlgorithm().recommend(data)
 
         self.assertEqual("AAPL", result.symbol)
-        self.assertEqual("algorithm-v0.2.2", result.algorithm_version)
+        self.assertEqual("algorithm-v0.3", result.algorithm_version)
         self.assertGreaterEqual(result.total_score, 0)
         self.assertLessEqual(result.total_score, 100)
-        self.assertEqual(5, len(result.factors))
+        self.assertEqual(6, len(result.factors))
         self.assertTrue(result.reasons)
         self.assertTrue(result.risks)
         self.assertEqual(RISK_DISCLAIMER, result.risk_disclaimer)
         factor_names = {factor.name for factor in result.factors}
         self.assertEqual(
-            {"fundamentals", "growth", "valuation", "technical", "volatility_risk"}, factor_names
+            {
+                "fundamentals",
+                "growth",
+                "valuation",
+                "technical",
+                "news_sentiment",
+                "volatility_risk",
+            },
+            factor_names,
         )
         self.assertIn("未提供财务数据", " ".join(result.risks))
+        self.assertIn("未提供新闻/披露信号", " ".join(result.risks))
 
     def test_recommendation_uses_real_fundamentals_when_provided(self) -> None:
         data = RecommendationInput(
@@ -157,6 +167,34 @@ class AlgorithmLayerTest(unittest.TestCase):
         # Sustained uptrend should score above the neutral default.
         self.assertGreater(technical_factor.score, 50)
 
+    def test_news_sentiment_factor_uses_news_signals(self) -> None:
+        data = RecommendationInput(
+            symbol="AAPL",
+            latest_price=104.0,
+            previous_close=100.0,
+            points=[
+                AlgorithmPoint(timestamp="2026-06-25T13:30:00+00:00", close=100.0, volume=1000),
+                AlgorithmPoint(timestamp="2026-06-25T13:32:00+00:00", close=104.0, volume=1800),
+            ],
+            source="test-source",
+            analysis_time="2026-06-25T13:33:00+00:00",
+            news_signals=[
+                NewsSignalInput(
+                    title="Apple beats revenue expectations and raises dividend",
+                    summary="Strong profit growth and new buyback program.",
+                    category="company_news",
+                    source="test-news",
+                )
+            ],
+        )
+
+        result = TrendRecommendationAlgorithm().recommend(data)
+
+        news_factor = next(factor for factor in result.factors if factor.name == "news_sentiment")
+        self.assertGreater(news_factor.score, 50)
+        self.assertIn("正向词", news_factor.explanation)
+        self.assertNotIn("未提供新闻/披露信号", " ".join(result.risks))
+
     def test_trend_recommendation_requires_points(self) -> None:
         data = RecommendationInput(
             symbol="AAPL",
@@ -173,4 +211,3 @@ class AlgorithmLayerTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

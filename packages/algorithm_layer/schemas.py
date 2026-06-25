@@ -48,6 +48,14 @@ class TechnicalSeriesInput:
 
 
 @dataclass(frozen=True)
+class NewsSignalInput:
+    title: str
+    summary: str = ""
+    category: str = "company_news"
+    source: str = ""
+
+
+@dataclass(frozen=True)
 class RecommendationInput:
     symbol: str
     latest_price: float
@@ -57,6 +65,7 @@ class RecommendationInput:
     analysis_time: str
     financial_factors: FinancialFactorsInput | None = None
     technical_series: TechnicalSeriesInput | None = None
+    news_signals: list[NewsSignalInput] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -101,4 +110,3 @@ class RecommendationResult:
             "analysis_time": self.analysis_time,
             "risk_disclaimer": self.risk_disclaimer,
         }
-

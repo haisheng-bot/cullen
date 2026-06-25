@@ -16,6 +16,7 @@ from packages.algorithm_layer.base import RecommendationAlgorithm
 from packages.algorithm_layer.schemas import (
     AlgorithmPoint,
     FinancialFactorsInput,
+    NewsSignalInput,
     RecommendationInput,
     TechnicalSeriesInput,
 )
@@ -33,12 +34,14 @@ class StockScreeningWorkflow:
         algorithm: RecommendationAlgorithm,
         financial_factors_fetcher: Callable[[str], FinancialFactorsInput | None],
         technical_series_fetcher: Callable[[str], TechnicalSeriesInput | None] | None = None,
+        news_signals_fetcher: Callable[[str], list[NewsSignalInput]] | None = None,
     ) -> None:
         self.universe_scanner = universe_scanner
         self.trend_client = trend_client
         self.algorithm = algorithm
         self.financial_factors_fetcher = financial_factors_fetcher
         self.technical_series_fetcher = technical_series_fetcher or (lambda symbol: None)
+        self.news_signals_fetcher = news_signals_fetcher or (lambda symbol: [])
 
     def screen(self, limit: int = 20) -> ScreeningResult:
         universe = self.universe_scanner.scan(limit=limit)
@@ -89,6 +92,7 @@ class StockScreeningWorkflow:
             analysis_time=trend.analysis_time,
             financial_factors=self.financial_factors_fetcher(item.symbol),
             technical_series=self.technical_series_fetcher(item.symbol),
+            news_signals=self.news_signals_fetcher(item.symbol),
         )
         result = self.algorithm.recommend(algorithm_input)
 

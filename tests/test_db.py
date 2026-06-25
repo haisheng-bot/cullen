@@ -98,7 +98,7 @@ class StockScorePersistenceTest(unittest.TestCase):
                     reasons=["区间走势为正，短线动量偏强。"],
                     risks=[],
                     source="test-source",
-                    algorithm_version="algorithm-v0.2.2",
+                    algorithm_version="algorithm-v0.3",
                 )
             ],
             skipped=[],

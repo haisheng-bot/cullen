@@ -11,6 +11,7 @@ from packages.algorithm_layer.recommendation import TrendRecommendationAlgorithm
 from packages.algorithm_layer.schemas import (
     AlgorithmPoint,
     FinancialFactorsInput,
+    NewsSignalInput,
     RecommendationInput,
     TechnicalSeriesInput,
 )
@@ -97,12 +98,30 @@ def _fetch_technical_series(symbol: str) -> TechnicalSeriesInput | None:
     return TechnicalSeriesInput(closes=closes)
 
 
+def _fetch_news_signals(symbol: str) -> list[NewsSignalInput]:
+    """Best-effort rule-based news sentiment inputs for algorithm-v0.3."""
+    try:
+        news = news_policy_client.fetch(symbol, years=3, limit=20)
+    except NewsPolicyError:
+        return []
+    return [
+        NewsSignalInput(
+            title=item.title,
+            summary=item.summary,
+            category=item.category,
+            source=item.source,
+        )
+        for item in news.items
+    ]
+
+
 screening_workflow = StockScreeningWorkflow(
     universe_scanner=universe_scanner,
     trend_client=trend_client,
     algorithm=recommendation_algorithm,
     financial_factors_fetcher=_fetch_financial_factors,
     technical_series_fetcher=_fetch_technical_series,
+    news_signals_fetcher=_fetch_news_signals,
 )
 
 POPULAR_US_STOCKS = [
@@ -198,6 +217,7 @@ def get_stock_recommendation(symbol: str) -> dict:
             analysis_time=trend.analysis_time,
             financial_factors=_fetch_financial_factors(normalized_symbol),
             technical_series=_fetch_technical_series(normalized_symbol),
+            news_signals=_fetch_news_signals(normalized_symbol),
         )
         return recommendation_algorithm.recommend(algorithm_input).to_dict()
     except ValueError as exc:
