@@ -215,7 +215,7 @@
 
       .chart-inspector {
         display: grid;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(8, minmax(0, 1fr));
         gap: 8px;
         margin-top: 10px;
       }
@@ -597,7 +597,10 @@
             <div class="metric"><div class="label">Price</div><div class="value" id="inspect-price">--</div></div>
             <div class="metric"><div class="label">Change</div><div class="value" id="inspect-change">--</div></div>
             <div class="metric"><div class="label">Volume</div><div class="value" id="inspect-volume">--</div></div>
-            <div class="metric"><div class="label">Turnover</div><div class="value" id="inspect-turnover">--</div></div>
+            <div class="metric"><div class="label">Amount</div><div class="value" id="inspect-turnover">--</div></div>
+            <div class="metric"><div class="label">Turnover Rate</div><div class="value" id="inspect-turnover-rate">--</div></div>
+            <div class="metric"><div class="label">Buy Vol</div><div class="value positive" id="inspect-buy-volume">--</div></div>
+            <div class="metric"><div class="label">Sell Vol</div><div class="value negative" id="inspect-sell-volume">--</div></div>
           </div>
           <div class="status" id="status">准备读取行情...</div>
         </section>
@@ -819,11 +822,11 @@
           renderQuote(quote);
           drawChart(trend.points || []);
           renderMetrics(trend);
-          renderInspector(trend.points?.at(-1), trend.points?.[0]);
+          renderInspector(trend.points?.at(-1), trend.points?.[0], Math.max((trend.points || []).length - 1, 0), trend.points || []);
           renderRecommendation(recommendation);
           renderScreenerGuide(quote, trend, history, recommendation);
           renderNews(news);
-          statusEl.textContent = `${state.symbol} 行情已更新`;
+          statusEl.textContent = `${state.symbol} 行情已更新 · 买/卖量为分钟线方向估算`;
         } catch (error) {
           statusEl.textContent = `读取失败：${error.message}`;
         } finally {
@@ -1077,8 +1080,44 @@
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       }
 
-      function renderInspector(point, firstPoint) {
+      function estimatedSharesOutstanding(price) {
+        const stock = currentUniverseStock();
+        if (!stock?.market_cap || !price) return null;
+        return stock.market_cap / price;
+      }
+
+      function estimateTradeFlow(points, index) {
+        const point = points[index];
+        if (!point) {
+          return { buyVolume: null, sellVolume: null, cumulativeVolume: null, turnoverRate: null, direction: "flat" };
+        }
+        const previous = points[Math.max(index - 1, 0)];
+        const volume = point.volume || 0;
+        let buyVolume = 0;
+        let sellVolume = 0;
+        let direction = "flat";
+        if (point.close > previous.close) {
+          buyVolume = volume;
+          direction = "buy";
+        } else if (point.close < previous.close) {
+          sellVolume = volume;
+          direction = "sell";
+        } else {
+          buyVolume = volume / 2;
+          sellVolume = volume / 2;
+        }
+        const cumulativeVolume = points
+          .slice(0, index + 1)
+          .reduce((sum, item) => sum + (item.volume || 0), 0);
+        const sharesOutstanding = estimatedSharesOutstanding(point.close);
+        const turnoverRate = sharesOutstanding ? (cumulativeVolume / sharesOutstanding) * 100 : null;
+        return { buyVolume, sellVolume, cumulativeVolume, turnoverRate, direction };
+      }
+
+      function renderInspector(point, firstPoint, pointIndex = null, points = state.lastTrend?.points || []) {
         if (!point) return;
+        const selectedIndex = pointIndex ?? Math.max(points.findIndex((item) => item === point), 0);
+        const flow = estimateTradeFlow(points, selectedIndex);
         const base = state.lastTrend?.previous_close || firstPoint?.close || point.close;
         const change = point.close - base;
         const changePercent = base ? (change / base) * 100 : 0;
@@ -1093,6 +1132,9 @@
         changeEl.textContent = `${sign}${fmt(change)} (${sign}${fmt(changePercent)}%)`;
         document.getElementById("inspect-volume").textContent = formatCompactNumber(volume);
         document.getElementById("inspect-turnover").textContent = formatMoney(turnover);
+        document.getElementById("inspect-turnover-rate").textContent = formatPercent(flow.turnoverRate);
+        document.getElementById("inspect-buy-volume").textContent = formatCompactNumber(flow.buyVolume);
+        document.getElementById("inspect-sell-volume").textContent = formatCompactNumber(flow.sellVolume);
       }
 
       function chartLayout(width, height) {
@@ -1222,15 +1264,18 @@
         const change = selected.close - base;
         const sign = change >= 0 ? "+" : "";
         const turnover = selected.volume ? selected.close * selected.volume : null;
+        const flow = estimateTradeFlow(points, selectedIndex);
         const tooltipLines = [
           formatChartTime(selected.timestamp),
           `Price ${fmt(selected.close)}`,
           `Change ${sign}${fmt(change)}`,
           `Vol ${formatCompactNumber(selected.volume)}`,
-          `Turnover ${formatMoney(turnover)}`,
+          `Amount ${formatMoney(turnover)}`,
+          `T/O Rate ${formatPercent(flow.turnoverRate)}`,
+          `Buy ${formatCompactNumber(flow.buyVolume)} / Sell ${formatCompactNumber(flow.sellVolume)}`,
         ];
         const tooltipWidth = 168;
-        const tooltipHeight = 104;
+        const tooltipHeight = 138;
         const tooltipX = selectedX + tooltipWidth + 18 > layout.right ? selectedX - tooltipWidth - 14 : selectedX + 14;
         const tooltipY = Math.max(layout.priceTop + 4, Math.min(selectedY - 18, layout.bottom - tooltipHeight));
         ctx.fillStyle = "rgba(17, 24, 39, 0.92)";
@@ -1246,7 +1291,7 @@
           ctx.fillText(line, tooltipX + 10, tooltipY + 20 + index * 17);
         });
 
-        renderInspector(selected, first);
+        renderInspector(selected, first, selectedIndex, points);
       }
 
       function updateChartHover(event) {
@@ -1260,6 +1305,13 @@
         const ratio = (boundedX - layout.pad.left) / Math.max(layout.width, 1);
         state.chartHoverIndex = Math.round(ratio * (points.length - 1));
         drawChart(points, state.chartHoverIndex);
+      }
+
+      function updateChartHoverFromClientPoint(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const insideChart = clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+        if (!insideChart) return;
+        updateChartHover({ clientX, clientY });
       }
 
       searchForm.addEventListener("submit", async (event) => {
@@ -1278,6 +1330,8 @@
       canvas.addEventListener("pointermove", updateChartHover);
       canvas.addEventListener("pointerdown", updateChartHover);
       canvas.addEventListener("mousemove", updateChartHover);
+      document.addEventListener("mousemove", (event) => updateChartHoverFromClientPoint(event.clientX, event.clientY));
+      document.addEventListener("pointermove", (event) => updateChartHoverFromClientPoint(event.clientX, event.clientY));
       canvas.addEventListener("pointerleave", () => {
         state.chartHoverIndex = null;
         if (state.lastTrend?.points?.length) drawChart(state.lastTrend.points);

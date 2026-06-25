@@ -144,11 +144,22 @@ class ProjectGovernanceTest(unittest.TestCase):
             "pointermove",
             "mousemove",
             "updateChartHover",
+            "updateChartHoverFromClientPoint",
+            "document.addEventListener(\"mousemove\"",
+            "document.addEventListener(\"pointermove\"",
             "offsetX",
             "chartSizeKey",
             "inspect-volume",
             "inspect-turnover",
-            "Turnover",
+            "inspect-turnover-rate",
+            "inspect-buy-volume",
+            "inspect-sell-volume",
+            "Turnover Rate",
+            "Buy Vol",
+            "Sell Vol",
+            "estimateTradeFlow",
+            "estimatedSharesOutstanding",
+            "买/卖量为分钟线方向估算",
         ]
         missing = [term for term in required_terms if term not in html]
         self.assertEqual([], missing)
