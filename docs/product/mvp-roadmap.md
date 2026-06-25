@@ -51,9 +51,11 @@
 
 ### M3 AI 分析
 
-* 模型统一接口（`packages/model_layer`，mock provider + LiteLLM-compatible provider） [usable]
-* SEC Filing Agent [planned]
-* News Agent [planned]
+* 模型统一接口（`packages/model_layer`，mock provider + LiteLLM-compatible provider，无 Key 自动 fallback mock，有 Key 自动切换 litellm） [verified]
+* Output Validator（`packages/model_layer/validator.py`，已接入 ModelRouter，强制检查风险提示/数据来源/禁止词） [verified]
+* Agent 基类（`packages/ai_agents/base.py`，Policy Guard → Data Context Builder → Workflow Executor → Model Layer → Output Validator → Audit Logger） [verified]
+* SEC Filing Agent（`packages/ai_agents/sec_filing_agent.py`，接入 `/stocks/{symbol}/sec-summary`，已用真实 SEC 数据端到端联调） [verified]
+* News Agent（消费 `packages/news_layer` 原始数据 + 情绪分析，待接 FinBERT 或 LLM） [planned]
 * Report Agent [planned]
 
 ### M4 评分与报告
@@ -73,5 +75,6 @@
 
 * Universe Layer：每日扫描美股最活跃 Top 100 候选池（`packages/universe_layer`） [verified]
 * Algorithm Layer：独立于 Model Layer 的可解释推荐算法（`packages/algorithm_layer`） [verified]
+* News / Policy Layer：原始新闻、监管披露和公司治理事件抓取（`packages/news_layer`，区别于 News Agent 的 AI 分析） [verified]
 * 一键启动脚本 `open-app.command` [usable]
 * 项目开发界面：展示版本、架构层和当前状态 [usable]

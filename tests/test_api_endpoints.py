@@ -11,6 +11,8 @@ from packages.data_sources.fred import FREDObservation, FREDSeriesResponse
 from packages.data_sources.sec_filings import Filing, FilingListResponse
 from packages.news_layer.schemas import NewsItem, NewsPolicyResponse
 from packages.universe_layer.schemas import UniverseResult, UniverseStock
+from packages.ai_agents.base import AgentResult
+from packages.model_layer.schemas import RISK_DISCLAIMER, ModelResponse, TokenUsage
 
 
 class FakeTrendClient:
@@ -116,6 +118,29 @@ class FakeNewsPolicyClient:
         )
 
 
+class FakeSECFilingAgent:
+    def run(self, symbol: str, *, trace_id: str | None = None, write_audit: bool = True) -> AgentResult:
+        response = ModelResponse(
+            provider="mock",
+            model_name="mock-model-v0",
+            task_type="sec_filing_summary",
+            output="Apple filed a routine 10-Q with no notable governance changes.",
+            citations=["https://www.sec.gov/example-10q.htm"],
+            confidence=0.5,
+            token_usage=TokenUsage(input_tokens=10, output_tokens=10, total_tokens=20),
+            cost_estimate=0.0,
+            latency_ms=1,
+            trace_id="trace-sec-001",
+            input_summary="Recent SEC filings for AAPL",
+        )
+        return AgentResult(
+            symbol=symbol,
+            task_type="sec_filing_summary",
+            response=response,
+            generated_at="2026-06-25T13:32:00+00:00",
+        )
+
+
 class FakeUniverseScanner:
     def scan(self, limit: int = 100) -> UniverseResult:
         return UniverseResult(
@@ -140,12 +165,14 @@ class ApiEndpointsTest(unittest.TestCase):
         self.original_sec_filing_client = main.sec_filing_client
         self.original_fred_client = main.fred_client
         self.original_news_policy_client = main.news_policy_client
+        self.original_sec_filing_agent = main.sec_filing_agent
         self.original_universe_scanner = main.universe_scanner
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
         main.sec_filing_client = FakeSECFilingClient()
         main.fred_client = FakeFREDClient()
         main.news_policy_client = FakeNewsPolicyClient()
+        main.sec_filing_agent = FakeSECFilingAgent()
         main.universe_scanner = FakeUniverseScanner()
 
     def tearDown(self) -> None:
@@ -154,6 +181,7 @@ class ApiEndpointsTest(unittest.TestCase):
         main.sec_filing_client = self.original_sec_filing_client
         main.fred_client = self.original_fred_client
         main.news_policy_client = self.original_news_policy_client
+        main.sec_filing_agent = self.original_sec_filing_agent
         main.universe_scanner = self.original_universe_scanner
 
     def test_popular_stocks_endpoint(self) -> None:
@@ -197,6 +225,14 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("FEDFUNDS", payload["series_id"])
         self.assertEqual(2, len(payload["observations"]))
         self.assertEqual(5.33, payload["observations"][0]["value"])
+
+    def test_sec_summary_agent_endpoint(self) -> None:
+        payload = main.get_stock_sec_summary("AAPL")
+
+        self.assertEqual("AAPL", payload["symbol"])
+        self.assertEqual("sec_filing_summary", payload["task_type"])
+        self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
+        self.assertIn("10-Q", payload["conclusion"])
 
     def test_news_policy_endpoint(self) -> None:
         payload = main.get_stock_news_policy("AAPL", years=3, limit=10)

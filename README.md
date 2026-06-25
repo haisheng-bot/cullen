@@ -88,6 +88,7 @@ GET http://127.0.0.1:8000/stocks/AAPL/news?years=3&limit=30
 GET http://127.0.0.1:8000/stocks/AAPL/trend?range=1d&interval=1m
 GET http://127.0.0.1:8000/stocks/AAPL/history?range=10y&interval=1d
 GET http://127.0.0.1:8000/stocks/AAPL/filings?forms=10-K,10-Q,8-K&limit=10
+GET http://127.0.0.1:8000/stocks/AAPL/sec-summary
 GET http://127.0.0.1:8000/macro/FEDFUNDS/observations?limit=10
 ```
 
@@ -102,6 +103,22 @@ packages/model_layer/providers/litellm_provider.py
 ```
 
 Agent、Workflow、Algorithm Layer 和 API 不得直接调用模型 SDK。
+
+未配置任何模型 API Key 时，`packages/model_layer/factory.py` 的 `build_default_router()` 自动 fallback 到 `mock` provider；配置 `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` 等任意一个后自动切换为 `litellm` provider，无需改代码。
+
+每次模型调用在返回前都会经过 `packages/model_layer/validator.py` 的 Output Validator：检查风险提示、数据来源（citations）、模型信息是否齐全，以及输出是否包含"必买/保证上涨/无风险/稳赚"等禁止词，不合规直接抛出 `OutputValidationError`。
+
+## AI Agent Layer（M3）
+
+第一个落地的 Agent：
+
+```text
+GET http://127.0.0.1:8000/stocks/AAPL/sec-summary
+```
+
+`SECFilingAgent`（`packages/ai_agents/sec_filing_agent.py`）走完整流水线：Policy Guard → Data Context Builder（拉取 SEC EDGAR 申报）→ Workflow Executor → Model Layer（含 Output Validator）→ Audit Logger（写入 `audit_logs`）。已用真实 SEC 数据（AAPL）做过端到端联调。
+
+Agent 基类见 `packages/ai_agents/base.py`，后续 News Agent、Report Agent 复用同一流水线。
 
 ## 后端基础（配置 / 数据库 / audit_logs）
 

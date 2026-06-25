@@ -13,6 +13,7 @@ GET /stocks/{symbol}/quote
 GET /stocks/{symbol}/recommendation
 GET /stocks/{symbol}/history
 GET /stocks/{symbol}/filings
+GET /stocks/{symbol}/sec-summary
 GET /stocks/{symbol}/financials
 GET /stocks/{symbol}/news
 GET /stocks/{symbol}/score
@@ -267,7 +268,7 @@ interval  间隔：1m, 2m, 5m, 15m, 30m, 60m, 1d
 }
 ```
 
-### 2.8 FRED 宏观数据（需免费 API Key）
+### 2.9 FRED 宏观数据（需免费 API Key）
 
 ```text
 GET /macro/{series_id}/observations?start_date=&end_date=&limit=100
@@ -309,7 +310,47 @@ limit         返回条数上限，默认 100，最大 1000
 
 说明：本接口尚未接入真实 FRED Key 做过线上联调，仅通过 mock payload 完成单元测试覆盖；接入真实 Key 后请重新做一次实际请求验证。
 
-## 3. 响应要求
+## 3. AI Agent API
+
+第一个落地的 AI Agent，走完整 Policy Guard → Data Context Builder → Workflow Executor → Model Layer → Agent Executor → Output Validator → Audit Logger 流水线（见 `docs/architecture/ai-development-architecture.md` 第 3 节）。
+
+### 3.1 SEC Filing Agent
+
+```text
+GET /stocks/{symbol}/sec-summary
+```
+
+用途：
+
+* 调用 SEC Filing Agent（`packages/ai_agents/sec_filing_agent.py`）
+* 读取最近的 10-K / 10-Q / 8-K 申报（复用 2.5 节的 SEC EDGAR 数据源）
+* 经 Model Layer 统一接口生成摘要，返回前必须通过 Output Validator 合规检查（免责声明、数据来源、禁止词）
+* 写入 `audit_logs`
+
+数据来源：
+
+* SEC EDGAR
+* 使用模型：默认 `mock` provider（未配置任何模型 API Key 时的 fallback）；配置 `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` 等后自动切换为 `litellm` provider，无需改代码
+
+响应示例：
+
+```json
+{
+  "symbol": "AAPL",
+  "task_type": "sec_filing_summary",
+  "model": "mock/mock-model-v0",
+  "data_source": ["https://www.sec.gov/Archives/edgar/data/320193/000032019326000013/aapl-20260328.htm"],
+  "input_summary": "Company: Apple Inc. (AAPL, CIK 0000320193)...",
+  "conclusion": "Mock response for sec_filing_summary: ...",
+  "analysis_time": "2026-06-25T09:18:15.683985+00:00",
+  "trace_id": "dbf51cdb-d3ac-4fd3-939c-775c7c3566b6",
+  "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
+}
+```
+
+已用真实 SEC EDGAR 数据（AAPL）做过线上联调，并确认 `audit_logs` 落库成功。
+
+## 4. 响应要求
 
 所有 AI 分析接口必须返回：
 

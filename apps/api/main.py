@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
+from packages.ai_agents.sec_filing_agent import SECFilingAgent
 from packages.algorithm_layer.recommendation import TrendRecommendationAlgorithm
 from packages.algorithm_layer.schemas import AlgorithmPoint, RecommendationInput
 from packages.data_sources.market_trend import (
@@ -17,6 +18,8 @@ from packages.data_sources.fred import FREDClient, FREDError
 from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
 from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
 from packages.db.session import check_database_connection
+from packages.model_layer.factory import build_default_router
+from packages.model_layer.validator import OutputValidationError
 from packages.news_layer.news_policy import NewsPolicyClient, NewsPolicyError
 from packages.universe_layer.most_active import MostActiveUniverseScanner
 
@@ -42,6 +45,8 @@ fred_client = FREDClient()
 news_policy_client = NewsPolicyClient()
 recommendation_algorithm = TrendRecommendationAlgorithm()
 universe_scanner = MostActiveUniverseScanner()
+model_router = build_default_router()
+sec_filing_agent = SECFilingAgent(model_router)
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
 
 POPULAR_US_STOCKS = [
@@ -190,6 +195,16 @@ def get_stock_sec_filings(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SECFilingError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/stocks/{symbol}/sec-summary")
+def get_stock_sec_summary(symbol: str) -> dict:
+    try:
+        return sec_filing_agent.run(symbol).to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except (SECFilingError, OutputValidationError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 

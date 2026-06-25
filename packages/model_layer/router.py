@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from packages.model_layer.base import ModelProvider
 from packages.model_layer.schemas import ModelRequest, ModelResponse
+from packages.model_layer.validator import validate_model_response
 
 
 class ModelRouter:
@@ -14,5 +15,7 @@ class ModelRouter:
         provider = self.providers.get(provider_name) or self.providers.get(self.default_provider)
         if provider is None:
             raise ValueError("No model provider is available")
-        return provider.generate(request)
+        response = provider.generate(request)
+        validate_model_response(response)
+        return response
 

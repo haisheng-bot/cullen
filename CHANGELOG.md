@@ -31,3 +31,7 @@
 * yfinance 风格免费历史日线数据源（近 10 年日 / 周 / 月线 OHLCV），接入 `/stocks/{symbol}/history`
 * SEC EDGAR 财报申报读取（免费，按代码解析 CIK，列出 10-K / 10-Q / 8-K 原文链接），接入 `/stocks/{symbol}/filings`
 * FRED 宏观数据源（需用户自备免费 API Key），接入 `/macro/{series_id}/observations`
+* Model Layer Output Validator：返回前强制检查风险提示、数据来源、模型信息和禁止词，已接入 ModelRouter
+* Agent 基类（`packages/ai_agents/base.py`）落地 Policy Guard → Data Context Builder → Workflow Executor → Model Layer → Output Validator → Audit Logger 流水线
+* SEC Filing Agent（M3 第一个 Agent），接入 `/stocks/{symbol}/sec-summary`，已用真实 SEC EDGAR 数据端到端联调并验证 audit_logs 落库
+* Model Layer 路由工厂 `build_default_router()`：无 Key 时 fallback 到 mock provider，配置任意模型 Key 后自动切换 litellm provider

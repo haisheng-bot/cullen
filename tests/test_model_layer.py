@@ -29,6 +29,7 @@ class ModelLayerTest(unittest.TestCase):
             task_type="news_sentiment",
             system_instruction="Summarize sentiment.",
             user_input="Summarize NVDA news.",
+            context={"citations": ["Yahoo Finance RSS"]},
             model_provider="missing",
         )
 
