@@ -14,6 +14,7 @@ from packages.data_sources.market_trend import (
     normalize_symbol,
 )
 from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
+from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
 from packages.db.session import check_database_connection
 from packages.universe_layer.most_active import MostActiveUniverseScanner
 
@@ -34,6 +35,7 @@ app.add_middleware(
 
 trend_client = YahooFinanceChartClient()
 history_client = YahooFinanceHistoryClient()
+sec_filing_client = SECFilingClient()
 recommendation_algorithm = TrendRecommendationAlgorithm()
 universe_scanner = MostActiveUniverseScanner()
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
@@ -166,4 +168,22 @@ def get_stock_price_history(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except PriceHistoryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/stocks/{symbol}/filings")
+def get_stock_sec_filings(
+    symbol: str,
+    forms: str = Query("10-K,10-Q,8-K"),
+    limit: int = Query(10, ge=1, le=50),
+) -> dict:
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+        form_types = tuple(form.strip() for form in forms.split(",") if form.strip())
+        return sec_filing_client.list_filings(
+            normalized_symbol, forms=form_types, limit=limit
+        ).to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except SECFilingError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
