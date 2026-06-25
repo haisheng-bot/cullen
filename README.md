@@ -41,6 +41,12 @@ python3 -m unittest discover -s tests
 
 ## 美股操作界面 MVP
 
+双击启动：
+
+```text
+open-app.command
+```
+
 启动 API：
 
 ```bash

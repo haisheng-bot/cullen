@@ -10,6 +10,7 @@ class ProjectGovernanceTest(unittest.TestCase):
     def test_required_paths_exist(self) -> None:
         required_paths = [
             "README.md",
+            "open-app.command",
             "LICENSE",
             "CONTRIBUTING.md",
             "SECURITY.md",
