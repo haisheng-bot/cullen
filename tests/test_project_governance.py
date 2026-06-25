@@ -43,6 +43,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             "docs/standards/github-collaboration.md",
             "docs/standards/agile-iteration.md",
             "docs/standards/AI_TOOL_COLLABORATION.md",
+            "docs/product/PRD.md",
             "docs/product/requirements-analysis.md",
             "docs/architecture/system-design.md",
             "docs/architecture/ai-development-architecture.md",
@@ -63,6 +64,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             "docs/standards/github-collaboration.md",
             "docs/standards/agile-iteration.md",
             "docs/standards/AI_TOOL_COLLABORATION.md",
+            "docs/product/PRD.md",
             "docs/product/requirements-analysis.md",
             "docs/architecture/system-design.md",
             "docs/architecture/ai-development-architecture.md",
@@ -70,6 +72,30 @@ class ProjectGovernanceTest(unittest.TestCase):
         ]
         missing = [path for path in docs if DISCLAIMER not in (ROOT / path).read_text(encoding="utf-8")]
         self.assertEqual([], missing)
+
+    def test_product_prd_defines_investment_research_platform(self) -> None:
+        prd = (ROOT / "docs/product/PRD.md").read_text(encoding="utf-8")
+        requirements = (ROOT / "docs/product/requirements-analysis.md").read_text(encoding="utf-8")
+
+        required_terms = [
+            "AI Investment Research Platform",
+            "Stock Screener",
+            "Stock Research",
+            "Portfolio",
+            "Strategy Engine",
+            "Portfolio Optimizer",
+            "Risk Engine",
+            "Backtesting Engine",
+            "AI Research",
+            "AI Report",
+            "Strategy Marketplace",
+            "Success Metrics",
+        ]
+        missing = [term for term in required_terms if term not in prd]
+        self.assertEqual([], missing)
+        self.assertIn("AI Investment Research Platform", requirements)
+        self.assertIn("Portfolio", requirements)
+        self.assertIn("Strategy Workflow", requirements)
 
     def test_project_interface_tracks_architecture_layers(self) -> None:
         html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")

@@ -1,6 +1,6 @@
 # OpenStock AI
 
-OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI 选股、股票分析、股票评分、研究报告生成、模拟交易与回测。
+OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 AI 选股、股票研究、投资组合管理、策略回测、风险分析和 AI 自动研究报告。
 
 项目目标不是直接替用户做投资决策，而是为美股研究提供可追溯、可审计、可扩展的 AI 辅助分析系统。
 
@@ -33,6 +33,7 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI
 * [Algorithm Layer 标准](docs/standards/ALGORITHM_STANDARD.md)
 * [Model Layer 标准](docs/standards/MODEL_STANDARD.md)
 * [Portfolio Strategy 标准](docs/standards/PORTFOLIO_STRATEGY_STANDARD.md)
+* [产品需求文档 PRD v0.1](docs/product/PRD.md)
 * [需求分析 v0.1](docs/product/requirements-analysis.md)
 * [系统设计框架](docs/architecture/system-design.md)
 * [AI 开发架构标准](docs/architecture/ai-development-architecture.md)

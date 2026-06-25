@@ -2,9 +2,11 @@
 
 ## 1. 项目定位
 
-OpenStock AI 是一个 AI 美股选股、股票分析与推荐系统。
+OpenStock AI 是一个 AI Investment Research Platform。
 
-系统面向美股市场，通过行情、财报、新闻、宏观数据、评分模型和 AI Agent，帮助用户筛选值得关注的股票、理解股票机会与风险，并生成可追溯的研究报告。
+系统不是股票交易软件、行情软件或券商终端，而是面向美股研究、投资组合管理、策略回测、风险分析和 AI 自动研究报告的智能投资研究平台。
+
+系统面向美股市场，通过行情、财报、新闻、宏观数据、评分模型、策略引擎、回测引擎和 AI Agent，帮助用户从研究单只股票升级到研究整个 Portfolio，并生成可追溯的研究结论。
 
 本系统仅用于投资研究辅助，不构成任何投资建议。
 
@@ -12,72 +14,199 @@ OpenStock AI 是一个 AI 美股选股、股票分析与推荐系统。
 
 系统需要提供：
 
-* 美股股票代码查询
-* 美股基础行情和财务数据采集
-* SEC 财报读取和摘要
-* 新闻摘要和情绪分析
-* 股票评分
-* AI 选股推荐
-* 投资组合分析
-* AI 研究报告
-* 模拟交易与回测
-* 本地数据库保存
+* Stock Screener：股票池、热门股票、主题股票、自定义股票池
+* Stock Research：单股行情、K 线、财务、财报、新闻、技术指标、AI 评分
+* Portfolio：多个组合创建、编辑、删除、导入、导出、对比
+* Strategy Engine：策略配置、参数管理、权重计算、约束管理
+* Portfolio Optimizer：最优权重、风险收益优化、约束求解
+* Risk Engine：波动率、Beta、VaR、CVaR、最大回撤、行业集中度、持仓集中度
+* Backtesting Engine：1 年、3 年、5 年、10 年和自定义时间回测
+* AI Research：股票分析、财务分析、新闻总结、风险解释、策略解释
+* AI Report：PDF、Markdown、HTML、Dashboard 报告
+* 本地数据库保存和审计追踪
 
 ## 3. 目标用户
 
-* 个人投资者：快速筛选和理解美股标的
-* 股票研究者：整理数据、财报和新闻，形成研究结论
-* 内容创作者：生成美股分析和研究报告
-* 开发者：扩展数据源、评分模型、Agent 和回测模块
+* 个人投资者：快速筛选和理解美股标的及组合风险
+* 股票研究者：整理行情、财报、新闻和策略结果，形成研究结论
+* 组合研究者：建立 Portfolio、配置策略、运行回测和风险分析
+* 内容创作者：生成美股分析、组合复盘和 AI 研究报告
+* 开发者：扩展数据源、评分模型、Agent、策略、优化器和回测模块
 
 ## 4. 核心场景
 
-### 4.1 AI 选股
+### 4.1 股票筛选
 
-用户输入条件，系统输出候选股票列表。
+用户根据主题、策略或市场活跃度生成股票池。
+
+股票池示例：
+
+* AI
+* Semiconductor
+* Momentum
+* Growth
+* Dividend
+* Healthcare
+* Energy
+* Defense
+* Crypto
+* Most Active
 
 输出必须包含：
 
 * 股票代码
 * 公司名称
-* 总分
-* 推荐等级
-* 推荐理由
-* 主要风险
+* 主题或行业标签
+* 成交量和成交额
+* 涨跌幅
 * 数据来源
 * 风险提示
 
-### 4.2 单股分析
+### 4.2 单股研究
 
 用户输入股票代码，系统输出：
 
-* 公司概况
-* 行情表现
-* 核心财务数据
-* 财报摘要
+* 实时价格
+* K 线图
+* 成交量
+* 财务数据
+* 财报分析
 * 新闻摘要
-* 估值分析
-* 风险因素
-* AI 评分
-* 研究结论
+* AI 自动评分
+* AI 风险提示
+* 行业分析
+* 技术指标
+* AI Research Report
 
-### 4.3 研究报告生成
+### 4.3 Portfolio 管理
 
-报告必须包含：
+用户可以建立多个投资组合，例如 AI Portfolio：
 
-* 公司概况
-* 核心财务数据
-* 利好因素
-* 风险因素
-* AI 评分
-* 结论
-* 免责声明
+* NVDA
+* AAPL
+* MSFT
+* META
+* TSM
+* GOOGL
 
-### 4.4 模拟交易与回测
+Portfolio 必须支持：
 
-第一阶段只允许模拟交易和回测，不允许自动实盘交易。
+* 创建
+* 删除
+* 编辑
+* 导入
+* 导出
+* 权重管理
+* 收益统计
+* 风险统计
+* 多组合对比
 
-## 5. 推荐边界
+### 4.4 Strategy Workflow
+
+用户从股票池选择股票并建立 Portfolio 后，可以选择策略并配置约束。
+
+基础策略：
+
+* Equal Weight
+* Market Cap
+* Dividend
+* Growth
+* Value
+* Momentum
+
+高级策略：
+
+* Mean Variance Optimization
+* Black-Litterman
+* Risk Parity
+* Hierarchical Risk Parity
+* Minimum Variance
+* Equal Risk Contribution
+
+AI 策略：
+
+* AI Score Strategy
+* AI Ranking Strategy
+* AI Dynamic Allocation
+* AI News Driven Strategy
+
+### 4.5 回测与风险分析
+
+回测周期：
+
+* 1 年
+* 3 年
+* 5 年
+* 10 年
+* 自定义时间
+
+回测输出：
+
+* CAGR
+* Annual Return
+* Max Drawdown
+* Sharpe Ratio
+* Sortino Ratio
+* Alpha
+* Beta
+* Win Rate
+* Information Ratio
+
+风险输出：
+
+* 波动率
+* Beta
+* VaR
+* CVaR
+* 最大回撤
+* 行业集中度
+* 持仓集中度
+* 风险贡献分析
+* Stress Test
+* Monte Carlo Simulation（后续版本）
+
+### 4.6 AI 报告生成
+
+AI Report 必须支持：
+
+* 新闻总结
+* 财报总结
+* 风险解释
+* 策略解释
+* 投资组合建议
+* PDF
+* Markdown
+* HTML
+* Dashboard
+
+## 5. 核心业务流程
+
+```text
+股票池
+  -> 选择股票
+  -> 建立 Portfolio
+  -> 选择策略
+  -> 配置约束条件
+  -> 运行优化
+  -> 回测
+  -> AI 自动解释
+  -> 生成投资报告
+  -> 形成投资建议
+```
+
+## 6. AI Agent 规划
+
+平台包含多个 AI Agent：
+
+* Research Agent：负责股票研究
+* News Agent：负责新闻分析
+* Financial Agent：负责财报分析
+* Risk Agent：负责风险分析
+* Strategy Agent：负责策略推荐
+* Portfolio Agent：负责组合优化
+* Report Agent：负责自动生成报告
+
+## 7. 推荐边界
 
 允许输出：
 
@@ -87,6 +216,8 @@ OpenStock AI 是一个 AI 美股选股、股票分析与推荐系统。
 * 回避
 * 候选标的
 * 研究关注名单
+* 组合优化建议
+* 风险复核建议
 
 禁止输出：
 
@@ -95,27 +226,53 @@ OpenStock AI 是一个 AI 美股选股、股票分析与推荐系统。
 * 无风险
 * 稳赚
 * 诱导用户立即买入或卖出
+* 默认自动交易
 
-## 6. 推荐生成流程
+## 8. MVP 范围
 
-```text
-采集数据
-  -> 标准化数据
-  -> 计算评分
-  -> AI Agent 分析
-  -> 合规检查
-  -> 生成推荐等级
-  -> 写入 audit_logs
-  -> 返回用户
-```
+第一阶段交付：
 
-## 7. MVP 成功标准
+* 股票研究
+* 股票池
+* Portfolio
+* Strategy Workflow
+* Backtesting
+* AI Summary
+* AI Report
 
-* 可以查询美股代码
-* 可以读取基础行情和财务数据
-* 可以读取 SEC 财报
-* 可以生成股票评分
-* 可以输出 AI 研究报告
-* 可以保存分析结果
-* 所有 AI 输出都有风险提示和数据来源
+第一阶段不包含：
+
+* 自动交易
+* 高频交易
+* 期权策略
+* 多资产配置
+
+## 9. 成功标准
+
+功能指标：
+
+* 股票池管理可用
+* Portfolio 创建成功率可观测
+* 回测成功率可观测
+* AI 报告生成速度可观测
+
+AI 指标：
+
+* AI 分析准确率
+* AI 推荐一致性
+* 新闻总结质量
+
+用户指标：
+
+* Portfolio 数量
+* 活跃用户
+* 每日研究次数
+* AI 报告生成次数
+
+技术指标：
+
+* API 响应时间
+* 回测耗时
+* Agent 执行成功率
+* 模型调用成功率
 
