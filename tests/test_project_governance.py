@@ -99,6 +99,11 @@ class ProjectGovernanceTest(unittest.TestCase):
             "52 周位置",
             "Beta",
             "行业强弱",
+            "screener-guide-grid",
+            "renderScreenerGuide",
+            "/history?range=1y&interval=1d",
+            "calculateRSI",
+            "formatMoney",
         ]
         missing = [term for term in required_terms if term not in html]
         self.assertEqual([], missing)

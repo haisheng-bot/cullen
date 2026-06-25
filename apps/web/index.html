@@ -349,6 +349,40 @@
         line-height: 1.45;
       }
 
+      .guide-value {
+        margin-bottom: 5px;
+        font-size: 18px;
+        font-weight: 850;
+      }
+
+      .guide-status {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        margin-bottom: 6px;
+        padding: 0 7px;
+        border-radius: 999px;
+        background: #eef4ff;
+        color: var(--blue);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .guide-status.positive {
+        background: #e9f7ef;
+        color: var(--green);
+      }
+
+      .guide-status.negative {
+        background: #fff1f0;
+        color: var(--red);
+      }
+
+      .guide-status.neutral {
+        background: #f1f5f9;
+        color: var(--muted);
+      }
+
       .action-stack { display: grid; gap: 8px; margin-bottom: 12px; }
       .action-stack button {
         height: 38px;
@@ -623,56 +657,7 @@
             </div>
             <span class="status-pill">Screener Guide</span>
           </div>
-          <div class="guide-grid">
-            <div class="guide-item">
-              <div class="guide-name"><span>成交量</span><span class="guide-tag">Volume</span></div>
-              <div class="guide-text">判断市场关注度和流动性。高成交量股票更适合进入每日候选池，但需要结合涨跌幅判断是否过热。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>相对成交量</span><span class="guide-tag">Rel Vol</span></div>
-              <div class="guide-text">当前成交量相对历史均值的放大倍数。大于 1 表示更活跃，大于 2 通常代表异常关注。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>涨跌幅</span><span class="guide-tag">% Change</span></div>
-              <div class="guide-text">衡量当日价格冲击。大涨大跌都值得跟踪，但不能单独作为买卖依据。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>市值</span><span class="guide-tag">Market Cap</span></div>
-              <div class="guide-text">区分大盘、成长和小盘股票。大市值通常更稳定，小市值可能波动更高。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>P/E</span><span class="guide-tag">Valuation</span></div>
-              <div class="guide-text">估值参考指标。低 P/E 不一定便宜，高 P/E 不一定贵，必须结合增长、行业和利润质量。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>RSI</span><span class="guide-tag">Momentum</span></div>
-              <div class="guide-text">常用动量指标。高位可能代表强势或过热，低位可能代表弱势或反弹机会。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>均线位置</span><span class="guide-tag">MA</span></div>
-              <div class="guide-text">观察价格是否站上短中期趋势。站上均线偏强，跌破均线需要关注趋势转弱。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>波动率</span><span class="guide-tag">Risk</span></div>
-              <div class="guide-text">衡量价格波动风险。高波动股票可能机会大，但仓位和止损要求更高。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>52 周位置</span><span class="guide-tag">Range</span></div>
-              <div class="guide-text">看当前价格接近一年高点还是低点。接近高点说明强势，接近低点需要区分低估和走弱。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>Beta</span><span class="guide-tag">Market Risk</span></div>
-              <div class="guide-text">衡量相对大盘的波动敏感度。Beta 越高，受市场情绪影响通常越明显。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>收入 / EPS 增长</span><span class="guide-tag">Growth</span></div>
-              <div class="guide-text">用于判断公司成长质量。收入增长看规模扩张，EPS 增长看盈利兑现。</div>
-            </div>
-            <div class="guide-item">
-              <div class="guide-name"><span>行业强弱</span><span class="guide-tag">Sector</span></div>
-              <div class="guide-text">同一行业股票常有联动。强行业里的强个股通常更值得进入观察池。</div>
-            </div>
-          </div>
+          <div class="guide-grid" id="screener-guide-grid"></div>
         </section>
       </main>
 
@@ -731,6 +716,15 @@
         if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
         return `$${formatCompactNumber(value)}`;
       };
+      const formatPercent = (value) => {
+        if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+        const sign = Number(value) > 0 ? "+" : "";
+        return `${sign}${Number(value).toFixed(2)}%`;
+      };
+      const formatRatio = (value) => {
+        if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+        return `${Number(value).toFixed(2)}x`;
+      };
       const formatChartTime = (timestamp) => {
         if (!timestamp) return "--";
         const date = new Date(timestamp);
@@ -750,6 +744,14 @@
           throw new Error(err.detail || `HTTP ${response.status}`);
         }
         return response.json();
+      }
+
+      async function requestOptional(path) {
+        try {
+          return await request(path);
+        } catch {
+          return null;
+        }
       }
 
       async function loadStocks(query = "") {
@@ -807,8 +809,11 @@
             request(`/stocks/${state.symbol}/quote`),
             request(`/stocks/${state.symbol}/trend?range=${rangeInput.value}&interval=${intervalInput.value}`),
           ]);
-          const recommendation = await request(`/stocks/${state.symbol}/recommendation`);
-          const news = await request(`/stocks/${state.symbol}/news?years=3&limit=60`);
+          const [recommendation, history, news] = await Promise.all([
+            request(`/stocks/${state.symbol}/recommendation`),
+            requestOptional(`/stocks/${state.symbol}/history?range=1y&interval=1d`),
+            request(`/stocks/${state.symbol}/news?years=3&limit=60`),
+          ]);
           state.lastTrend = trend;
           state.chartHoverIndex = null;
           renderQuote(quote);
@@ -816,6 +821,7 @@
           renderMetrics(trend);
           renderInspector(trend.points?.at(-1), trend.points?.[0]);
           renderRecommendation(recommendation);
+          renderScreenerGuide(quote, trend, history, recommendation);
           renderNews(news);
           statusEl.textContent = `${state.symbol} 行情已更新`;
         } catch (error) {
@@ -872,6 +878,171 @@
 
         const risks = (recommendation.risks || []).join(" ");
         document.getElementById("research-note").textContent = `${recommendation.symbol} 算法推荐等级：${recommendation.recommendation}。${risks}`;
+      }
+
+      function currentUniverseStock() {
+        return state.stocks.find((stock) => stock.symbol === state.symbol) || null;
+      }
+
+      function average(values) {
+        const usable = values.filter((value) => Number.isFinite(value));
+        if (!usable.length) return null;
+        return usable.reduce((sum, value) => sum + value, 0) / usable.length;
+      }
+
+      function calculateRSI(closes, period = 14) {
+        if (closes.length <= period) return null;
+        let gains = 0;
+        let losses = 0;
+        const slice = closes.slice(-period - 1);
+        for (let index = 1; index < slice.length; index += 1) {
+          const change = slice[index] - slice[index - 1];
+          if (change >= 0) gains += change;
+          else losses += Math.abs(change);
+        }
+        const averageGain = gains / period;
+        const averageLoss = losses / period;
+        if (averageLoss === 0) return 100;
+        const rs = averageGain / averageLoss;
+        return 100 - (100 / (1 + rs));
+      }
+
+      function statusClass(status) {
+        if (["活跃", "强势", "高位", "站上均线", "行业偏强", "估值可观察"].includes(status)) return "positive";
+        if (["异常活跃", "波动较高", "跌破均线", "弱势", "行业偏弱", "高估值"].includes(status)) return "negative";
+        return "neutral";
+      }
+
+      function renderGuideCard(metric) {
+        return `
+          <div class="guide-item">
+            <div class="guide-name"><span>${escapeHtml(metric.name)}</span><span class="guide-tag">${escapeHtml(metric.tag)}</span></div>
+            <div class="guide-value">${escapeHtml(metric.value)}</div>
+            <div class="guide-status ${statusClass(metric.status)}">${escapeHtml(metric.status)}</div>
+            <div class="guide-text">${escapeHtml(metric.text)}</div>
+          </div>
+        `;
+      }
+
+      function renderScreenerGuide(quote, trend, history, recommendation) {
+        const stock = currentUniverseStock();
+        const trendPoints = trend.points || [];
+        const historyPoints = history?.points || [];
+        const closes = historyPoints.map((point) => point.close).filter((value) => Number.isFinite(value));
+        const trendVolumes = trendPoints.map((point) => point.volume || 0).filter((value) => value > 0);
+        const latestPoint = trendPoints.at(-1);
+        const latestVolumePoint = [...trendPoints].reverse().find((point) => point.volume && point.volume > 0);
+        const latestPrice = quote.price || latestPoint?.close || stock?.price || null;
+        const totalIntradayVolume = trendVolumes.reduce((sum, value) => sum + value, 0);
+        const displayVolume = stock?.volume || totalIntradayVolume || latestPoint?.volume || null;
+        const averageIntradayVolume = average(trendVolumes);
+        const latestVolumeRatio = averageIntradayVolume && latestVolumePoint?.volume ? latestVolumePoint.volume / averageIntradayVolume : stock?.relative_volume;
+        const changePercent = quote.change_percent ?? stock?.change_percent ?? null;
+        const marketCap = stock?.market_cap ?? null;
+        const peRatio = stock?.pe_ratio ?? null;
+        const rsi = calculateRSI(closes);
+        const ma20 = average(closes.slice(-20));
+        const ma50 = average(closes.slice(-50));
+        const high52 = historyPoints.length ? Math.max(...historyPoints.map((point) => point.high || point.close)) : null;
+        const low52 = historyPoints.length ? Math.min(...historyPoints.map((point) => point.low || point.close)) : null;
+        const rangePosition = high52 && low52 && high52 !== low52 && latestPrice ? ((latestPrice - low52) / (high52 - low52)) * 100 : null;
+        const volatility = closes.length ? ((Math.max(...closes.slice(-30)) - Math.min(...closes.slice(-30))) / average(closes.slice(-30))) * 100 : null;
+        const sectorPeers = stock?.sector ? state.stocks.filter((item) => item.sector === stock.sector && Number.isFinite(item.change_percent)) : [];
+        const sectorAverageChange = average(sectorPeers.map((item) => item.change_percent));
+        const maStatus = latestPrice && ma20 && ma50
+          ? latestPrice >= ma20 && latestPrice >= ma50 ? "站上均线" : "跌破均线"
+          : "数据不足";
+        const rsiStatus = rsi === null ? "数据不足" : rsi >= 70 ? "偏热" : rsi <= 30 ? "弱势" : "中性";
+        const relVolStatus = latestVolumeRatio === null || latestVolumeRatio === undefined ? "数据不足" : latestVolumeRatio >= 2 ? "异常活跃" : latestVolumeRatio >= 1 ? "活跃" : "平稳";
+        const changeStatus = changePercent === null || changePercent === undefined ? "数据不足" : changePercent >= 2 ? "强势" : changePercent <= -2 ? "弱势" : "中性";
+        const metrics = [
+          {
+            name: "成交量",
+            tag: "Volume",
+            value: formatCompactNumber(displayVolume),
+            status: displayVolume ? (displayVolume >= 10_000_000 ? "活跃" : "平稳") : "数据不足",
+            text: `候选池成交量用于判断流动性；当前估算成交额 ${formatMoney(displayVolume && latestPrice ? displayVolume * latestPrice : null)}。`,
+          },
+          {
+            name: "相对成交量",
+            tag: "Rel Vol",
+            value: formatRatio(latestVolumeRatio),
+            status: relVolStatus,
+            text: "用最新分钟成交量相对当日分钟均量估算，后续可接入历史日均量作为正式 Rel Vol。",
+          },
+          {
+            name: "涨跌幅",
+            tag: "% Change",
+            value: formatPercent(changePercent),
+            status: changeStatus,
+            text: "衡量当日价格冲击，只代表研究关注强弱，不构成买卖建议。",
+          },
+          {
+            name: "市值",
+            tag: "Market Cap",
+            value: formatMoney(marketCap),
+            status: marketCap ? (marketCap >= 200_000_000_000 ? "大盘股" : "中小盘") : "数据不足",
+            text: "来自候选池报价数据，用于区分稳定性和波动弹性。",
+          },
+          {
+            name: "P/E",
+            tag: "Valuation",
+            value: peRatio ? peRatio.toFixed(2) : "--",
+            status: peRatio ? (peRatio > 60 ? "高估值" : peRatio > 0 && peRatio < 20 ? "估值可观察" : "中性") : "数据不足",
+            text: "估值需要结合增长、行业和利润质量；低 P/E 或高 P/E 都不能单独判断好坏。",
+          },
+          {
+            name: "RSI",
+            tag: "Momentum",
+            value: rsi === null ? "--" : rsi.toFixed(1),
+            status: rsiStatus,
+            text: "基于 1 年日线最近 14 个交易日估算，70 以上偏热，30 以下偏弱。",
+          },
+          {
+            name: "均线位置",
+            tag: "MA",
+            value: ma20 && ma50 ? `20D ${fmt(ma20)} / 50D ${fmt(ma50)}` : "--",
+            status: maStatus,
+            text: `当前价 ${fmt(latestPrice)}，用于判断是否处于短中期趋势线上方。`,
+          },
+          {
+            name: "波动率",
+            tag: "Risk",
+            value: formatPercent(volatility),
+            status: volatility === null ? "数据不足" : volatility >= 12 ? "波动较高" : "中性",
+            text: "用最近 30 个交易日高低区间相对均价估算，数值越高仓位管理要求越高。",
+          },
+          {
+            name: "52 周位置",
+            tag: "Range",
+            value: rangePosition === null ? "--" : `${rangePosition.toFixed(0)}%`,
+            status: rangePosition === null ? "数据不足" : rangePosition >= 80 ? "高位" : rangePosition <= 20 ? "弱势" : "中性",
+            text: high52 && low52 ? `52 周低 ${fmt(low52)} / 高 ${fmt(high52)}。接近高位代表强势，也要观察过热。` : "需要 1 年历史数据。",
+          },
+          {
+            name: "Beta",
+            tag: "Market Risk",
+            value: "--",
+            status: "待接入",
+            text: "第一阶段尚未接入指数回归或数据商 Beta，后续用 SPY 回归或基本面数据源补齐。",
+          },
+          {
+            name: "收入 / EPS 增长",
+            tag: "Growth",
+            value: recommendation?.total_score ? `${recommendation.total_score}/100` : "--",
+            status: "待接入",
+            text: "当前先显示算法综合分；正式收入和 EPS 增长需接入财报标准化数据。",
+          },
+          {
+            name: "行业强弱",
+            tag: "Sector",
+            value: stock?.sector || "--",
+            status: sectorAverageChange === null ? "数据不足" : sectorAverageChange >= 1 ? "行业偏强" : sectorAverageChange <= -1 ? "行业偏弱" : "中性",
+            text: sectorAverageChange === null ? "搜索股票不在当前候选池时，行业相对强弱暂不可用。" : `当前 Top 100 中同板块平均涨跌 ${formatPercent(sectorAverageChange)}。`,
+          },
+        ];
+
+        document.getElementById("screener-guide-grid").innerHTML = metrics.map(renderGuideCard).join("");
       }
 
       function renderNews(news) {
