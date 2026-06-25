@@ -8,17 +8,20 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI
 
 ## 当前阶段
 
-当前项目处于 `0.1.0` 框架重建阶段，已建立：
+当前项目处于 `0.1.0` 开发阶段。按 [MVP 路线图](docs/product/mvp-roadmap.md) 的里程碑，目前进度：
 
-* 项目标准
-* 需求分析
-* 系统架构设计
-* AI 开发架构
-* GitHub 协作规范
-* 版本管理规范
-* 敏捷迭代标准
-* 基础 CI
-* 项目治理测试
+* **M0 项目重建**：完成。项目标准、需求分析、架构设计、GitHub 协作配置、基础测试已建立。
+* **M1 后端基础**：完成。FastAPI、统一配置管理、数据库连接（默认本地 SQLite，可切换 Postgres）、`audit_logs` 表、Docker Compose、数据库初始化脚本均可用。
+* **M2 数据源**：完成。yfinance 风格历史日线、SEC EDGAR 财报申报、FRED 宏观数据（需自备免费 Key）、Yahoo 实时走势均已接入并有测试覆盖。
+* **M3 AI 分析**：部分完成。Model Layer 统一接口已落地（mock provider + LiteLLM-compatible provider），但 SEC Filing Agent / News Agent / Report Agent 尚未开发（`packages/ai_agents` 仍为空）。
+* **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.1`），但基于大模型的 AI Scoring Agent、研究报告生成尚未开发（`packages/scoring` 仍为空）。
+* **M5 前端展示**：部分完成。美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分）已可用，独立的股票深度分析页和研究报告页尚未开发。
+* 尚未开始：模拟交易与回测（`packages/backtesting`、`packages/brokers` 仍为空）。
+
+额外完成的扩展能力（超出原始路线图，但已落地并有测试）：
+
+* Universe Layer：每日扫描美股最活跃 Top 100 候选池（`packages/universe_layer`）
+* Algorithm Layer：独立于 Model Layer 的可解释推荐算法（`packages/algorithm_layer`）
 
 ## 文档入口
 

@@ -27,11 +27,11 @@
 
 ### M0 项目重建
 
-* 标准文档
-* 需求分析
-* 架构设计
-* GitHub 协作配置
-* 基础测试
+* 标准文档 [released]
+* 需求分析 [released]
+* 架构设计 [released]
+* GitHub 协作配置 [released]
+* 基础测试 [released]
 
 ### M1 后端基础
 
@@ -51,20 +51,27 @@
 
 ### M3 AI 分析
 
-* 模型统一接口
-* SEC Filing Agent
-* News Agent
-* Report Agent
+* 模型统一接口（`packages/model_layer`，mock provider + LiteLLM-compatible provider） [usable]
+* SEC Filing Agent [planned]
+* News Agent [planned]
+* Report Agent [planned]
 
 ### M4 评分与报告
 
-* Scoring Agent
-* 评分模型
-* 研究报告生成
+* 规则化推荐评分（Algorithm Layer，`algorithm-v0.1`，超出原路线图范围但已落地） [verified]
+* Scoring Agent（基于 Model Layer 的 AI 评分，区别于上面的规则算法） [planned]
+* 研究报告生成 [planned]
 
 ### M5 前端展示
 
-* 美股操作工作台
-* 实时走势图页面
-* 股票分析页面
-* 研究报告页面
+* 美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分、项目状态面板） [usable]
+* 实时走势图页面 [usable]
+* 股票分析页面（独立深度分析页，区别于操作工作台） [planned]
+* 研究报告页面 [planned]
+
+### 额外扩展（超出原路线图）
+
+* Universe Layer：每日扫描美股最活跃 Top 100 候选池（`packages/universe_layer`） [verified]
+* Algorithm Layer：独立于 Model Layer 的可解释推荐算法（`packages/algorithm_layer`） [verified]
+* 一键启动脚本 `open-app.command` [usable]
+* 项目开发界面：展示版本、架构层和当前状态 [usable]
