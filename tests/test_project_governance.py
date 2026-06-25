@@ -137,7 +137,10 @@ class ProjectGovernanceTest(unittest.TestCase):
         required_terms = [
             "chart-inspector",
             "pointermove",
+            "mousemove",
             "updateChartHover",
+            "offsetX",
+            "chartSizeKey",
             "inspect-volume",
             "inspect-turnover",
             "Turnover",

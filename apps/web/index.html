@@ -708,7 +708,7 @@
 
     <script>
       const API = window.location.origin;
-      const state = { symbol: "AAPL", stocks: [], lastTrend: null, chartHoverIndex: null };
+      const state = { symbol: "AAPL", stocks: [], lastTrend: null, chartHoverIndex: null, chartSizeKey: "" };
 
       const stockList = document.getElementById("stock-list");
       const searchForm = document.getElementById("search-form");
@@ -895,8 +895,14 @@
       function resizeCanvas() {
         const ratio = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
-        canvas.width = Math.floor(rect.width * ratio);
-        canvas.height = Math.floor(rect.height * ratio);
+        const width = Math.floor(rect.width * ratio);
+        const height = Math.floor(rect.height * ratio);
+        const sizeKey = `${width}x${height}`;
+        if (state.chartSizeKey !== sizeKey) {
+          canvas.width = width;
+          canvas.height = height;
+          state.chartSizeKey = sizeKey;
+        }
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       }
 
@@ -1077,9 +1083,11 @@
         const points = state.lastTrend.points;
         const rect = canvas.getBoundingClientRect();
         const layout = chartLayout(rect.width, rect.height);
-        const clientX = event.touches?.[0]?.clientX ?? event.clientX;
-        const boundedX = Math.max(layout.pad.left, Math.min(clientX - rect.left, layout.right));
-        state.chartHoverIndex = Math.round(((boundedX - layout.pad.left) / Math.max(layout.width, 1)) * (points.length - 1));
+        const touchX = event.touches?.[0]?.clientX;
+        const rawX = Number.isFinite(event.offsetX) ? event.offsetX : (touchX ?? event.clientX) - rect.left;
+        const boundedX = Math.max(layout.pad.left, Math.min(rawX, layout.right));
+        const ratio = (boundedX - layout.pad.left) / Math.max(layout.width, 1);
+        state.chartHoverIndex = Math.round(ratio * (points.length - 1));
         drawChart(points, state.chartHoverIndex);
       }
 
@@ -1098,6 +1106,7 @@
       window.addEventListener("resize", () => state.lastTrend && drawChart(state.lastTrend.points || []));
       canvas.addEventListener("pointermove", updateChartHover);
       canvas.addEventListener("pointerdown", updateChartHover);
+      canvas.addEventListener("mousemove", updateChartHover);
       canvas.addEventListener("pointerleave", () => {
         state.chartHoverIndex = null;
         if (state.lastTrend?.points?.length) drawChart(state.lastTrend.points);
