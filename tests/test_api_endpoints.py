@@ -7,6 +7,7 @@ if importlib.util.find_spec("fastapi") is None:
 from apps.api import main
 from packages.data_sources.market_trend import TrendPoint, TrendResponse
 from packages.data_sources.price_history import HistoryPoint, HistoryResponse
+from packages.data_sources.fred import FREDObservation, FREDSeriesResponse
 from packages.data_sources.sec_filings import Filing, FilingListResponse
 from packages.universe_layer.schemas import UniverseResult, UniverseStock
 
@@ -73,6 +74,25 @@ class FakeSECFilingClient:
         )
 
 
+class FakeFREDClient:
+    def fetch_observations(
+        self,
+        series_id: str,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        limit: int = 100,
+    ) -> FREDSeriesResponse:
+        return FREDSeriesResponse(
+            series_id=series_id.upper(),
+            observations=[
+                FREDObservation(date="2026-05-01", value=5.33),
+                FREDObservation(date="2026-04-01", value=None),
+            ],
+            source="test-source",
+            analysis_time="2026-06-25T13:32:00+00:00",
+        )
+
+
 class FakeUniverseScanner:
     def scan(self, limit: int = 100) -> UniverseResult:
         return UniverseResult(
@@ -95,16 +115,19 @@ class ApiEndpointsTest(unittest.TestCase):
         self.original_client = main.trend_client
         self.original_history_client = main.history_client
         self.original_sec_filing_client = main.sec_filing_client
+        self.original_fred_client = main.fred_client
         self.original_universe_scanner = main.universe_scanner
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
         main.sec_filing_client = FakeSECFilingClient()
+        main.fred_client = FakeFREDClient()
         main.universe_scanner = FakeUniverseScanner()
 
     def tearDown(self) -> None:
         main.trend_client = self.original_client
         main.history_client = self.original_history_client
         main.sec_filing_client = self.original_sec_filing_client
+        main.fred_client = self.original_fred_client
         main.universe_scanner = self.original_universe_scanner
 
     def test_popular_stocks_endpoint(self) -> None:
@@ -141,6 +164,13 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("0000320193", payload["cik"])
         self.assertEqual(1, len(payload["filings"]))
         self.assertEqual("10-K", payload["filings"][0]["form"])
+
+    def test_fred_observations_endpoint(self) -> None:
+        payload = main.get_fred_observations("fedfunds", limit=2)
+
+        self.assertEqual("FEDFUNDS", payload["series_id"])
+        self.assertEqual(2, len(payload["observations"]))
+        self.assertEqual(5.33, payload["observations"][0]["value"])
 
     def test_recommendation_endpoint(self) -> None:
         payload = main.get_stock_recommendation("AAPL")

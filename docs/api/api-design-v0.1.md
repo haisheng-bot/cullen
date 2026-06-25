@@ -17,6 +17,7 @@ GET /stocks/{symbol}/financials
 GET /stocks/{symbol}/news
 GET /stocks/{symbol}/score
 GET /stocks/{symbol}/trend
+GET /macro/{series_id}/observations
 POST /reports/generate
 POST /backtests/run
 ```
@@ -243,6 +244,48 @@ interval  间隔：1m, 2m, 5m, 15m, 30m, 60m, 1d
   "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
 }
 ```
+
+### 2.8 FRED 宏观数据（需免费 API Key）
+
+```text
+GET /macro/{series_id}/observations?start_date=&end_date=&limit=100
+```
+
+用途：
+
+* 读取美联储 FRED 宏观经济序列（如 `FEDFUNDS` 联邦基金利率、`CPIAUCSL` CPI、`UNRATE` 失业率）
+* 为后续宏观新闻、估值分析提供背景数据
+
+数据来源：
+
+* FRED（St. Louis Fed），需在 `.env` 设置 `FRED_API_KEY`（免费注册：https://fred.stlouisfed.org/docs/api/api_key.html）
+* 未配置 Key 时返回 503，并提示如何申请，不会使用任何内置默认 Key
+
+请求参数：
+
+```text
+series_id     FRED 序列代码，例如 FEDFUNDS
+start_date    起始日期 YYYY-MM-DD，可选
+end_date      结束日期 YYYY-MM-DD，可选
+limit         返回条数上限，默认 100，最大 1000
+```
+
+响应示例：
+
+```json
+{
+  "series_id": "FEDFUNDS",
+  "observations": [
+    {"date": "2026-05-01", "value": 5.33},
+    {"date": "2026-04-01", "value": null}
+  ],
+  "source": "FRED (Federal Reserve Economic Data)",
+  "analysis_time": "2026-06-25T13:31:00+00:00",
+  "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
+}
+```
+
+说明：本接口尚未接入真实 FRED Key 做过线上联调，仅通过 mock payload 完成单元测试覆盖；接入真实 Key 后请重新做一次实际请求验证。
 
 ## 3. 响应要求
 

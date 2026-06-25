@@ -13,6 +13,7 @@ from packages.data_sources.market_trend import (
     YahooFinanceChartClient,
     normalize_symbol,
 )
+from packages.data_sources.fred import FREDClient, FREDError
 from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
 from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
 from packages.db.session import check_database_connection
@@ -36,6 +37,7 @@ app.add_middleware(
 trend_client = YahooFinanceChartClient()
 history_client = YahooFinanceHistoryClient()
 sec_filing_client = SECFilingClient()
+fred_client = FREDClient()
 recommendation_algorithm = TrendRecommendationAlgorithm()
 universe_scanner = MostActiveUniverseScanner()
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
@@ -187,3 +189,20 @@ def get_stock_sec_filings(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SECFilingError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/macro/{series_id}/observations")
+def get_fred_observations(
+    series_id: str,
+    start_date: str | None = Query(None),
+    end_date: str | None = Query(None),
+    limit: int = Query(100, ge=1, le=1000),
+) -> dict:
+    try:
+        return fred_client.fetch_observations(
+            series_id, start_date=start_date, end_date=end_date, limit=limit
+        ).to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except FREDError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

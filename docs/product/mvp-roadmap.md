@@ -46,7 +46,7 @@
 
 * yfinance（近 10 年免费历史日 / 周 / 月线，`packages/data_sources/price_history.py`） [verified]
 * SEC EDGAR（按代码解析 CIK，读取 10-K / 10-Q / 8-K 列表，`packages/data_sources/sec_filings.py`） [verified]
-* FRED
+* FRED（`packages/data_sources/fred.py`，需用户自备免费 Key，目前仅 mock payload 测试，未做真实联调） [usable]
 * 实时走势 API 接入 [usable]
 
 ### M3 AI 分析

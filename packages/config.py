@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     alpha_vantage_api_key: str | None = None
     finnhub_api_key: str | None = None
     polygon_api_key: str | None = None
+    fred_api_key: str | None = None
 
 
 @lru_cache
