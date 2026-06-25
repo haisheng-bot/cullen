@@ -100,17 +100,21 @@ class ProjectGovernanceTest(unittest.TestCase):
         missing = [term for term in required_terms if term not in html]
         self.assertEqual([], missing)
 
-    def test_stock_universe_list_uses_collapsible_groups(self) -> None:
+    def test_stock_universe_list_uses_scrollable_top_20(self) -> None:
         html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
 
         required_terms = [
-            "stock-group",
-            "stock-group-items",
-            "chunkStocks(state.stocks, 20)",
-            "details.open",
+            "扫描最活跃 20 只",
+            "loadMostActiveUniverse(20)",
+            "state.stocks.slice(0, 20)",
+            "overflow-y: auto",
         ]
         missing = [term for term in required_terms if term not in html]
         self.assertEqual([], missing)
+
+        removed_terms = ["stock-group", "chunkStocks", "details.open"]
+        present = [term for term in removed_terms if term in html]
+        self.assertEqual([], present)
 
 
 if __name__ == "__main__":

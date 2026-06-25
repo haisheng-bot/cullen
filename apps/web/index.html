@@ -107,46 +107,9 @@
       .stock-list {
         display: grid;
         gap: 6px;
-      }
-
-      .stock-group {
-        border: 1px solid #d8e1ed;
-        border-radius: 8px;
-        background: #fbfdff;
-        overflow: hidden;
-      }
-
-      .stock-group summary {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 9px 10px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 800;
-        list-style: none;
-      }
-
-      .stock-group summary::-webkit-details-marker {
-        display: none;
-      }
-
-      .stock-group summary::after {
-        content: "展开";
-        color: var(--muted);
-        font-size: 11px;
-        font-weight: 700;
-      }
-
-      .stock-group[open] summary::after {
-        content: "收起";
-      }
-
-      .stock-group-items {
-        display: grid;
-        gap: 4px;
-        padding: 0 6px 6px;
+        max-height: calc(100vh - 150px);
+        overflow-y: auto;
+        padding-right: 3px;
       }
 
       .side-actions {
@@ -484,7 +447,7 @@
       <aside>
         <div class="section-title">每日美股候选池</div>
         <div class="side-actions">
-          <button id="scan-universe-button">扫描最活跃 100 只</button>
+          <button id="scan-universe-button">扫描最活跃 20 只</button>
         </div>
         <div class="muted" id="universe-meta">Most Active · US</div>
         <div class="stock-list" id="stock-list"></div>
@@ -700,7 +663,7 @@
         renderStockList();
       }
 
-      async function loadMostActiveUniverse(limit = 100) {
+      async function loadMostActiveUniverse(limit = 20) {
         scanUniverseButton.disabled = true;
         universeMeta.textContent = "正在扫描 Most Active Universe...";
         try {
@@ -715,40 +678,15 @@
 
       function renderStockList() {
         stockList.innerHTML = "";
-        chunkStocks(state.stocks, 20).forEach((group, groupIndex) => {
-          const details = document.createElement("details");
-          details.className = "stock-group";
-          const groupStart = groupIndex * 20 + 1;
-          const groupEnd = groupStart + group.length - 1;
-          const containsSelected = group.some((stock) => stock.symbol === state.symbol);
-          if (groupIndex === 0 || containsSelected) details.open = true;
-
-          const summary = document.createElement("summary");
-          summary.innerHTML = `<span>${groupStart}-${groupEnd}</span><span class="muted">${group.length} 只</span>`;
-          details.appendChild(summary);
-
-          const groupItems = document.createElement("div");
-          groupItems.className = "stock-group-items";
-          group.forEach((stock) => {
+        state.stocks.slice(0, 20).forEach((stock) => {
           const button = document.createElement("button");
           button.className = `stock-item${stock.symbol === state.symbol ? " active" : ""}`;
           const rank = stock.rank ? `#${stock.rank}` : (stock.sector || "");
           const tags = stock.analysis_tags ? stock.analysis_tags.slice(0, 2).join(", ") : stock.sector;
           button.innerHTML = `<span><span class="symbol">${stock.symbol}</span><br><span class="name">${stock.name}</span><br><span class="sector">${tags || ""}</span></span><span class="sector">${rank}</span>`;
           button.addEventListener("click", () => selectSymbol(stock.symbol));
-            groupItems.appendChild(button);
-          });
-          details.appendChild(groupItems);
-          stockList.appendChild(details);
+          stockList.appendChild(button);
         });
-      }
-
-      function chunkStocks(stocks, size) {
-        const groups = [];
-        for (let index = 0; index < stocks.length; index += size) {
-          groups.push(stocks.slice(index, index + size));
-        }
-        return groups;
       }
 
       async function selectSymbol(symbol) {
@@ -898,7 +836,7 @@
       });
 
       refreshButton.addEventListener("click", loadMarket);
-      scanUniverseButton.addEventListener("click", () => loadMostActiveUniverse(100));
+      scanUniverseButton.addEventListener("click", () => loadMostActiveUniverse(20));
       rangeInput.addEventListener("change", loadMarket);
       intervalInput.addEventListener("change", loadMarket);
       window.addEventListener("resize", () => state.lastTrend && drawChart(state.lastTrend.points || []));
@@ -908,7 +846,7 @@
       document.getElementById("action-watch").addEventListener("click", () => alert(`${state.symbol} 已作为本地观察动作记录，持久化将在数据库版本接入。`));
       document.getElementById("action-backtest").addEventListener("click", () => alert("模拟回测将在 backtesting 模块接入。"));
 
-      loadMostActiveUniverse(100).then(loadMarket);
+      loadMostActiveUniverse(20).then(loadMarket);
       window.setInterval(loadMarket, 60000);
     </script>
   </body>
