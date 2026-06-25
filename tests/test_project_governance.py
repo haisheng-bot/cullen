@@ -100,6 +100,18 @@ class ProjectGovernanceTest(unittest.TestCase):
         missing = [term for term in required_terms if term not in html]
         self.assertEqual([], missing)
 
+    def test_stock_universe_list_uses_collapsible_groups(self) -> None:
+        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+
+        required_terms = [
+            "stock-group",
+            "stock-group-items",
+            "chunkStocks(state.stocks, 20)",
+            "details.open",
+        ]
+        missing = [term for term in required_terms if term not in html]
+        self.assertEqual([], missing)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -109,6 +109,46 @@
         gap: 6px;
       }
 
+      .stock-group {
+        border: 1px solid #d8e1ed;
+        border-radius: 8px;
+        background: #fbfdff;
+        overflow: hidden;
+      }
+
+      .stock-group summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 9px 10px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 800;
+        list-style: none;
+      }
+
+      .stock-group summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .stock-group summary::after {
+        content: "展开";
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .stock-group[open] summary::after {
+        content: "收起";
+      }
+
+      .stock-group-items {
+        display: grid;
+        gap: 4px;
+        padding: 0 6px 6px;
+      }
+
       .side-actions {
         display: grid;
         gap: 8px;
@@ -675,15 +715,40 @@
 
       function renderStockList() {
         stockList.innerHTML = "";
-        state.stocks.forEach((stock) => {
+        chunkStocks(state.stocks, 20).forEach((group, groupIndex) => {
+          const details = document.createElement("details");
+          details.className = "stock-group";
+          const groupStart = groupIndex * 20 + 1;
+          const groupEnd = groupStart + group.length - 1;
+          const containsSelected = group.some((stock) => stock.symbol === state.symbol);
+          if (groupIndex === 0 || containsSelected) details.open = true;
+
+          const summary = document.createElement("summary");
+          summary.innerHTML = `<span>${groupStart}-${groupEnd}</span><span class="muted">${group.length} 只</span>`;
+          details.appendChild(summary);
+
+          const groupItems = document.createElement("div");
+          groupItems.className = "stock-group-items";
+          group.forEach((stock) => {
           const button = document.createElement("button");
           button.className = `stock-item${stock.symbol === state.symbol ? " active" : ""}`;
           const rank = stock.rank ? `#${stock.rank}` : (stock.sector || "");
           const tags = stock.analysis_tags ? stock.analysis_tags.slice(0, 2).join(", ") : stock.sector;
           button.innerHTML = `<span><span class="symbol">${stock.symbol}</span><br><span class="name">${stock.name}</span><br><span class="sector">${tags || ""}</span></span><span class="sector">${rank}</span>`;
           button.addEventListener("click", () => selectSymbol(stock.symbol));
-          stockList.appendChild(button);
+            groupItems.appendChild(button);
+          });
+          details.appendChild(groupItems);
+          stockList.appendChild(details);
         });
+      }
+
+      function chunkStocks(stocks, size) {
+        const groups = [];
+        for (let index = 0; index < stocks.length; index += size) {
+          groups.push(stocks.slice(index, index + size));
+        }
+        return groups;
       }
 
       async function selectSymbol(symbol) {
