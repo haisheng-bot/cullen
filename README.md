@@ -30,6 +30,7 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI
 * [GitHub 协作标准](docs/standards/github-collaboration.md)
 * [版本管理标准](docs/standards/version-management.md)
 * [敏捷迭代与即开发即使用标准](docs/standards/agile-iteration.md)
+* [AI 开发工具协作标准](docs/standards/AI_TOOL_COLLABORATION.md)
 * [API 设计 v0.1](docs/api/api-design-v0.1.md)
 
 ## 本地检查

@@ -29,6 +29,8 @@ GitHub 仓库建议开启：
 
 每个 PR 必须说明：
 
+* AI 任务标识
+* 使用的开发工具
 * 修改范围
 * 测试结果
 * 文档是否更新
@@ -36,6 +38,16 @@ GitHub 仓库建议开启：
 * 是否涉及 AI 输出
 * 是否涉及投资结论
 * 对应版本号或 CHANGELOG 条目
+
+开发工具允许值：
+
+```text
+codex
+claude-code
+cursor
+human
+mixed
+```
 
 ## 4. CI 要求
 

@@ -15,3 +15,4 @@
 * 基础 CI 和治理测试
 * 实时走势 API 和前端趋势图 MVP
 * 独立 Model Layer 标准、目录和 mock provider
+* AI 开发工具协作标准，支持 Codex、Claude Code、Cursor 混用开发
