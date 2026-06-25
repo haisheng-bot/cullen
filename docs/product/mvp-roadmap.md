@@ -60,7 +60,7 @@
 
 ### M4 评分与报告
 
-* 规则化推荐评分（Algorithm Layer，`algorithm-v0.1`，超出原路线图范围但已落地） [verified]
+* 规则化推荐评分（Algorithm Layer，`algorithm-v0.2`，已接入真实 SEC 财务数据：基本面/成长性/估值/技术面/风险五因子） [verified]
 * Scoring Agent（基于 Model Layer 的 AI 评分，区别于上面的规则算法） [planned]
 * 研究报告生成 [planned]
 

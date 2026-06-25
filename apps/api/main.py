@@ -8,7 +8,7 @@ from pathlib import Path
 
 from packages.ai_agents.sec_filing_agent import SECFilingAgent
 from packages.algorithm_layer.recommendation import TrendRecommendationAlgorithm
-from packages.algorithm_layer.schemas import AlgorithmPoint, RecommendationInput
+from packages.algorithm_layer.schemas import AlgorithmPoint, FinancialFactorsInput, RecommendationInput
 from packages.data_sources.market_trend import (
     MarketTrendError,
     YahooFinanceChartClient,
@@ -17,6 +17,7 @@ from packages.data_sources.market_trend import (
 from packages.data_sources.fred import FREDClient, FREDError
 from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
 from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
+from packages.data_sources.sec_financials import SECFinancialsClient, SECFinancialsError
 from packages.db.session import check_database_connection
 from packages.model_layer.factory import build_default_router
 from packages.model_layer.validator import OutputValidationError
@@ -41,6 +42,7 @@ app.add_middleware(
 trend_client = YahooFinanceChartClient()
 history_client = YahooFinanceHistoryClient()
 sec_filing_client = SECFilingClient()
+sec_financials_client = SECFinancialsClient(filing_client=sec_filing_client)
 fred_client = FREDClient()
 news_policy_client = NewsPolicyClient()
 recommendation_algorithm = TrendRecommendationAlgorithm()
@@ -140,12 +142,31 @@ def get_stock_recommendation(symbol: str) -> dict:
             ],
             source=trend.source,
             analysis_time=trend.analysis_time,
+            financial_factors=_fetch_financial_factors(normalized_symbol),
         )
         return recommendation_algorithm.recommend(algorithm_input).to_dict()
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except MarketTrendError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+def _fetch_financial_factors(symbol: str) -> FinancialFactorsInput | None:
+    """Best-effort: a stock missing SEC XBRL data should not break recommendations."""
+    try:
+        facts = sec_financials_client.fetch_financial_facts(symbol)
+    except SECFinancialsError:
+        return None
+    if facts.latest is None:
+        return None
+    return FinancialFactorsInput(
+        revenue=facts.latest.revenue,
+        previous_revenue=facts.previous.revenue if facts.previous else None,
+        net_income=facts.latest.net_income,
+        eps_diluted=facts.latest.eps_diluted,
+        stockholders_equity=facts.latest.stockholders_equity,
+        shares_outstanding=facts.latest.shares_outstanding,
+    )
 
 
 @app.get("/stocks/{symbol}/trend")

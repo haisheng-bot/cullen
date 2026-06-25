@@ -15,6 +15,18 @@ class AlgorithmPoint:
 
 
 @dataclass(frozen=True)
+class FinancialFactorsInput:
+    """Optional real fundamentals, from SEC XBRL company facts (algorithm-v0.2)."""
+
+    revenue: float | None = None
+    previous_revenue: float | None = None
+    net_income: float | None = None
+    eps_diluted: float | None = None
+    stockholders_equity: float | None = None
+    shares_outstanding: float | None = None
+
+
+@dataclass(frozen=True)
 class RecommendationInput:
     symbol: str
     latest_price: float
@@ -22,6 +34,7 @@ class RecommendationInput:
     points: list[AlgorithmPoint]
     source: str
     analysis_time: str
+    financial_factors: FinancialFactorsInput | None = None
 
 
 @dataclass(frozen=True)

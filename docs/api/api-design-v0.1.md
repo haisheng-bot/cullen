@@ -205,27 +205,6 @@ GET /stocks/{symbol}/news?years=3&limit=30
 GET /stocks/{symbol}/trend?range=1d&interval=1m
 ```
 
-### 2.8 推荐算法
-
-```text
-GET /stocks/{symbol}/recommendation
-```
-
-用途：
-
-* 调用独立 Algorithm Layer
-* 返回股票评分和推荐等级
-* 展示因子分、推荐理由和风险
-
-第一阶段算法：
-
-* `algorithm-v0.1`
-* 基于实时走势、前收盘、波动和成交量活跃度
-
-说明：
-
-推荐算法仅用于研究关注优先级，不构成买卖建议。
-
 用途：
 
 * 接入美股走势 API
@@ -267,6 +246,55 @@ interval  间隔：1m, 2m, 5m, 15m, 30m, 60m, 1d
   "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
 }
 ```
+
+### 2.8 推荐算法
+
+```text
+GET /stocks/{symbol}/recommendation
+```
+
+用途：
+
+* 调用独立 Algorithm Layer
+* 返回股票评分和推荐等级
+* 展示因子分、推荐理由和风险
+
+当前算法：`algorithm-v0.2`，五个因子：
+
+* `fundamentals` 基本面（净利润率，30%）—— 来自 SEC XBRL company facts
+* `growth` 成长性（营收同比，20%）—— 来自 SEC XBRL company facts
+* `valuation` 估值（P/E 绝对档位，20%）—— 结合实时价格与 EPS
+* `technical` 技术面（区间走势/前收盘变化/成交量活跃度，20%）
+* `volatility_risk` 风险（区间波动，10%）
+
+某只股票缺少可用财务数据时，`fundamentals`/`growth`/`valuation` 退化为中性分（50分），并在 `risks` 中提示。权重过渡说明见 `docs/standards/ALGORITHM_STANDARD.md` 第 9.1 节。
+
+说明：推荐算法仅用于研究关注优先级，不构成买卖建议。
+
+响应示例：
+
+```json
+{
+  "symbol": "AAPL",
+  "total_score": 67,
+  "recommendation": "中性",
+  "factors": [
+    {"name": "fundamentals", "score": 90, "weight": 0.3, "explanation": "净利润率约 26.9%（基于最近年度 SEC 财报）"},
+    {"name": "growth", "score": 58, "weight": 0.2, "explanation": "营收同比增长约 6.4%（基于最近两个年度 SEC 财报）"},
+    {"name": "valuation", "score": 55, "weight": 0.2, "explanation": "按最新价格估算 P/E 约 39.3（绝对档位估算，非行业相对）"},
+    {"name": "technical", "score": 58, "weight": 0.2, "explanation": "区间走势 -0.05%，相对前收盘 -0.41%，结合成交量活跃度估算"},
+    {"name": "volatility_risk", "score": 55, "weight": 0.1, "explanation": "区间波动估算 2.23%"}
+  ],
+  "reasons": ["区间走势为负，短线动量偏弱。", "当前价格低于或接近前收盘价。", "区间波动较高，需要结合风险承受能力观察。"],
+  "risks": ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。"],
+  "source": "Yahoo Finance chart API",
+  "algorithm_version": "algorithm-v0.2",
+  "analysis_time": "2026-06-25T09:36:16.212676+00:00",
+  "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
+}
+```
+
+已用真实 AAPL 数据（SEC XBRL + Yahoo 实时走势）做过线上联调。
 
 ### 2.9 FRED 宏观数据（需免费 API Key）
 

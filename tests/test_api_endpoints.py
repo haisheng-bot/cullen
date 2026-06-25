@@ -9,6 +9,7 @@ from packages.data_sources.market_trend import TrendPoint, TrendResponse
 from packages.data_sources.price_history import HistoryPoint, HistoryResponse
 from packages.data_sources.fred import FREDObservation, FREDSeriesResponse
 from packages.data_sources.sec_filings import Filing, FilingListResponse
+from packages.data_sources.sec_financials import SECFinancialsError
 from packages.news_layer.schemas import NewsItem, NewsPolicyResponse
 from packages.universe_layer.schemas import UniverseResult, UniverseStock
 from packages.ai_agents.base import AgentResult
@@ -75,6 +76,11 @@ class FakeSECFilingClient:
             source="test-source",
             analysis_time="2026-06-25T13:32:00+00:00",
         )
+
+
+class FakeSECFinancialsClient:
+    def fetch_financial_facts(self, symbol: str):
+        raise SECFinancialsError("no test fixture wired for financial facts")
 
 
 class FakeFREDClient:
@@ -163,6 +169,7 @@ class ApiEndpointsTest(unittest.TestCase):
         self.original_client = main.trend_client
         self.original_history_client = main.history_client
         self.original_sec_filing_client = main.sec_filing_client
+        self.original_sec_financials_client = main.sec_financials_client
         self.original_fred_client = main.fred_client
         self.original_news_policy_client = main.news_policy_client
         self.original_sec_filing_agent = main.sec_filing_agent
@@ -170,6 +177,7 @@ class ApiEndpointsTest(unittest.TestCase):
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
         main.sec_filing_client = FakeSECFilingClient()
+        main.sec_financials_client = FakeSECFinancialsClient()
         main.fred_client = FakeFREDClient()
         main.news_policy_client = FakeNewsPolicyClient()
         main.sec_filing_agent = FakeSECFilingAgent()
@@ -179,6 +187,7 @@ class ApiEndpointsTest(unittest.TestCase):
         main.trend_client = self.original_client
         main.history_client = self.original_history_client
         main.sec_filing_client = self.original_sec_filing_client
+        main.sec_financials_client = self.original_sec_financials_client
         main.fred_client = self.original_fred_client
         main.news_policy_client = self.original_news_policy_client
         main.sec_filing_agent = self.original_sec_filing_agent
@@ -246,7 +255,7 @@ class ApiEndpointsTest(unittest.TestCase):
 
         self.assertEqual("AAPL", payload["symbol"])
         self.assertIn(payload["recommendation"], {"强关注", "观察", "中性", "回避"})
-        self.assertEqual("algorithm-v0.1", payload["algorithm_version"])
+        self.assertEqual("algorithm-v0.2", payload["algorithm_version"])
         self.assertTrue(payload["factors"])
 
     def test_most_active_universe_endpoint(self) -> None:

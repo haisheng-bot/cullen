@@ -36,3 +36,5 @@
 * Agent 基类（`packages/ai_agents/base.py`）落地 Policy Guard → Data Context Builder → Workflow Executor → Model Layer → Output Validator → Audit Logger 流水线
 * SEC Filing Agent（M3 第一个 Agent），接入 `/stocks/{symbol}/sec-summary`，已用真实 SEC EDGAR 数据端到端联调并验证 audit_logs 落库
 * Model Layer 路由工厂 `build_default_router()`：无 Key 时 fallback 到 mock provider，配置任意模型 Key 后自动切换 litellm provider
+* SEC EDGAR XBRL 财务数据源（`packages/data_sources/sec_financials.py`），免费读取营收/净利润/EPS/股东权益等真实财报数据
+* Algorithm Layer 升级到 `algorithm-v0.2`：加入基本面、成长性、估值三个真实数据因子，与原技术面/风险因子合并为五维度评分，`/stocks/{symbol}/recommendation` 已接入真实 SEC 财务数据并端到端联调
