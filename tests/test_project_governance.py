@@ -124,6 +124,28 @@ class ProjectGovernanceTest(unittest.TestCase):
         present = [term for term in removed_terms if term in html]
         self.assertEqual([], present)
 
+    def test_project_interface_includes_us_concept_preview(self) -> None:
+        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+
+        required_terms = [
+            "美国概念板块预览",
+            "concept-grid",
+            "CONCEPT_DEFINITIONS",
+            "renderConceptPreview",
+            "matchesConcept",
+            "AI / Cloud",
+            "Semiconductors",
+            "EV / Battery",
+            "Crypto / Fintech",
+            "Biotech / Pharma",
+            "Aerospace / Defense",
+            "Energy / Uranium",
+            "Small Cap Momentum",
+            "click to open leader",
+        ]
+        missing = [term for term in required_terms if term not in html]
+        self.assertEqual([], missing)
+
     def test_project_interface_includes_news_policy_panel(self) -> None:
         html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
 

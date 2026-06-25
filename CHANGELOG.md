@@ -27,6 +27,7 @@
 * 走势图升级为券商式滑动界面，支持十字坐标、成交量和成交额读数
 * 常用分析维度升级为可用数据面板，展示成交量、Rel Vol、RSI、均线、52 周位置等实时指标
 * 实时行情坐标分析增加估算换手率、买量和卖量展示
+* 操作界面增加美国概念板块预览，按 Most Active Top 100 聚合 AI、半导体、EV、Crypto 等概念热度
 * 后端基础：统一配置管理、数据库连接层、audit_logs 表，以及 Docker Compose（Postgres + Redis）和数据库初始化脚本
 * yfinance 风格免费历史日线数据源（近 10 年日 / 周 / 月线 OHLCV），接入 `/stocks/{symbol}/history`
 * SEC EDGAR 财报申报读取（免费，按代码解析 CIK，列出 10-K / 10-Q / 8-K 原文链接），接入 `/stocks/{symbol}/filings`

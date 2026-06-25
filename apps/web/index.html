@@ -313,6 +313,59 @@
         line-height: 1.4;
       }
 
+      .concept-board {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .concept-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .concept-card {
+        border: 1px solid #e1e7f0;
+        border-radius: 8px;
+        background: #fbfdff;
+        padding: 9px;
+        min-height: 116px;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .concept-card:hover {
+        border-color: #b8cef7;
+        background: #edf4ff;
+      }
+
+      .concept-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 850;
+      }
+
+      .concept-meta {
+        margin: 6px 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .concept-symbols {
+        color: var(--text);
+        font-size: 12px;
+        font-weight: 750;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       .analysis-guide {
         margin-top: 12px;
         padding: 12px;
@@ -533,11 +586,11 @@
         }
         .topbar, aside, main, .rightbar { grid-column: 1; }
         canvas { height: 330px; }
-        .metrics, .layer-grid, .guide-grid, .chart-inspector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
       @media (max-width: 560px) {
-        .metrics, .layer-grid, .guide-grid, .chart-inspector { grid-template-columns: 1fr; }
+        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector { grid-template-columns: 1fr; }
       }
     </style>
   </head>
@@ -618,6 +671,17 @@
           <div class="metric"><div class="label">最新点数</div><div class="value" id="metric-points">--</div></div>
           <div class="metric"><div class="label">前收盘</div><div class="value" id="metric-prev">--</div></div>
           <div class="metric"><div class="label">更新时间</div><div class="value" id="metric-time">--</div></div>
+        </section>
+
+        <section class="concept-board">
+          <div class="project-head">
+            <div>
+              <div class="project-title">美国概念板块预览</div>
+              <div class="muted">基于当前 Most Active Top 100 聚合，展示概念热度、代表股票和平均涨跌。</div>
+            </div>
+            <span class="status-pill">Concept Preview</span>
+          </div>
+          <div class="concept-grid" id="concept-grid"></div>
         </section>
 
         <section class="project-board">
@@ -717,6 +781,22 @@
       const statusEl = document.getElementById("status");
       const canvas = document.getElementById("chart");
       const ctx = canvas.getContext("2d");
+      const conceptGrid = document.getElementById("concept-grid");
+
+      const CONCEPT_DEFINITIONS = [
+        { id: "ai", name: "AI / Cloud", tag: "AI", symbols: ["NVDA", "MSFT", "GOOGL", "AMZN", "META", "PLTR", "ORCL", "SNOW", "CRM", "AI", "SOUN"], keywords: ["artificial", "cloud", "software", "data", "analytics"] },
+        { id: "semis", name: "Semiconductors", tag: "Chip", symbols: ["NVDA", "AMD", "INTC", "MU", "MRVL", "AVGO", "TSM", "ARM", "QCOM", "SMCI", "ASML"], keywords: ["semiconductor", "chip", "micro", "memory", "computer"] },
+        { id: "ev", name: "EV / Battery", tag: "EV", symbols: ["TSLA", "RIVN", "LCID", "NIO", "LI", "XPEV", "QS", "CHPT", "ENVX", "JOBY", "ACHR"], keywords: ["electric", "vehicle", "battery", "automotive", "aviation"] },
+        { id: "crypto", name: "Crypto / Fintech", tag: "Crypto", symbols: ["COIN", "MSTR", "MARA", "RIOT", "HOOD", "PYPL", "SQ", "SOFI", "NU", "IBIT", "ETHA"], keywords: ["crypto", "bitcoin", "blockchain", "fintech", "digital", "financial technology"] },
+        { id: "biotech", name: "Biotech / Pharma", tag: "Health", symbols: ["PFE", "MRNA", "BNTX", "LLY", "NVO", "AMGN", "GILD", "BIIB", "VRTX", "UNH"], keywords: ["biotech", "pharma", "therapeutics", "health", "medical", "drug"] },
+        { id: "defense", name: "Aerospace / Defense", tag: "Defense", symbols: ["BA", "LMT", "RTX", "NOC", "GD", "KTOS", "JOBY", "ACHR", "SPCE"], keywords: ["aerospace", "defense", "aviation", "space", "airlines"] },
+        { id: "energy", name: "Energy / Uranium", tag: "Energy", symbols: ["XOM", "CVX", "OXY", "SLB", "HAL", "CCJ", "UEC", "SMR", "OKLO", "PLUG"], keywords: ["energy", "oil", "gas", "uranium", "nuclear", "power", "mining"] },
+        { id: "banks", name: "Banks / Brokers", tag: "Finance", symbols: ["JPM", "BAC", "C", "WFC", "GS", "MS", "SCHW", "USB", "HBAN", "KEY"], keywords: ["bank", "capital", "financial", "bancshares", "broker"] },
+        { id: "consumer", name: "Consumer / Retail", tag: "Retail", symbols: ["AMZN", "WMT", "COST", "TGT", "NKE", "SBUX", "MCD", "DIS", "BABA"], keywords: ["retail", "consumer", "restaurant", "stores", "commerce"] },
+        { id: "media", name: "Media / Streaming", tag: "Media", symbols: ["NFLX", "DIS", "WBD", "PARA", "ROKU", "SPOT", "GOOGL", "META", "SNAP"], keywords: ["media", "streaming", "entertainment", "communications", "social"] },
+        { id: "quantum", name: "Quantum / Advanced Tech", tag: "Quantum", symbols: ["IONQ", "RGTI", "QBTS", "QUBT", "ARQQ", "IBM", "GOOGL", "MSFT"], keywords: ["quantum", "computing", "advanced"] },
+        { id: "small-momentum", name: "Small Cap Momentum", tag: "Momentum", symbols: [], keywords: ["holdings", "inc."], rule: "smallMomentum" },
+      ];
 
       const fmt = (value) => value === null || value === undefined ? "--" : Number(value).toFixed(2);
       const formatCompactNumber = (value) => {
@@ -770,6 +850,7 @@
         state.stocks = data.items;
         universeMeta.textContent = query ? `Search · ${query}` : "Popular US watchlist";
         renderStockList();
+        renderConceptPreview();
       }
 
       async function loadMostActiveUniverse(limit = 100) {
@@ -783,6 +864,7 @@
           scanUniverseButton.disabled = false;
         }
         renderStockList();
+        renderConceptPreview();
       }
 
       function renderStockList() {
@@ -795,6 +877,57 @@
           button.innerHTML = `<span><span class="symbol">${stock.symbol}</span><br><span class="name">${stock.name}</span><br><span class="sector">${tags || ""}</span></span><span class="sector">${rank}</span>`;
           button.addEventListener("click", () => selectSymbol(stock.symbol));
           stockList.appendChild(button);
+        });
+      }
+
+      function matchesConcept(stock, concept) {
+        const symbolMatch = (concept.symbols || []).includes(stock.symbol);
+        const haystack = `${stock.name || ""} ${stock.sector || ""} ${(stock.analysis_tags || []).join(" ")}`.toLowerCase();
+        const keywordMatch = (concept.keywords || []).some((keyword) => haystack.includes(keyword));
+        const smallMomentum = concept.rule === "smallMomentum"
+          && stock.market_cap !== null
+          && stock.market_cap !== undefined
+          && stock.market_cap < 10_000_000_000
+          && Math.abs(stock.change_percent || 0) >= 5;
+        return symbolMatch || keywordMatch || smallMomentum;
+      }
+
+      function buildConceptPreview(concept) {
+        const items = state.stocks.filter((stock) => matchesConcept(stock, concept));
+        const avgChange = average(items.map((stock) => stock.change_percent));
+        const totalVolume = items.reduce((sum, stock) => sum + (stock.volume || 0), 0);
+        const leaders = [...items].sort((a, b) => (b.volume || 0) - (a.volume || 0)).slice(0, 4);
+        return { ...concept, items, avgChange, totalVolume, leaders };
+      }
+
+      function renderConceptPreview() {
+        if (!conceptGrid) return;
+        const previews = CONCEPT_DEFINITIONS
+          .map(buildConceptPreview)
+          .filter((concept) => concept.items.length > 0)
+          .sort((a, b) => b.items.length - a.items.length || (b.totalVolume || 0) - (a.totalVolume || 0));
+
+        conceptGrid.innerHTML = previews.map((concept) => {
+          const status = concept.avgChange === null ? "neutral" : concept.avgChange >= 0 ? "positive" : "negative";
+          const leaderSymbols = concept.leaders.map((stock) => stock.symbol).join(" · ") || "--";
+          return `
+            <button class="concept-card" type="button" data-symbol="${escapeHtml(concept.leaders[0]?.symbol || "")}">
+              <div class="concept-head">
+                <span>${escapeHtml(concept.name)}</span>
+                <span class="${status}">${formatPercent(concept.avgChange)}</span>
+              </div>
+              <div class="concept-meta">${concept.items.length} stocks · Vol ${formatCompactNumber(concept.totalVolume)}</div>
+              <div class="concept-symbols">${escapeHtml(leaderSymbols)}</div>
+              <div class="concept-meta">${escapeHtml(concept.tag)} · click to open leader</div>
+            </button>
+          `;
+        }).join("");
+
+        conceptGrid.querySelectorAll(".concept-card").forEach((card) => {
+          card.addEventListener("click", () => {
+            const symbol = card.getAttribute("data-symbol");
+            if (symbol) selectSymbol(symbol);
+          });
         });
       }
 
