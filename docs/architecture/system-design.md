@@ -9,6 +9,8 @@ Agent Layer
         |
 Workflow Layer
         |
+Universe Layer
+        |
 Algorithm Layer
         |
 Model Layer
@@ -27,6 +29,7 @@ Data Layer
 * REST API
 * 参数校验
 * 美股搜索和报价接口
+* 每日候选池扫描
 * 数据源调用
 * 实时走势 API
 * Agent 编排
@@ -64,7 +67,23 @@ Data Layer
 * Finnhub
 * Polygon
 
-## 5. Algorithm Layer
+## 5. Universe Layer
+
+候选池层位于 `packages/universe_layer`，用于每日扫描美股交易最活跃的 100 只股票。
+
+Universe Layer 负责：
+
+* Most Active Top 100
+* 市场常见筛选维度
+* 每日候选池
+* 候选股票标签
+* 给 Algorithm Layer 和 Agent Layer 提供输入
+
+详细标准见：
+
+* `docs/standards/UNIVERSE_STANDARD.md`
+
+## 6. Algorithm Layer
 
 算法层位于 `packages/algorithm_layer`，独立于 API、前端、Agent 和 Model Layer。
 
@@ -81,7 +100,7 @@ Algorithm Layer 负责：
 
 * `docs/standards/ALGORITHM_STANDARD.md`
 
-## 6. Model Layer
+## 7. Model Layer
 
 模型层位于 `packages/model_layer`，是独立于 Agent 的核心层。
 
@@ -101,7 +120,7 @@ Agent、Workflow、API 和 Data Source 不得直接调用具体模型 SDK。
 
 * `docs/standards/MODEL_STANDARD.md`
 
-## 7. AI Agent 层
+## 8. AI Agent 层
 
 Agent 位于 `packages/ai_agents`，至少包括：
 
@@ -113,7 +132,7 @@ Agent 位于 `packages/ai_agents`，至少包括：
 
 Agent 只负责任务定义和业务推理目标，不负责模型供应商适配。
 
-## 8. 审计日志
+## 9. 审计日志
 
 所有 AI 输出必须写入 `audit_logs`。
 

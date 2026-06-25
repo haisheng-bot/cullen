@@ -14,6 +14,7 @@ from packages.data_sources.market_trend import (
     normalize_symbol,
 )
 from packages.db.session import check_database_connection
+from packages.universe_layer.most_active import MostActiveUniverseScanner
 
 
 app = FastAPI(
@@ -32,6 +33,7 @@ app.add_middleware(
 
 trend_client = YahooFinanceChartClient()
 recommendation_algorithm = TrendRecommendationAlgorithm()
+universe_scanner = MostActiveUniverseScanner()
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
 
 POPULAR_US_STOCKS = [
@@ -91,6 +93,11 @@ def search_us_stocks(q: str = Query("", max_length=32)) -> dict:
         "items": items,
         "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。",
     }
+
+
+@app.get("/stocks/universe/most-active")
+def get_most_active_universe(limit: int = Query(100, ge=1, le=100)) -> dict:
+    return universe_scanner.scan(limit=limit).to_dict()
 
 
 @app.get("/stocks/{symbol}/quote")

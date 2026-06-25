@@ -109,6 +109,21 @@
         gap: 6px;
       }
 
+      .side-actions {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .side-actions button {
+        height: 34px;
+        border: 1px solid #c8d3e2;
+        border-radius: 6px;
+        background: #172033;
+        color: white;
+        cursor: pointer;
+      }
+
       .stock-item {
         display: grid;
         grid-template-columns: 1fr auto;
@@ -383,7 +398,11 @@
       </header>
 
       <aside>
-        <div class="section-title">美股关注列表</div>
+        <div class="section-title">每日美股候选池</div>
+        <div class="side-actions">
+          <button id="scan-universe-button">扫描最活跃 100 只</button>
+        </div>
+        <div class="muted" id="universe-meta">Most Active · US</div>
         <div class="stock-list" id="stock-list"></div>
       </aside>
 
@@ -450,6 +469,10 @@
               <div class="layer-status">美股操作界面、报价、走势、推荐展示已接入。</div>
             </div>
             <div class="layer">
+              <div class="layer-name">Universe Layer</div>
+              <div class="layer-status">每日扫描美股最活跃 Top 100，作为候选池。</div>
+            </div>
+            <div class="layer">
               <div class="layer-name">Algorithm Layer</div>
               <div class="layer-status">algorithm-v0.1，趋势型推荐算法，可单独测试。</div>
             </div>
@@ -506,6 +529,8 @@
       const stockList = document.getElementById("stock-list");
       const searchForm = document.getElementById("search-form");
       const searchInput = document.getElementById("search-input");
+      const scanUniverseButton = document.getElementById("scan-universe-button");
+      const universeMeta = document.getElementById("universe-meta");
       const rangeInput = document.getElementById("range");
       const intervalInput = document.getElementById("interval");
       const refreshButton = document.getElementById("refresh-button");
@@ -527,6 +552,20 @@
       async function loadStocks(query = "") {
         const data = await request(query ? `/stocks/search?q=${encodeURIComponent(query)}` : "/stocks/popular");
         state.stocks = data.items;
+        universeMeta.textContent = query ? `Search · ${query}` : "Popular US watchlist";
+        renderStockList();
+      }
+
+      async function loadMostActiveUniverse(limit = 100) {
+        scanUniverseButton.disabled = true;
+        universeMeta.textContent = "正在扫描 Most Active Universe...";
+        try {
+          const data = await request(`/stocks/universe/most-active?limit=${limit}`);
+          state.stocks = data.items;
+          universeMeta.textContent = `${data.universe_name} · ${data.items.length} · ${data.source}`;
+        } finally {
+          scanUniverseButton.disabled = false;
+        }
         renderStockList();
       }
 
@@ -535,7 +574,9 @@
         state.stocks.forEach((stock) => {
           const button = document.createElement("button");
           button.className = `stock-item${stock.symbol === state.symbol ? " active" : ""}`;
-          button.innerHTML = `<span><span class="symbol">${stock.symbol}</span><br><span class="name">${stock.name}</span></span><span class="sector">${stock.sector}</span>`;
+          const rank = stock.rank ? `#${stock.rank}` : (stock.sector || "");
+          const tags = stock.analysis_tags ? stock.analysis_tags.slice(0, 2).join(", ") : stock.sector;
+          button.innerHTML = `<span><span class="symbol">${stock.symbol}</span><br><span class="name">${stock.name}</span><br><span class="sector">${tags || ""}</span></span><span class="sector">${rank}</span>`;
           button.addEventListener("click", () => selectSymbol(stock.symbol));
           stockList.appendChild(button);
         });
@@ -688,6 +729,7 @@
       });
 
       refreshButton.addEventListener("click", loadMarket);
+      scanUniverseButton.addEventListener("click", () => loadMostActiveUniverse(100));
       rangeInput.addEventListener("change", loadMarket);
       intervalInput.addEventListener("change", loadMarket);
       window.addEventListener("resize", () => state.lastTrend && drawChart(state.lastTrend.points || []));
@@ -697,7 +739,7 @@
       document.getElementById("action-watch").addEventListener("click", () => alert(`${state.symbol} 已作为本地观察动作记录，持久化将在数据库版本接入。`));
       document.getElementById("action-backtest").addEventListener("click", () => alert("模拟回测将在 backtesting 模块接入。"));
 
-      loadStocks().then(loadMarket);
+      loadMostActiveUniverse(100).then(loadMarket);
       window.setInterval(loadMarket, 60000);
     </script>
   </body>

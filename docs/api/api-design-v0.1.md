@@ -8,6 +8,7 @@
 GET /stocks/{symbol}
 GET /stocks/popular
 GET /stocks/search
+GET /stocks/universe/most-active
 GET /stocks/{symbol}/quote
 GET /stocks/{symbol}/recommendation
 GET /stocks/{symbol}/financials
@@ -49,13 +50,41 @@ GET /stocks/{symbol}/quote
 
 * Yahoo Finance chart API
 
-### 2.3 实时走势
+### 2.3 每日候选池
+
+```text
+GET /stocks/universe/most-active?limit=100
+```
+
+用途：
+
+* 扫描美股交易最活跃的 100 只股票
+* 作为每日筛选股票的第一层候选池
+* 输出市场常见分析维度和标签
+* 为 Algorithm Layer、Agent Layer 和操作界面提供输入
+
+第一阶段维度：
+
+* 成交量
+* 相对成交量
+* 成交额
+* 涨跌幅
+* 市值
+* P/E
+* EPS / 收入增长
+* RSI / 均线
+* 波动率
+* 52 周位置
+* 行业
+* 分析师评级
+
+### 2.4 实时走势
 
 ```text
 GET /stocks/{symbol}/trend?range=1d&interval=1m
 ```
 
-### 2.4 推荐算法
+### 2.5 推荐算法
 
 ```text
 GET /stocks/{symbol}/recommendation
