@@ -22,3 +22,4 @@
 * LiteLLM-compatible Model Layer provider 和标准
 * 项目开发界面，展示版本、架构层和当前可用状态
 * Universe Layer，用于每日扫描美股最活跃 Top 100 候选池
+* 操作界面增加常用分析维度解读区域

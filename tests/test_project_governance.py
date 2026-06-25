@@ -82,6 +82,24 @@ class ProjectGovernanceTest(unittest.TestCase):
         missing = [term for term in required_terms if term not in html]
         self.assertEqual([], missing)
 
+    def test_project_interface_includes_analysis_dimension_guide(self) -> None:
+        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+
+        required_terms = [
+            "常用分析维度解读",
+            "成交量",
+            "相对成交量",
+            "P/E",
+            "RSI",
+            "均线位置",
+            "波动率",
+            "52 周位置",
+            "Beta",
+            "行业强弱",
+        ]
+        missing = [term for term in required_terms if term not in html]
+        self.assertEqual([], missing)
+
 
 if __name__ == "__main__":
     unittest.main()

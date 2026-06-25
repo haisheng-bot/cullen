@@ -273,6 +273,50 @@
         line-height: 1.4;
       }
 
+      .analysis-guide {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .guide-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .guide-item {
+        border: 1px solid #e1e7f0;
+        border-radius: 8px;
+        background: #fbfdff;
+        padding: 9px;
+        min-height: 98px;
+      }
+
+      .guide-name {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .guide-tag {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .guide-text {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
       .action-stack { display: grid; gap: 8px; margin-bottom: 12px; }
       .action-stack button {
         height: 38px;
@@ -378,11 +422,11 @@
         }
         .topbar, aside, main, .rightbar { grid-column: 1; }
         canvas { height: 330px; }
-        .metrics, .layer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .metrics, .layer-grid, .guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
       @media (max-width: 560px) {
-        .metrics, .layer-grid { grid-template-columns: 1fr; }
+        .metrics, .layer-grid, .guide-grid { grid-template-columns: 1fr; }
       }
     </style>
   </head>
@@ -491,6 +535,66 @@
             <div class="layer">
               <div class="layer-name">Governance</div>
               <div class="layer-status">GitHub、版本、AI 工具协作、敏捷迭代标准已建立。</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="analysis-guide">
+          <div class="project-head">
+            <div>
+              <div class="project-title">常用分析维度解读</div>
+              <div class="muted">用于每日候选池、推荐算法和人工复核。</div>
+            </div>
+            <span class="status-pill">Screener Guide</span>
+          </div>
+          <div class="guide-grid">
+            <div class="guide-item">
+              <div class="guide-name"><span>成交量</span><span class="guide-tag">Volume</span></div>
+              <div class="guide-text">判断市场关注度和流动性。高成交量股票更适合进入每日候选池，但需要结合涨跌幅判断是否过热。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>相对成交量</span><span class="guide-tag">Rel Vol</span></div>
+              <div class="guide-text">当前成交量相对历史均值的放大倍数。大于 1 表示更活跃，大于 2 通常代表异常关注。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>涨跌幅</span><span class="guide-tag">% Change</span></div>
+              <div class="guide-text">衡量当日价格冲击。大涨大跌都值得跟踪，但不能单独作为买卖依据。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>市值</span><span class="guide-tag">Market Cap</span></div>
+              <div class="guide-text">区分大盘、成长和小盘股票。大市值通常更稳定，小市值可能波动更高。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>P/E</span><span class="guide-tag">Valuation</span></div>
+              <div class="guide-text">估值参考指标。低 P/E 不一定便宜，高 P/E 不一定贵，必须结合增长、行业和利润质量。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>RSI</span><span class="guide-tag">Momentum</span></div>
+              <div class="guide-text">常用动量指标。高位可能代表强势或过热，低位可能代表弱势或反弹机会。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>均线位置</span><span class="guide-tag">MA</span></div>
+              <div class="guide-text">观察价格是否站上短中期趋势。站上均线偏强，跌破均线需要关注趋势转弱。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>波动率</span><span class="guide-tag">Risk</span></div>
+              <div class="guide-text">衡量价格波动风险。高波动股票可能机会大，但仓位和止损要求更高。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>52 周位置</span><span class="guide-tag">Range</span></div>
+              <div class="guide-text">看当前价格接近一年高点还是低点。接近高点说明强势，接近低点需要区分低估和走弱。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>Beta</span><span class="guide-tag">Market Risk</span></div>
+              <div class="guide-text">衡量相对大盘的波动敏感度。Beta 越高，受市场情绪影响通常越明显。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>收入 / EPS 增长</span><span class="guide-tag">Growth</span></div>
+              <div class="guide-text">用于判断公司成长质量。收入增长看规模扩张，EPS 增长看盈利兑现。</div>
+            </div>
+            <div class="guide-item">
+              <div class="guide-name"><span>行业强弱</span><span class="guide-tag">Sector</span></div>
+              <div class="guide-text">同一行业股票常有联动。强行业里的强个股通常更值得进入观察池。</div>
             </div>
           </div>
         </section>
