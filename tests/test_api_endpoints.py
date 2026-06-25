@@ -293,7 +293,7 @@ class ApiEndpointsTest(unittest.TestCase):
 
         self.assertEqual("AAPL", payload["symbol"])
         self.assertIn(payload["recommendation"], {"强关注", "观察", "中性", "回避"})
-        self.assertEqual("algorithm-v0.2", payload["algorithm_version"])
+        self.assertEqual("algorithm-v0.2.1", payload["algorithm_version"])
         self.assertTrue(payload["factors"])
 
     def test_most_active_universe_endpoint(self) -> None:

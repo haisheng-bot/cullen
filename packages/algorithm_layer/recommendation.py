@@ -8,25 +8,33 @@ from packages.algorithm_layer.schemas import (
     FinancialFactorsInput,
     RecommendationInput,
     RecommendationResult,
+    TechnicalSeriesInput,
+)
+from packages.algorithm_layer.technical_indicators import (
+    MIN_CLOSES_FOR_INDICATORS,
+    calculate_momentum_percent,
+    calculate_rsi,
+    detect_ma_cross,
 )
 
 NO_DATA_SCORE = 50
 
 
 class TrendRecommendationAlgorithm(RecommendationAlgorithm):
-    """algorithm-v0.2: adds fundamentals/growth/valuation factors from real SEC
-    XBRL data alongside the v0.1 technical/risk factors. See
+    """algorithm-v0.2.1: technical factor now uses real RSI-14/MA(5,20)
+    cross/10-day momentum from daily closes instead of crude interval %
+    change, when `technical_series` is supplied. Fundamentals/growth/
+    valuation factors are unchanged from v0.2 (real SEC XBRL data). See
     docs/standards/ALGORITHM_STANDARD.md section 9 for the version roadmap.
     """
 
-    algorithm_version = "algorithm-v0.2"
+    algorithm_version = "algorithm-v0.2.1"
 
     def recommend(self, data: RecommendationInput) -> RecommendationResult:
         if not data.points:
             raise ValueError("points are required for recommendation")
 
         closes = [point.close for point in data.points]
-        volumes = [point.volume for point in data.points if point.volume is not None]
         first_close = closes[0]
         latest_price = data.latest_price
         previous_close = data.previous_close or first_close
@@ -36,7 +44,7 @@ class TrendRecommendationAlgorithm(RecommendationAlgorithm):
         volatility_percent = _volatility_percent(closes)
 
         technical_score, technical_explanation = _technical_score(
-            trend_change_percent, day_change_percent, _volume_score(volumes)
+            data.technical_series, trend_change_percent, day_change_percent
         )
         fundamentals_score, fundamentals_explanation = _fundamentals_score(data.financial_factors)
         growth_score, growth_explanation = _growth_score(data.financial_factors)
@@ -151,17 +159,6 @@ def _risk_score(volatility_percent: float) -> int:
     return max(20, min(95, round(95 - volatility_percent * 18)))
 
 
-def _volume_score(volumes: list[int]) -> int:
-    if not volumes:
-        return 55
-    average_volume = mean(volumes)
-    latest_volume = volumes[-1]
-    if average_volume <= 0:
-        return 55
-    ratio = latest_volume / average_volume
-    return max(35, min(90, round(55 + ratio * 18)))
-
-
 def _volatility_percent(closes: list[float]) -> float:
     if not closes:
         return 0.0
@@ -171,15 +168,69 @@ def _volatility_percent(closes: list[float]) -> float:
     return (max(closes) - min(closes)) / average_close * 100
 
 
+_CROSS_LABELS = {
+    "golden_cross": "金叉",
+    "death_cross": "死叉",
+    "bullish": "多头排列",
+    "bearish": "空头排列",
+    "flat": "走势平缓",
+}
+
+_CROSS_SCORES = {
+    "golden_cross": 80,
+    "bullish": 65,
+    "flat": 50,
+    "bearish": 35,
+    "death_cross": 20,
+}
+
+
+def _rsi_score(rsi: float) -> int:
+    """Maps RSI-14 to a 0-100 score. 30-70 is treated as the healthy
+    momentum band (linear around neutral 50); above 70 is capped to reflect
+    overbought pullback risk, below 30 is floored to reflect oversold risk.
+    """
+    if rsi >= 80:
+        return 45
+    if rsi >= 70:
+        return 65
+    if rsi >= 55:
+        return round(50 + (rsi - 55) * (65 - 50) / (70 - 55))
+    if rsi >= 40:
+        return round(35 + (rsi - 40) * (50 - 35) / (55 - 40))
+    if rsi >= 20:
+        return round(20 + (rsi - 20) * (35 - 20) / (40 - 20))
+    return 20
+
+
 def _technical_score(
-    trend_change_percent: float, day_change_percent: float, volume_score: int
+    technical_series: TechnicalSeriesInput | None,
+    trend_change_percent: float,
+    day_change_percent: float,
 ) -> tuple[int, str]:
+    if technical_series is not None and len(technical_series.closes) >= MIN_CLOSES_FOR_INDICATORS:
+        closes = technical_series.closes
+        momentum_percent = calculate_momentum_percent(closes, lookback=10) or 0.0
+        rsi = calculate_rsi(closes, period=14) or 50.0
+        cross_state = detect_ma_cross(closes, short_period=5, long_period=20)
+
+        momentum_score = _trend_score(momentum_percent)
+        rsi_score = _rsi_score(rsi)
+        cross_score = _CROSS_SCORES[cross_state]
+
+        composite = round(momentum_score * 0.4 + rsi_score * 0.3 + cross_score * 0.3)
+        explanation = (
+            f"动量(10日) {momentum_percent:+.2f}%，RSI(14) {rsi:.1f}，"
+            f"均线(5/20)状态：{_CROSS_LABELS[cross_state]}"
+        )
+        return max(0, min(100, composite)), explanation
+
     trend_score = _trend_score(trend_change_percent)
     day_score = _trend_score(day_change_percent)
-    composite = round(trend_score * 0.5625 + day_score * 0.3125 + volume_score * 0.125)
+    composite = round(trend_score * 0.6 + day_score * 0.4)
     explanation = (
-        f"区间走势 {trend_change_percent:.2f}%，相对前收盘 {day_change_percent:.2f}%，"
-        "结合成交量活跃度估算"
+        f"日线数据不足（需 {MIN_CLOSES_FOR_INDICATORS} 个交易日以上），暂以区间走势 "
+        f"{trend_change_percent:.2f}% 与相对前收盘 {day_change_percent:.2f}% 估算"
     )
     return max(0, min(100, composite)), explanation
 

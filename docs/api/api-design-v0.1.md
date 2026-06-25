@@ -260,12 +260,12 @@ GET /stocks/{symbol}/recommendation
 * 返回股票评分和推荐等级
 * 展示因子分、推荐理由和风险
 
-当前算法：`algorithm-v0.2`，五个因子：
+当前算法：`algorithm-v0.2.1`，五个因子：
 
 * `fundamentals` 基本面（净利润率，30%）—— 来自 SEC XBRL company facts
 * `growth` 成长性（营收同比，20%）—— 来自 SEC XBRL company facts
 * `valuation` 估值（P/E 绝对档位，20%）—— 结合实时价格与 EPS
-* `technical` 技术面（区间走势/前收盘变化/成交量活跃度，20%）
+* `technical` 技术面（动量 10 日 40% + RSI(14) 30% + 均线 5/20 金死叉 30%，权重小计 20%）—— 来自近 1 年日线收盘价，数据不足时退化为区间走势粗估
 * `volatility_risk` 风险（区间波动，10%）
 
 某只股票缺少可用财务数据时，`fundamentals`/`growth`/`valuation` 退化为中性分（50分），并在 `risks` 中提示。权重过渡说明见 `docs/standards/ALGORITHM_STANDARD.md` 第 9.1 节。
@@ -277,25 +277,25 @@ GET /stocks/{symbol}/recommendation
 ```json
 {
   "symbol": "AAPL",
-  "total_score": 67,
+  "total_score": 64,
   "recommendation": "中性",
   "factors": [
     {"name": "fundamentals", "score": 90, "weight": 0.3, "explanation": "净利润率约 26.9%（基于最近年度 SEC 财报）"},
     {"name": "growth", "score": 58, "weight": 0.2, "explanation": "营收同比增长约 6.4%（基于最近两个年度 SEC 财报）"},
     {"name": "valuation", "score": 55, "weight": 0.2, "explanation": "按最新价格估算 P/E 约 39.3（绝对档位估算，非行业相对）"},
-    {"name": "technical", "score": 58, "weight": 0.2, "explanation": "区间走势 -0.05%，相对前收盘 -0.41%，结合成交量活跃度估算"},
+    {"name": "technical", "score": 46, "weight": 0.2, "explanation": "动量(10日) +0.87%，RSI(14) 32.7，均线(5/20)状态：空头排列"},
     {"name": "volatility_risk", "score": 55, "weight": 0.1, "explanation": "区间波动估算 2.23%"}
   ],
   "reasons": ["区间走势为负，短线动量偏弱。", "当前价格低于或接近前收盘价。", "区间波动较高，需要结合风险承受能力观察。"],
   "risks": ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。"],
   "source": "Yahoo Finance chart API",
-  "algorithm_version": "algorithm-v0.2",
-  "analysis_time": "2026-06-25T09:36:16.212676+00:00",
+  "algorithm_version": "algorithm-v0.2.1",
+  "analysis_time": "2026-06-25T10:48:53.949057+00:00",
   "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
 }
 ```
 
-已用真实 AAPL 数据（SEC XBRL + Yahoo 实时走势）做过线上联调。
+已用真实 AAPL 数据（SEC XBRL 财报 + Yahoo 实时走势 + 近 1 年日线技术指标）做过线上联调。
 
 ### 2.9 FRED 宏观数据（需免费 API Key）
 
@@ -421,7 +421,7 @@ limit  候选池大小，同时也是评分数量上限，默认 20，最大 50
       "reasons": ["区间走势为正，短线动量偏强。"],
       "risks": ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。"],
       "source": "Yahoo Finance chart API",
-      "algorithm_version": "algorithm-v0.2"
+      "algorithm_version": "algorithm-v0.2.1"
     }
   ],
   "skipped": [],

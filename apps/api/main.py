@@ -8,7 +8,12 @@ from pathlib import Path
 
 from packages.ai_agents.sec_filing_agent import SECFilingAgent
 from packages.algorithm_layer.recommendation import TrendRecommendationAlgorithm
-from packages.algorithm_layer.schemas import AlgorithmPoint, FinancialFactorsInput, RecommendationInput
+from packages.algorithm_layer.schemas import (
+    AlgorithmPoint,
+    FinancialFactorsInput,
+    RecommendationInput,
+    TechnicalSeriesInput,
+)
 from packages.data_sources.market_trend import (
     MarketTrendError,
     YahooFinanceChartClient,
@@ -71,11 +76,26 @@ def _fetch_financial_factors(symbol: str) -> FinancialFactorsInput | None:
     )
 
 
+def _fetch_technical_series(symbol: str) -> TechnicalSeriesInput | None:
+    """Best-effort: missing daily history falls back to the intraday-only
+    technical estimate in TrendRecommendationAlgorithm rather than failing.
+    """
+    try:
+        history = history_client.fetch_history(symbol, range_="1y", interval="1d")
+    except PriceHistoryError:
+        return None
+    closes = [point.close for point in history.points]
+    if not closes:
+        return None
+    return TechnicalSeriesInput(closes=closes)
+
+
 screening_workflow = StockScreeningWorkflow(
     universe_scanner=universe_scanner,
     trend_client=trend_client,
     algorithm=recommendation_algorithm,
     financial_factors_fetcher=_fetch_financial_factors,
+    technical_series_fetcher=_fetch_technical_series,
 )
 
 POPULAR_US_STOCKS = [
@@ -170,6 +190,7 @@ def get_stock_recommendation(symbol: str) -> dict:
             source=trend.source,
             analysis_time=trend.analysis_time,
             financial_factors=_fetch_financial_factors(normalized_symbol),
+            technical_series=_fetch_technical_series(normalized_symbol),
         )
         return recommendation_algorithm.recommend(algorithm_input).to_dict()
     except ValueError as exc:

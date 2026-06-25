@@ -14,7 +14,7 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI
 * **M1 后端基础**：完成。FastAPI、统一配置管理、数据库连接（默认本地 SQLite，可切换 Postgres）、`audit_logs` 表、Docker Compose、数据库初始化脚本均可用。
 * **M2 数据源**：完成。yfinance 风格历史日线、SEC EDGAR 财报申报、FRED 宏观数据（需自备免费 Key）、Yahoo 实时走势均已接入并有测试覆盖。
 * **M3 AI 分析**：部分完成。Model Layer 统一接口、Output Validator、Agent 基类和 SEC Filing Agent 已落地并端到端联调；News Agent / Report Agent 尚未开发。
-* **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.2`，已接入 SEC 真实财务数据：基本面/成长性/估值/技术面/风险五因子），并通过新增的 Workflow Layer（`stocks/screening`）实现批量选股排序；基于大模型的 AI Scoring Agent、研究报告生成尚未开发（`packages/scoring` 仍为空）。
+* **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.2.1`，已接入 SEC 真实财务数据和真实技术指标：基本面/成长性/估值/技术面（RSI/均线金死叉/动量）/风险五因子），并通过新增的 Workflow Layer（`stocks/screening`）实现批量选股排序；基于大模型的 AI Scoring Agent、研究报告生成尚未开发（`packages/scoring` 仍为空）。
 * **M5 前端展示**：部分完成。美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分）已可用，独立的股票深度分析页和研究报告页尚未开发。
 * 尚未开始：模拟交易与回测（`packages/backtesting`、`packages/brokers` 仍为空）。
 
@@ -127,7 +127,11 @@ Agent 基类见 `packages/ai_agents/base.py`，后续 News Agent、Report Agent 
 GET http://127.0.0.1:8000/stocks/screening?limit=20
 ```
 
-`StockScreeningWorkflow`（`packages/workflow_layer/stock_screening.py`）把 Universe Layer 的候选池（Most Active Top 100）逐个用 Algorithm Layer v0.2 打分，并发请求（最多 8 个并发）后按总分排序返回。这是"自己选股"场景的核心入口：不指定单一股票，直接看候选池里排序靠前的标的。已用真实数据端到端联调（10 只股票全部评分成功）。
+`StockScreeningWorkflow`（`packages/workflow_layer/stock_screening.py`）把 Universe Layer 的候选池（Most Active Top 100）逐个用 Algorithm Layer v0.2.1 打分，并发请求（最多 8 个并发）后按总分排序返回。这是"自己选股"场景的核心入口：不指定单一股票，直接看候选池里排序靠前的标的。已用真实数据端到端联调（5 只股票全部评分成功，约 19 秒）。
+
+### 技术面因子（algorithm-v0.2.1）
+
+`technical` 因子不再是粗略的区间涨跌幅估算，而是基于近 1 年日线收盘价（`packages/data_sources/price_history.py`）计算的真实技术指标（`packages/algorithm_layer/technical_indicators.py`）：10 日动量（40%）、RSI-14（30%）、均线 5/20 金叉死叉状态（30%）。日线数据不足（如新上市股票）时自动退化为旧的区间走势粗估，并在 `explanation` 中说明。计算出的 RSI 数值和均线状态通过 `factors[].explanation` 字段暴露，可用于替换前端面板上现有的占位 RSI/均线标签。
 
 ## 后端基础（配置 / 数据库 / audit_logs）
 

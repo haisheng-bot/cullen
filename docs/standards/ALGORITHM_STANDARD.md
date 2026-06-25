@@ -143,11 +143,12 @@ Algorithm Layer 必须可以单独开发和测试。
 算法需要独立版本号。
 
 ```text
-algorithm-v0.1  趋势型推荐算法 [released]
-algorithm-v0.2  加入财务和估值因子（基于 SEC XBRL company facts） [released]
-algorithm-v0.3  加入新闻情绪因子 [planned]
-algorithm-v0.4  加入风险模型 [planned]
-algorithm-v1.0  稳定推荐算法 [planned]
+algorithm-v0.1    趋势型推荐算法 [released]
+algorithm-v0.2    加入财务和估值因子（基于 SEC XBRL company facts） [released]
+algorithm-v0.2.1  技术面因子升级为真实技术指标（RSI/均线金死叉/动量） [released]
+algorithm-v0.3    加入新闻情绪因子 [planned]
+algorithm-v0.4    加入风险模型 [planned]
+algorithm-v1.0    稳定推荐算法 [planned]
 ```
 
 算法版本必须出现在 API 响应和 audit_logs 设计中。
@@ -160,11 +161,23 @@ v0.2 在 v0.1 基础上加入基本面、成长性、估值三个真实数据因
 fundamentals (基本面，净利润率)   30%
 growth (成长性，营收同比)         20%
 valuation (估值，P/E 绝对档位)    20%
-technical (技术面，原 trend/day_change/volume 合并)  20%
+technical (技术面)                20%
 volatility_risk (风险，区间波动)  10%
 ```
 
 这是 `project-standard-v0.1.md` 第 6 节目标权重（基本面30+成长性20+估值20+技术面10+新闻情绪10+风险10）在新闻情绪因子尚未接入前的过渡分配：技术面权重临时从 10% 提到 20% 吸收新闻情绪的份额，v0.3 接入新闻情绪因子后会重新拆分。
 
 财务数据来自 SEC EDGAR XBRL company facts（`packages/data_sources/sec_financials.py`），免费、无需 Key。当某只股票缺少可用财务数据（例如新上市公司、非标准 XBRL 标签）时，三个因子退化为中性分（50分）并在 `risks` 字段中明确提示，不会导致接口报错。
+
+### 9.2 algorithm-v0.2.1 技术面因子说明
+
+v0.2 的 technical 因子原本只是把区间涨跌幅、相对前收盘涨跌幅、成交量活跃度三个粗略指标加权合并。v0.2.1 改为使用日线收盘价（`packages/data_sources/price_history.py` 拉取近 1 年，`packages/algorithm_layer/technical_indicators.py` 计算）算出的真实技术指标：
+
+```text
+momentum（10 日价格动量）   40%
+RSI(14)                     30%
+MA(5/20) 金叉/死叉状态      30%
+```
+
+当日线收盘价少于 `MIN_CLOSES_FOR_INDICATORS`（25 条，约一个半月）时——例如新上市股票——退化为 v0.2 之前基于当日内走势的粗略估算，并在 `explanation` 字段中说明"日线数据不足"，不影响接口可用性。RSI/均线状态等中间值通过 `factors[].explanation` 暴露，供未来前端替换面板上的占位 RSI/均线标签使用。
 

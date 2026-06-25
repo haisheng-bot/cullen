@@ -13,7 +13,12 @@ from dataclasses import replace
 from datetime import datetime, timezone
 
 from packages.algorithm_layer.base import RecommendationAlgorithm
-from packages.algorithm_layer.schemas import AlgorithmPoint, FinancialFactorsInput, RecommendationInput
+from packages.algorithm_layer.schemas import (
+    AlgorithmPoint,
+    FinancialFactorsInput,
+    RecommendationInput,
+    TechnicalSeriesInput,
+)
 from packages.data_sources.market_trend import MarketTrendError
 from packages.workflow_layer.schemas import ScreeningCandidate, ScreeningResult, SkippedCandidate
 
@@ -27,11 +32,13 @@ class StockScreeningWorkflow:
         trend_client,
         algorithm: RecommendationAlgorithm,
         financial_factors_fetcher: Callable[[str], FinancialFactorsInput | None],
+        technical_series_fetcher: Callable[[str], TechnicalSeriesInput | None] | None = None,
     ) -> None:
         self.universe_scanner = universe_scanner
         self.trend_client = trend_client
         self.algorithm = algorithm
         self.financial_factors_fetcher = financial_factors_fetcher
+        self.technical_series_fetcher = technical_series_fetcher or (lambda symbol: None)
 
     def screen(self, limit: int = 20) -> ScreeningResult:
         universe = self.universe_scanner.scan(limit=limit)
@@ -81,6 +88,7 @@ class StockScreeningWorkflow:
             source=trend.source,
             analysis_time=trend.analysis_time,
             financial_factors=self.financial_factors_fetcher(item.symbol),
+            technical_series=self.technical_series_fetcher(item.symbol),
         )
         result = self.algorithm.recommend(algorithm_input)
 

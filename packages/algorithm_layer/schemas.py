@@ -27,6 +27,16 @@ class FinancialFactorsInput:
 
 
 @dataclass(frozen=True)
+class TechnicalSeriesInput:
+    """Daily closes (oldest first) for RSI/MA-cross/momentum indicators
+    (algorithm-v0.2.1). Distinct from `points`, which are intraday and only
+    cover the current trading day.
+    """
+
+    closes: list[float]
+
+
+@dataclass(frozen=True)
 class RecommendationInput:
     symbol: str
     latest_price: float
@@ -35,6 +45,7 @@ class RecommendationInput:
     source: str
     analysis_time: str
     financial_factors: FinancialFactorsInput | None = None
+    technical_series: TechnicalSeriesInput | None = None
 
 
 @dataclass(frozen=True)

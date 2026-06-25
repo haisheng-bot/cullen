@@ -6,6 +6,7 @@ from packages.algorithm_layer.schemas import (
     RISK_DISCLAIMER,
     FinancialFactorsInput,
     RecommendationInput,
+    TechnicalSeriesInput,
 )
 
 
@@ -33,7 +34,7 @@ class AlgorithmLayerTest(unittest.TestCase):
         result = TrendRecommendationAlgorithm().recommend(data)
 
         self.assertEqual("AAPL", result.symbol)
-        self.assertEqual("algorithm-v0.2", result.algorithm_version)
+        self.assertEqual("algorithm-v0.2.1", result.algorithm_version)
         self.assertGreaterEqual(result.total_score, 0)
         self.assertLessEqual(result.total_score, 100)
         self.assertEqual(5, len(result.factors))
@@ -73,6 +74,48 @@ class AlgorithmLayerTest(unittest.TestCase):
         self.assertGreater(factors_by_name["fundamentals"].score, 50)
         self.assertGreater(factors_by_name["growth"].score, 50)
         self.assertNotIn("未提供财务数据", " ".join(result.risks))
+
+    def test_technical_factor_falls_back_without_daily_history(self) -> None:
+        data = RecommendationInput(
+            symbol="AAPL",
+            latest_price=104.0,
+            previous_close=100.0,
+            points=[
+                AlgorithmPoint(timestamp="2026-06-25T13:30:00+00:00", close=100.0, volume=1000),
+                AlgorithmPoint(timestamp="2026-06-25T13:32:00+00:00", close=104.0, volume=1800),
+            ],
+            source="test-source",
+            analysis_time="2026-06-25T13:33:00+00:00",
+        )
+
+        result = TrendRecommendationAlgorithm().recommend(data)
+
+        technical_factor = next(factor for factor in result.factors if factor.name == "technical")
+        self.assertIn("日线数据不足", technical_factor.explanation)
+
+    def test_technical_factor_uses_real_indicators_when_daily_history_provided(self) -> None:
+        closes = [100.0 + index * 0.8 for index in range(30)]
+        data = RecommendationInput(
+            symbol="AAPL",
+            latest_price=104.0,
+            previous_close=100.0,
+            points=[
+                AlgorithmPoint(timestamp="2026-06-25T13:30:00+00:00", close=100.0, volume=1000),
+                AlgorithmPoint(timestamp="2026-06-25T13:32:00+00:00", close=104.0, volume=1800),
+            ],
+            source="test-source",
+            analysis_time="2026-06-25T13:33:00+00:00",
+            technical_series=TechnicalSeriesInput(closes=closes),
+        )
+
+        result = TrendRecommendationAlgorithm().recommend(data)
+
+        technical_factor = next(factor for factor in result.factors if factor.name == "technical")
+        self.assertIn("RSI(14)", technical_factor.explanation)
+        self.assertIn("动量(10日)", technical_factor.explanation)
+        self.assertNotIn("日线数据不足", technical_factor.explanation)
+        # Sustained uptrend should score above the neutral default.
+        self.assertGreater(technical_factor.score, 50)
 
     def test_trend_recommendation_requires_points(self) -> None:
         data = RecommendationInput(
