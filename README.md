@@ -91,6 +91,33 @@ packages/model_layer/providers/litellm_provider.py
 
 Agent、Workflow、Algorithm Layer 和 API 不得直接调用模型 SDK。
 
+## 后端基础（配置 / 数据库 / audit_logs）
+
+启动本地 Postgres 和 Redis：
+
+```bash
+docker compose -f docker/docker-compose.yml up -d
+```
+
+复制环境变量并初始化数据库表：
+
+```bash
+cp .env.example .env
+.venv311/bin/python scripts/init_db.py
+```
+
+验证：
+
+```bash
+.venv311/bin/python -m unittest tests.test_db -v
+```
+
+```text
+GET http://127.0.0.1:8000/health/db
+```
+
+未配置数据库时，`DATABASE_URL` 默认回退到本地 SQLite 文件，保证不依赖 Docker 也能跑通测试和基础功能。所有模型调用产生的 `ModelResponse` 都可以通过 `packages/db/audit.py` 中的 `write_audit_log` 写入 `audit_logs` 表。
+
 ## Git 分支规范
 
 ```text

@@ -23,3 +23,4 @@
 * 项目开发界面，展示版本、架构层和当前可用状态
 * Universe Layer，用于每日扫描美股最活跃 Top 100 候选池
 * 操作界面增加常用分析维度解读区域
+* 后端基础：统一配置管理、数据库连接层、audit_logs 表，以及 Docker Compose（Postgres + Redis）和数据库初始化脚本

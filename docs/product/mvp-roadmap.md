@@ -35,10 +35,12 @@
 
 ### M1 后端基础
 
-* FastAPI 初始化
-* 配置管理
-* 数据库连接
-* audit_logs 表
+* FastAPI 初始化 [usable]
+* 配置管理（`packages/config.py`，环境变量 + `.env`） [verified]
+* 数据库连接（`packages/db/session.py`，SQLAlchemy，默认回退本地 SQLite） [verified]
+* audit_logs 表（`packages/db/models.py` + `packages/db/audit.py`） [verified]
+* Docker Compose 本地 Postgres + Redis（`docker/docker-compose.yml`） [usable]
+* 数据库初始化脚本（`scripts/init_db.py`） [usable]
 
 ### M2 数据源
 

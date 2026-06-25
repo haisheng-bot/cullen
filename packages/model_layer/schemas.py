@@ -40,6 +40,7 @@ class ModelResponse:
     cost_estimate: float | None
     latency_ms: int | None
     trace_id: str | None
+    input_summary: str = ""
     risk_disclaimer: str = RISK_DISCLAIMER
 
     def to_audit_summary(self) -> dict[str, Any]:
@@ -48,6 +49,7 @@ class ModelResponse:
             "task_type": self.task_type,
             "provider": self.provider,
             "model_name": self.model_name,
+            "input_summary": self.input_summary[:500],
             "output_summary": self.output[:500],
             "citations": self.citations,
             "token_usage": {

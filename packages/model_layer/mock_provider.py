@@ -29,5 +29,6 @@ class MockModelProvider(ModelProvider):
             cost_estimate=0.0,
             latency_ms=int((perf_counter() - started) * 1000),
             trace_id=request.trace_id,
+            input_summary=request.user_input[:500],
         )
 
