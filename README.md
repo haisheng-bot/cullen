@@ -180,3 +180,19 @@ feature/*   新功能
 fix/*       修复
 docs/*      文档
 ```
+
+## GitHub 协作入口
+
+GitHub 协作标准见：
+
+```text
+docs/standards/github-collaboration.md
+```
+
+提交 Issue 或 Pull Request 前请确认：
+
+* 已选择对应模板
+* 已说明修改范围和测试结果
+* 已更新相关文档
+* 未提交 API Key、Token、券商账户或真实交易记录
+* 投资研究相关输出保留风险提示

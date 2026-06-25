@@ -19,6 +19,9 @@ class ProjectGovernanceTest(unittest.TestCase):
             ".gitignore",
             ".github/workflows/ci.yml",
             ".github/pull_request_template.md",
+            ".github/ISSUE_TEMPLATE/config.yml",
+            ".github/ISSUE_TEMPLATE/bug_report.md",
+            ".github/ISSUE_TEMPLATE/feature_request.md",
             "apps/api/main.py",
             "apps/web/index.html",
             "apps/web/realtime-trend.html",
@@ -96,6 +99,44 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertIn("AI Investment Research Platform", requirements)
         self.assertIn("Portfolio", requirements)
         self.assertIn("Strategy Workflow", requirements)
+
+    def test_github_templates_cover_ai_and_compliance_workflow(self) -> None:
+        pr_template = (ROOT / ".github/pull_request_template.md").read_text(encoding="utf-8")
+        bug_template = (ROOT / ".github/ISSUE_TEMPLATE/bug_report.md").read_text(encoding="utf-8")
+        feature_template = (ROOT / ".github/ISSUE_TEMPLATE/feature_request.md").read_text(encoding="utf-8")
+        issue_config = (ROOT / ".github/ISSUE_TEMPLATE/config.yml").read_text(encoding="utf-8")
+        github_standard = (ROOT / "docs/standards/github-collaboration.md").read_text(encoding="utf-8")
+
+        required_pr_terms = [
+            "AI 开发标识",
+            "codex",
+            "claude-code",
+            "Portfolio Strategy / Backtesting",
+            "外部 API / 数据源",
+            "AI 输出与投资合规",
+            "安全检查",
+            DISCLAIMER,
+        ]
+        missing_pr = [term for term in required_pr_terms if term not in pr_template]
+        self.assertEqual([], missing_pr)
+
+        required_issue_terms = [
+            "影响模块",
+            "Portfolio Strategy / Backtesting",
+            "合规与安全",
+            "Strategy Engine",
+            "Risk Engine",
+            "AI Research / Report",
+            "验收标准",
+            DISCLAIMER,
+        ]
+        issue_text = bug_template + feature_template
+        missing_issue = [term for term in required_issue_terms if term not in issue_text]
+        self.assertEqual([], missing_issue)
+
+        self.assertIn("blank_issues_enabled: false", issue_config)
+        self.assertIn("Issue 模板配置", github_standard)
+        self.assertIn("不允许空白 Issue", github_standard)
 
     def test_project_interface_tracks_architecture_layers(self) -> None:
         html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
