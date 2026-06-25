@@ -6,16 +6,22 @@
     <title>OpenStock AI 工作台</title>
     <style>
       :root {
-        --bg: #eef2f7;
+        --bg: #edf1ee;
+        --surface: #f7f9f7;
         --panel: #ffffff;
-        --panel-2: #f8fafc;
-        --line: #d9e1ec;
-        --text: #172033;
-        --muted: #607086;
-        --green: #0f8b57;
-        --red: #c43b38;
-        --blue: #1d4ed8;
-        --amber: #9a6700;
+        --panel-2: #f4f7f6;
+        --line: #d8e0dc;
+        --line-strong: #b9c8c1;
+        --text: #17211d;
+        --muted: #65756f;
+        --green: #087a55;
+        --red: #c23b3b;
+        --blue: #2457d6;
+        --amber: #a36a00;
+        --teal: #0f766e;
+        --indigo: #4658b8;
+        --gold: #b7791f;
+        --shadow: 0 10px 28px rgba(23, 33, 29, 0.08);
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
@@ -26,8 +32,8 @@
       .app {
         min-height: 100vh;
         display: grid;
-        grid-template-columns: 260px minmax(0, 1fr) 320px;
-        grid-template-rows: 56px minmax(0, 1fr);
+        grid-template-columns: 292px minmax(0, 1fr) 344px;
+        grid-template-rows: 64px minmax(0, 1fr);
       }
 
       .topbar {
@@ -35,18 +41,19 @@
         display: flex;
         align-items: center;
         gap: 16px;
-        padding: 0 18px;
-        background: #111827;
+        padding: 0 20px;
+        background: #101a17;
         color: white;
-        border-bottom: 1px solid #0b1220;
+        border-bottom: 1px solid #23302c;
       }
 
-      .brand { font-size: 18px; font-weight: 700; min-width: 160px; }
+      .brand { font-size: 19px; font-weight: 850; min-width: 168px; letter-spacing: 0; }
       .market-badge {
-        padding: 4px 8px;
-        border: 1px solid #344157;
+        padding: 5px 9px;
+        border: 1px solid #31443e;
         border-radius: 6px;
-        color: #cbd5e1;
+        background: #16241f;
+        color: #c6d6d0;
         font-size: 12px;
       }
 
@@ -59,10 +66,10 @@
       .search input {
         width: 100%;
         height: 38px;
-        border: 1px solid #344157;
+        border: 1px solid #334842;
         border-radius: 6px 0 0 6px;
         padding: 0 13px;
-        background: #1f2937;
+        background: #17231f;
         color: white;
         font-size: 15px;
         font-weight: 650;
@@ -78,10 +85,10 @@
 
       .search button {
         height: 38px;
-        border: 1px solid var(--blue);
+        border: 1px solid #2f7d6f;
         border-radius: 0 6px 6px 0;
         padding: 0 16px;
-        background: var(--blue);
+        background: #0f766e;
         color: white;
         font-size: 14px;
         font-weight: 750;
@@ -90,29 +97,30 @@
 
       aside, main, .rightbar { min-width: 0; }
       aside {
-        background: var(--panel);
+        background: #f8faf8;
         border-right: 1px solid var(--line);
-        padding: 12px;
-        overflow: auto;
-      }
-
-      main {
         padding: 14px;
         overflow: auto;
       }
 
+      main {
+        padding: 16px;
+        overflow: auto;
+      }
+
       .rightbar {
-        background: var(--panel);
+        background: #f8faf8;
         border-left: 1px solid var(--line);
-        padding: 12px;
+        padding: 14px;
         overflow: auto;
       }
 
       .section-title {
         margin: 8px 0 10px;
-        font-size: 13px;
-        color: var(--muted);
-        font-weight: 700;
+        color: #30413b;
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0;
       }
 
       .stock-list {
@@ -124,8 +132,9 @@
         padding-right: 3px;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: #fbfdff;
+        background: #ffffff;
         padding: 6px;
+        box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.03);
       }
 
       .side-actions {
@@ -135,11 +144,12 @@
       }
 
       .side-actions button {
-        height: 34px;
-        border: 1px solid #c8d3e2;
+        height: 36px;
+        border: 1px solid #0f766e;
         border-radius: 6px;
-        background: #172033;
+        background: #0f766e;
         color: white;
+        font-weight: 800;
         cursor: pointer;
       }
 
@@ -150,9 +160,9 @@
         gap: 8px;
         height: 48px;
         width: 100%;
-        border: 1px solid transparent;
+        border: 1px solid #edf2ef;
         border-radius: 6px;
-        background: transparent;
+        background: #fbfdfc;
         padding: 6px 8px;
         text-align: left;
         cursor: pointer;
@@ -171,8 +181,8 @@
       }
 
       .stock-item:hover, .stock-item.active {
-        background: #edf4ff;
-        border-color: #b8cef7;
+        background: #eef8f5;
+        border-color: #93cfc5;
       }
 
       .portfolio-panel {
@@ -181,6 +191,8 @@
         border-radius: 8px;
         background: var(--panel);
         padding: 10px;
+        border-top: 3px solid var(--indigo);
+        box-shadow: var(--shadow);
       }
 
       .portfolio-controls {
@@ -193,7 +205,7 @@
       .portfolio-controls select,
       .portfolio-controls button {
         height: 32px;
-        border: 1px solid #c8d3e2;
+        border: 1px solid var(--line-strong);
         border-radius: 6px;
         background: white;
         padding: 0 8px;
@@ -201,9 +213,11 @@
       }
 
       .portfolio-controls button {
-        background: #172033;
+        background: var(--indigo);
         color: white;
         cursor: pointer;
+        border-color: var(--indigo);
+        font-weight: 800;
       }
 
       .portfolio-list {
@@ -215,9 +229,9 @@
       }
 
       .portfolio-group {
-        border: 1px solid #e1e7f0;
+        border: 1px solid #dfe8e4;
         border-radius: 8px;
-        background: #fbfdff;
+        background: #fbfdfc;
         padding: 8px;
       }
 
@@ -241,9 +255,9 @@
         align-items: center;
         gap: 4px;
         height: 24px;
-        border: 1px solid #d4deeb;
+        border: 1px solid #c8d8d2;
         border-radius: 999px;
-        background: white;
+        background: #ffffff;
         padding: 0 7px;
         font-size: 12px;
         font-weight: 750;
@@ -262,9 +276,11 @@
       .workflow-panel {
         margin-bottom: 12px;
         border: 1px solid var(--line);
+        border-top: 3px solid var(--indigo);
         border-radius: 8px;
         background: var(--panel);
         padding: 12px;
+        box-shadow: var(--shadow);
       }
 
       .workflow-steps {
@@ -279,9 +295,9 @@
         grid-template-columns: 24px 1fr;
         gap: 7px;
         align-items: start;
-        border: 1px solid #e1e7f0;
+        border: 1px solid #dfe5f2;
         border-radius: 8px;
-        background: #fbfdff;
+        background: #fbfcff;
         padding: 8px;
       }
 
@@ -292,7 +308,7 @@
         width: 24px;
         height: 24px;
         border-radius: 999px;
-        background: #172033;
+        background: var(--indigo);
         color: white;
         font-size: 11px;
         font-weight: 850;
@@ -322,7 +338,7 @@
       .strategy-result-panel {
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: #fbfdff;
+        background: #fbfcff;
         padding: 12px;
       }
 
@@ -380,7 +396,7 @@
       .constraint-field select {
         width: 100%;
         height: 31px;
-        border: 1px solid #c8d3e2;
+        border: 1px solid #c9d3e4;
         border-radius: 6px;
         background: white;
         padding: 0 8px;
@@ -392,9 +408,9 @@
         width: auto;
         min-width: 150px;
         height: 34px;
-        border: 1px solid #172033;
+        border: 1px solid var(--indigo);
         border-radius: 6px;
-        background: #172033;
+        background: var(--indigo);
         color: white;
         font-weight: 800;
         cursor: pointer;
@@ -413,7 +429,7 @@
       }
 
       .result-card {
-        border: 1px solid #e1e7f0;
+        border: 1px solid #dfe5f2;
         border-radius: 8px;
         background: white;
         padding: 8px;
@@ -463,6 +479,12 @@
         gap: 10px;
         align-items: end;
         margin-bottom: 12px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-left: 4px solid var(--teal);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
       }
 
       .quote-symbol { font-size: 30px; font-weight: 800; }
@@ -482,31 +504,37 @@
         align-items: center;
         padding: 10px;
         margin-bottom: 12px;
+        box-shadow: var(--shadow);
       }
 
       .toolbar select, .toolbar button {
         height: 34px;
         border-radius: 6px;
-        border: 1px solid #c8d3e2;
+        border: 1px solid var(--line-strong);
         background: white;
         padding: 0 10px;
       }
 
       .toolbar button {
-        background: #172033;
+        background: var(--teal);
         color: white;
-        border-color: #172033;
+        border-color: var(--teal);
         cursor: pointer;
+        font-weight: 800;
       }
 
-      .chart-card { padding: 14px; }
+      .chart-card {
+        padding: 14px;
+        border-top: 3px solid var(--teal);
+        box-shadow: var(--shadow);
+      }
       canvas {
         display: block;
         width: 100%;
         height: 430px;
-        border: 1px solid #edf0f5;
+        border: 1px solid #e3ebe7;
         border-radius: 6px;
-        background: #fbfdff;
+        background: #fbfdfc;
         cursor: crosshair;
         touch-action: none;
       }
@@ -524,7 +552,7 @@
         min-width: 168px;
         min-height: 58px;
         padding: 8px;
-        background: #fbfdff;
+        background: #f7faf8;
       }
 
       .chart-inspector .value {
@@ -547,6 +575,7 @@
         border-radius: 8px;
         background: var(--panel);
         padding: 10px;
+        box-shadow: 0 6px 18px rgba(23, 33, 29, 0.04);
       }
 
       .metric .label { color: var(--muted); font-size: 12px; }
@@ -556,8 +585,10 @@
         margin-top: 12px;
         padding: 12px;
         border: 1px solid var(--line);
+        border-top: 3px solid var(--gold);
         border-radius: 8px;
         background: var(--panel);
+        box-shadow: var(--shadow);
       }
 
       .project-head {
@@ -569,7 +600,8 @@
       }
 
       .project-title {
-        font-weight: 800;
+        font-size: 15px;
+        font-weight: 900;
       }
 
       .status-pill {
@@ -578,11 +610,31 @@
         height: 24px;
         padding: 0 8px;
         border-radius: 999px;
-        background: #e9f7ef;
-        color: var(--green);
+        background: #eef8f5;
+        color: var(--teal);
         font-size: 12px;
         font-weight: 750;
         white-space: nowrap;
+      }
+
+      .workflow-panel .status-pill {
+        background: #eef0ff;
+        color: var(--indigo);
+      }
+
+      .project-board .status-pill {
+        background: #fff4de;
+        color: var(--gold);
+      }
+
+      .concept-board .status-pill {
+        background: #eef4ff;
+        color: var(--blue);
+      }
+
+      .analysis-guide .status-pill {
+        background: #eef8f5;
+        color: var(--teal);
       }
 
       .layer-grid {
@@ -592,9 +644,9 @@
       }
 
       .layer {
-        border: 1px solid #e1e7f0;
+        border: 1px solid #e4e5da;
         border-radius: 8px;
-        background: #fbfdff;
+        background: #fffefa;
         padding: 9px;
         min-height: 74px;
       }
@@ -615,8 +667,10 @@
         margin-top: 12px;
         padding: 12px;
         border: 1px solid var(--line);
+        border-top: 3px solid var(--blue);
         border-radius: 8px;
         background: var(--panel);
+        box-shadow: var(--shadow);
       }
 
       .concept-grid {
@@ -626,9 +680,9 @@
       }
 
       .concept-card {
-        border: 1px solid #e1e7f0;
+        border: 1px solid #dfe6f5;
         border-radius: 8px;
-        background: #fbfdff;
+        background: #fbfcff;
         padding: 9px;
         min-height: 116px;
         text-align: left;
@@ -636,8 +690,8 @@
       }
 
       .concept-card:hover {
-        border-color: #b8cef7;
-        background: #edf4ff;
+        border-color: #adc0f1;
+        background: #f1f5ff;
       }
 
       .concept-head {
@@ -668,8 +722,10 @@
         margin-top: 12px;
         padding: 12px;
         border: 1px solid var(--line);
+        border-top: 3px solid var(--teal);
         border-radius: 8px;
         background: var(--panel);
+        box-shadow: var(--shadow);
       }
 
       .guide-grid {
@@ -679,9 +735,9 @@
       }
 
       .guide-item {
-        border: 1px solid #e1e7f0;
+        border: 1px solid #dde8e4;
         border-radius: 8px;
-        background: #fbfdff;
+        background: #fbfdfc;
         padding: 9px;
         min-height: 98px;
       }
@@ -745,12 +801,18 @@
       .action-stack { display: grid; gap: 8px; margin-bottom: 12px; }
       .action-stack button {
         height: 38px;
-        border: 1px solid #c8d3e2;
+        border: 1px solid var(--line-strong);
         background: white;
         border-radius: 6px;
         cursor: pointer;
         text-align: left;
         padding: 0 10px;
+        font-weight: 750;
+      }
+
+      .action-stack button:hover {
+        border-color: var(--teal);
+        background: #eef8f5;
       }
 
       .analysis {
@@ -766,7 +828,7 @@
         padding: 12px;
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: var(--panel-2);
+        background: #fbfdfc;
       }
 
       .score-number {
@@ -782,8 +844,8 @@
       }
 
       .note {
-        border: 1px solid #f1d28a;
-        background: #fff8e6;
+        border: 1px solid #edd6a6;
+        background: #fffaf0;
         color: var(--amber);
         border-radius: 8px;
         padding: 10px;
@@ -822,7 +884,7 @@
       .factor-bar span {
         display: block;
         height: 100%;
-        background: var(--blue);
+        background: var(--teal);
       }
 
       .bullets {
@@ -844,7 +906,7 @@
       .news-item {
         border: 1px solid var(--line);
         border-radius: 8px;
-        background: var(--panel-2);
+        background: #fbfdfc;
         padding: 9px;
       }
 

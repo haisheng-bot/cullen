@@ -125,6 +125,7 @@ POST /backtests/run
 代码中的实际版本号是 `BacktestResult.algorithm_version`（`packages/backtesting/engine.py` 的 `ALGORITHM_VERSION` 常量），与下表一一对应：
 
 ```text
+portfolio-strategy-v0.1  组合策略工作流与技术面回测界面 [released]
 backtesting-v0.1  技术面组合回测与约束配置（仅 technical_score，无基本面因子） [released]
 backtesting-v0.2  接入按披露日期重建的历史财报快照，回测规则可使用 ai_score [planned]
 backtesting-v0.3  加入 Model Layer 回测结果自然语言解释 [planned]
@@ -158,4 +159,3 @@ backtesting-v1.0  稳定组合策略工作流 [planned]
 * 回测指标测试
 * API 请求/响应测试
 * 前端是否调用 `POST /backtests/run` 的治理测试
-
