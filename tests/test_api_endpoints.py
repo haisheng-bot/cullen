@@ -183,6 +183,7 @@ class FakeBacktestEngine:
             symbols=config.symbols,
             start_date=config.start_date,
             end_date=config.end_date,
+            signal_mode=config.signal_mode,
             initial_cash=config.initial_cash,
             final_value=11_000.0,
             total_return_percent=10.0,
@@ -393,6 +394,25 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("backtesting-v0.1", payload["algorithm_version"])
         self.assertTrue(payload["risks"])
         self.assertEqual(1, len(self.persisted_backtest_runs))
+
+    def test_run_backtest_endpoint_passes_through_ai_score_signal_mode(self) -> None:
+        request = main.BacktestRunRequest(
+            strategy_name="ai_strategy",
+            symbols=["aapl"],
+            start_date="2023-01-01",
+            end_date="2023-12-31",
+            signal_mode="ai_score",
+            entry_rules=main.EntryRulesRequest(min_ai_score=65),
+            exit_rules=main.ExitRulesRequest(max_ai_score=35),
+        )
+
+        payload = main.run_backtest(request)
+
+        self.assertEqual("ai_score", payload["signal_mode"])
+        config, _ = self.persisted_backtest_runs[0]
+        self.assertEqual("ai_score", config.signal_mode)
+        self.assertEqual(65, config.entry_rules.min_ai_score)
+        self.assertEqual(35, config.exit_rules.max_ai_score)
 
 
 if __name__ == "__main__":

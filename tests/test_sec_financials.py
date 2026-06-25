@@ -1,6 +1,6 @@
 import unittest
 
-from packages.data_sources.sec_financials import parse_companyfacts_payload
+from packages.data_sources.sec_financials import parse_companyfacts_payload, parse_companyfacts_series
 
 
 def sample_companyfacts_payload() -> dict:
@@ -149,6 +149,38 @@ class SECFinancialsTest(unittest.TestCase):
 
         self.assertIsNone(response.latest)
         self.assertIsNone(response.previous)
+
+
+class ParseCompanyfactsSeriesTest(unittest.TestCase):
+    def test_returns_every_fiscal_year_sorted_descending(self) -> None:
+        series = parse_companyfacts_series(sample_companyfacts_payload(), "AAPL", "0000320193")
+
+        self.assertEqual(["2025-09-27", "2024-09-28"], [item.end_date for item in series])
+
+    def test_filed_date_uses_earliest_filing_not_a_later_restatement(self) -> None:
+        # The fixture's FY2024 revenue (end=2024-09-28) appears twice: once
+        # filed 2024-11-01 (the original 10-K) and again filed 2025-11-01
+        # (as a comparative figure inside the FY2025 10-K). Point-in-time
+        # reconstruction must anchor on the *original* filing date, not the
+        # later one, or a backtest rebalancing in e.g. 2025-01 would
+        # incorrectly believe FY2024 financials weren't disclosed yet.
+        series = parse_companyfacts_series(sample_companyfacts_payload(), "AAPL", "0000320193")
+        fy2024 = next(item for item in series if item.end_date == "2024-09-28")
+
+        self.assertEqual("2024-11-01", fy2024.filed_date)
+        self.assertEqual(391035000000, fy2024.revenue)
+
+    def test_latest_fiscal_year_filed_date_matches_its_own_filing(self) -> None:
+        series = parse_companyfacts_series(sample_companyfacts_payload(), "AAPL", "0000320193")
+        fy2025 = next(item for item in series if item.end_date == "2025-09-27")
+
+        self.assertEqual("2025-11-01", fy2025.filed_date)
+        self.assertEqual(416161000000, fy2025.revenue)
+
+    def test_handles_missing_facts(self) -> None:
+        series = parse_companyfacts_series({"entityName": "Empty Co"}, "EMPTY", "0000000001")
+
+        self.assertEqual([], series)
 
 
 if __name__ == "__main__":

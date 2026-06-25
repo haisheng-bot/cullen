@@ -1,10 +1,13 @@
-"""Portfolio Strategy Engine schemas (backtesting-v0.1).
+"""Portfolio Strategy Engine schemas.
 
-V1 scope: entry/exit/position-sizing signals are price/technical-only
-(see docs/standards/PORTFOLIO_STRATEGY_STANDARD.md). A future v2 can add
-AI-score-driven rules once point-in-time SEC fundamentals reconstruction
-exists; until then this stays honest about being technical-only by never
-calling anything here "ai_score".
+V1 (backtesting-v0.1) scope was price/technical-only signals. V2
+(backtesting-v0.2) adds an opt-in `signal_mode="ai_score"` that uses
+point-in-time-reconstructed SEC fundamentals (see
+docs/standards/PORTFOLIO_STRATEGY_STANDARD.md) — `min_technical_score`/
+`max_technical_score` still mean exactly "technical_score" in both modes
+(never silently redefined); `min_ai_score`/`max_ai_score` are the new,
+separately-named ai_score thresholds, only evaluated when
+`signal_mode == "ai_score"`.
 """
 from __future__ import annotations
 
@@ -28,6 +31,7 @@ MA_CROSS_FILTERS = (
     "bearish",
     "death_or_bearish",
 )
+SIGNAL_MODES = ("technical", "ai_score")
 
 
 @dataclass(frozen=True)
@@ -35,12 +39,14 @@ class EntryRules:
     min_technical_score: int = 60
     min_momentum_percent: float | None = None
     require_ma_cross: str | None = None
+    min_ai_score: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "min_technical_score": self.min_technical_score,
             "min_momentum_percent": self.min_momentum_percent,
             "require_ma_cross": self.require_ma_cross,
+            "min_ai_score": self.min_ai_score,
         }
 
 
@@ -49,12 +55,14 @@ class ExitRules:
     max_technical_score: int = 40
     stop_loss_percent: float | None = 0.08
     require_ma_cross: str | None = None
+    max_ai_score: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "max_technical_score": self.max_technical_score,
             "stop_loss_percent": self.stop_loss_percent,
             "require_ma_cross": self.require_ma_cross,
+            "max_ai_score": self.max_ai_score,
         }
 
 
@@ -93,6 +101,7 @@ class StrategyConfig:
     initial_cash: float = 10_000.0
     rebalance_frequency: str = "monthly"
     benchmark_symbol: str = "SPY"
+    signal_mode: str = "technical"
     allocation: AllocationConfig = field(default_factory=AllocationConfig)
     entry_rules: EntryRules = field(default_factory=EntryRules)
     exit_rules: ExitRules = field(default_factory=ExitRules)
@@ -108,6 +117,7 @@ class StrategyConfig:
             "initial_cash": self.initial_cash,
             "rebalance_frequency": self.rebalance_frequency,
             "benchmark_symbol": self.benchmark_symbol,
+            "signal_mode": self.signal_mode,
             "allocation": self.allocation.to_dict(),
             "entry_rules": self.entry_rules.to_dict(),
             "exit_rules": self.exit_rules.to_dict(),
@@ -170,6 +180,7 @@ class BacktestResult:
     symbols: list[str]
     start_date: str
     end_date: str
+    signal_mode: str
     initial_cash: float
     final_value: float
     total_return_percent: float
@@ -199,6 +210,7 @@ class BacktestResult:
             "symbols": self.symbols,
             "start_date": self.start_date,
             "end_date": self.end_date,
+            "signal_mode": self.signal_mode,
             "initial_cash": self.initial_cash,
             "final_value": self.final_value,
             "total_return_percent": self.total_return_percent,

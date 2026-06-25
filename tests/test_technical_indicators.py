@@ -5,10 +5,12 @@ from packages.algorithm_layer.technical_indicators import (
     calculate_rsi,
     calculate_sma,
     calculate_sma_series,
+    calculate_volatility_percent,
     detect_ma_cross,
     rsi_score,
     technical_indicator_score,
     trend_score,
+    volatility_risk_score,
 )
 
 
@@ -80,6 +82,24 @@ class TechnicalIndicatorsTest(unittest.TestCase):
         self.assertEqual(max(0, min(100, expected)), score)
         self.assertIn("RSI(14)", explanation)
         self.assertIn("均线(5/20)状态：金叉", explanation)
+
+    def test_calculate_volatility_percent(self) -> None:
+        closes = [90.0, 100.0, 110.0]
+        self.assertAlmostEqual(20.0, calculate_volatility_percent(closes))
+
+    def test_calculate_volatility_percent_empty_is_zero(self) -> None:
+        self.assertEqual(0.0, calculate_volatility_percent([]))
+
+    def test_volatility_risk_score_higher_volatility_scores_lower(self) -> None:
+        low_vol_score, _ = volatility_risk_score([99.0, 100.0, 101.0])
+        high_vol_score, _ = volatility_risk_score([50.0, 100.0, 150.0])
+        self.assertGreater(low_vol_score, high_vol_score)
+
+    def test_volatility_risk_score_floor_and_cap(self) -> None:
+        score, _ = volatility_risk_score([1.0, 100.0, 200.0])
+        self.assertEqual(20, score)
+        score, _ = volatility_risk_score([100.0, 100.0, 100.0])
+        self.assertEqual(95, score)
 
 
 if __name__ == "__main__":

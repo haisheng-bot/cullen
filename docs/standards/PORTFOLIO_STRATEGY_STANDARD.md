@@ -38,21 +38,33 @@ Portfolio Strategy 不应写在前端页面或 Agent 内部。
 
 ```text
 packages/backtesting/
-├── schemas.py      策略配置、规则、回测结果等数据结构
-├── signals.py       Signal Engine：复用 algorithm_layer/technical_indicators.py 的技术指标
-├── allocation.py    Position Sizing：等权 / 低波动 / 技术评分 / 市值加权 + 仓位上限与现金底线
+├── schemas.py      策略配置、规则、回测结果等数据结构（含 signal_mode/min_ai_score/max_ai_score）
+├── signals.py       Signal Engine：技术指标（复用 algorithm_layer/technical_indicators.py）+
+│                    ai_score（复用 algorithm_layer/financial_factors.py）+
+│                    select_financials_as_of（按披露日期过滤，回测核心防穿越函数）
+├── allocation.py    Position Sizing：等权 / 低波动 / 技术评分(或 ai_score) / 市值加权 + 仓位上限与现金底线
 ├── risk.py          Risk Engine：止损、组合最大回撤熔断、行业暴露检查
 ├── engine.py        Strategy Engine + Backtest Engine：PortfolioBacktestEngine.run()
 └── performance.py   Performance Evaluator：收益、回撤、Sharpe、胜率、Alpha/Beta
 ```
 
-## 4. 第一阶段范围
+`packages/data_sources/sec_financials.py` 的 `parse_companyfacts_series` / `SECFinancialsClient.fetch_annual_series` 提供按披露日期标注的历史财报系列；`packages/db/financial_facts_cache.py` 缓存该系列（24 小时 TTL，与价格缓存同构）。
 
-**第一阶段为什么只用技术面信号，不直接用 `/stocks/{symbol}/recommendation` 的完整 AI 评分：**
+## 4. 阶段范围
 
-现有 AI 评分依赖 SEC 年报基本面因子，而 `packages/data_sources/sec_financials.py` 目前只暴露最新 1-2 个财年数据，没有保留每条 XBRL 财务事实的实际披露日期（`filed` 字段）。如果直接把这套评分接入回测，会在历史调仓日"看到"当时还没披露的财报数据，即未来数据穿越（lookahead bias），回测结果会失真且无法被信任。要修复需要新增按披露日期重建历史可见财报快照的能力，而且年报频率对月度调仓也偏稀疏（多数月份没有新数据）。
+**第一阶段（`backtesting-v0.1`）为什么只用技术面信号，不直接用 `/stocks/{symbol}/recommendation` 的完整 AI 评分：**
 
-价格 / 技术指标（动量、RSI、均线金死叉）天然不存在这个问题——它们是某个历史日期之前收盘价序列的纯函数，只要截到调仓日为止取数即可保证不穿越。因此第一阶段（`backtesting-v0.1`）的买卖规则和仓位评分只使用技术面信号，命名为 `technical_score` 而非 `ai_score`，避免被误读为验证了完整的 5 维 AI 评分。基于完整 AI 评分（含基本面）的回测是第二阶段（见第 6 节版本管理），依赖先完成按披露日期重建历史财报快照的工作。
+旧版 `packages/data_sources/sec_financials.py` 只暴露最新 1-2 个财年数据，没有保留每条 XBRL 财务事实的实际披露日期（`filed` 字段）。如果直接把这套评分接入回测，会在历史调仓日"看到"当时还没披露的财报数据，即未来数据穿越（lookahead bias），回测结果会失真且无法被信任。
+
+价格 / 技术指标（动量、RSI、均线金死叉）天然不存在这个问题——它们是某个历史日期之前收盘价序列的纯函数，只要截到调仓日为止取数即可保证不穿越。因此第一阶段的买卖规则和仓位评分只使用技术面信号，命名为 `technical_score` 而非 `ai_score`，避免被误读为验证了完整的 5 维 AI 评分。
+
+**第二阶段（`backtesting-v0.2`）：按披露日期重建历史财报快照，新增 `signal_mode="ai_score"`。**
+
+`packages/data_sources/sec_financials.py` 的 `parse_companyfacts_series` 现在保留每个财年最早的 `filed` 日期（`AnnualFinancials.filed_date`），`packages/backtesting/signals.py` 的 `select_financials_as_of(series, as_of_date)` 只返回 `filed_date <= as_of_date` 的财年——这是修复未来数据穿越的关键函数，有专门的回归测试（一个财年的数据在其 `filed_date` 之前必须不可见）。
+
+`ai_score` 是 algorithm-v0.3 的基本面(0.30)/成长(0.20)/估值(0.20)/技术(0.10)/新闻情绪(0.10)/波动风险(0.10) 六因子去掉新闻情绪后，剩余权重按比例放大到合计 1.0：基本面 1/3、成长 2/9、估值 2/9、技术 1/9、波动风险 1/9（见 `packages/backtesting/signals.py` 的 `AI_SCORE_WEIGHTS`）。**新闻情绪因子被排除**：`packages/news_layer/news_policy.py` 的 Yahoo Finance RSS 新闻源只能拿到"当前"最新新闻，没有历史新闻归档（模块自带的 `COVERAGE_NOTE` 也写明"完整 3 年新闻归档需要专门的归档新闻源"），无法在历史回测里保证不穿越，因此第二阶段也无法把它纳入 `ai_score`。
+
+`StrategyConfig.signal_mode`（`"technical"` 默认 / `"ai_score"`）控制买卖规则和仓位评分用哪套分数；`min_technical_score`/`max_technical_score` 两种模式下含义不变（始终是技术分阈值），新增的 `min_ai_score`/`max_ai_score` 只在 `signal_mode="ai_score"` 时生效——一个字段名永远只代表一种分数，不会被静默重新定义。
 
 第一阶段实现：
 
@@ -73,12 +85,16 @@ packages/backtesting/
 * 调用 `POST /backtests/run` 执行历史回测。
 * 输出收益、年化收益、最大回撤、Sharpe、Alpha、交易次数、贡献股票、风险提示。
 
-第一阶段不做：
+第一阶段不做（第二阶段已完成）：
+
+* ~~使用未来数据的回测~~ → 第二阶段已通过按披露日期重建历史财报快照修复（`ai_score` 模式）。
+
+第二阶段仍不做：
 
 * 自动实盘下单
 * 保证收益
 * 无人工确认的交易
-* 使用未来数据的回测
+* 新闻情绪因子的历史回测（无历史新闻归档数据源，见上文）
 
 ## 5. API 标准
 
@@ -96,6 +112,7 @@ POST /backtests/run
 * end_date
 * initial_cash
 * benchmark_symbol
+* signal_mode（`"technical"` 或 `"ai_score"`）
 * allocation
 * entry_rules
 * exit_rules
@@ -127,7 +144,7 @@ POST /backtests/run
 ```text
 portfolio-strategy-v0.1  组合策略工作流与技术面回测界面 [released]
 backtesting-v0.1  技术面组合回测与约束配置（仅 technical_score，无基本面因子） [released]
-backtesting-v0.2  接入按披露日期重建的历史财报快照，回测规则可使用 ai_score [planned]
+backtesting-v0.2  按披露日期重建历史财报快照，新增 signal_mode="ai_score"（不含新闻情绪因子） [released]
 backtesting-v0.3  加入 Model Layer 回测结果自然语言解释 [planned]
 backtesting-v1.0  稳定组合策略工作流 [planned]
 ```

@@ -76,6 +76,23 @@ class PriceHistoryCache(Base):
     )
 
 
+class FinancialFactsCache(Base):
+    """Cached point-in-time annual financials series per symbol (every
+    fiscal year, with `filed_date`), so a `signal_mode="ai_score"` backtest
+    doesn't re-fetch SEC EDGAR company facts on every run (see
+    packages/db/financial_facts_cache.py).
+    """
+
+    __tablename__ = "financial_facts_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    symbol: Mapped[str] = mapped_column(String(16), index=True, nullable=False)
+    annual_series: Mapped[list] = mapped_column(JSON, default=list)
+    fetched_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+
 class BacktestRun(Base):
     """One row per Portfolio Strategy Engine backtest run
     (`POST /backtests/run`), per docs/standards/PORTFOLIO_STRATEGY_STANDARD.md.

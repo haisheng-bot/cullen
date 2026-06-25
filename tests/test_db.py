@@ -3,8 +3,10 @@ from dataclasses import dataclass
 
 from packages.backtesting.schemas import BacktestResult, EquityPoint, StrategyConfig
 from packages.config import Settings
+from packages.data_sources.sec_financials import AnnualFinancials
 from packages.db.audit import write_audit_log
 from packages.db.backtest_runs import write_backtest_run
+from packages.db.financial_facts_cache import get_or_fetch_annual_series
 from packages.db.models import AuditLog, Base
 from packages.db.price_history_cache import get_or_fetch_closes
 from packages.db.session import build_engine
@@ -177,6 +179,52 @@ class PriceHistoryCachePersistenceTest(unittest.TestCase):
         self.assertEqual(1, client.call_count, "second call should hit the cache, not the network")
 
 
+class _CountingFakeFinancialsClient:
+    def __init__(self) -> None:
+        self.call_count = 0
+
+    def fetch_annual_series(self, symbol: str) -> list[AnnualFinancials]:
+        self.call_count += 1
+        return [
+            AnnualFinancials(
+                fiscal_year=2024,
+                end_date="2024-12-31",
+                revenue=1000.0,
+                net_income=200.0,
+                eps_diluted=None,
+                total_assets=None,
+                stockholders_equity=None,
+                shares_outstanding=None,
+                operating_income=None,
+                current_assets=None,
+                current_liabilities=None,
+                net_fixed_assets=None,
+                cash=None,
+                total_debt=None,
+                filed_date="2025-02-15",
+            )
+        ]
+
+
+class FinancialFactsCachePersistenceTest(unittest.TestCase):
+    def test_get_or_fetch_annual_series_caches_after_first_call(self) -> None:
+        engine = make_sqlite_engine()
+        client = _CountingFakeFinancialsClient()
+
+        with Session(engine) as session:
+            first = get_or_fetch_annual_series(session, client, "AAPL")
+            session.commit()
+        with Session(engine) as session:
+            second = get_or_fetch_annual_series(session, client, "AAPL")
+            session.commit()
+
+        self.assertEqual(1, len(first))
+        self.assertEqual("2024-12-31", first[0].end_date)
+        self.assertEqual("2025-02-15", first[0].filed_date)
+        self.assertEqual(first, second)
+        self.assertEqual(1, client.call_count, "second call should hit the cache, not the network")
+
+
 class BacktestRunPersistenceTest(unittest.TestCase):
     def test_write_backtest_run_persists_config_and_result(self) -> None:
         engine = make_sqlite_engine()
@@ -188,6 +236,7 @@ class BacktestRunPersistenceTest(unittest.TestCase):
             symbols=["AAPL"],
             start_date="2023-01-01",
             end_date="2023-12-31",
+            signal_mode="technical",
             initial_cash=10_000.0,
             final_value=11_000.0,
             total_return_percent=10.0,

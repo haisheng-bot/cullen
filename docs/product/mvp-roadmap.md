@@ -77,7 +77,8 @@
 
 * Portfolio Strategy Engine（`packages/backtesting`，`backtesting-v0.1`：仓位分配、技术面信号买卖规则、风险熔断、回测指标）[verified]
 * `POST /backtests/run` + 前端组合策略工作流（Universe → Strategy Library → Constraints → Backtest → Recommendation） [usable]
-* 接入完整 AI 评分（含基本面因子）的回测，依赖按披露日期重建历史财报快照 [planned]
+* Portfolio Strategy Engine 升级到 `backtesting-v0.2`：按披露日期重建历史财报快照（`parse_companyfacts_series`），新增 `signal_mode="ai_score"` 复用基本面/成长/估值/技术/波动风险五因子回测（新闻情绪因子因无历史新闻归档暂不支持） [verified]
+* 新闻情绪因子的历史回测：依赖接入有历史归档的新闻数据源 [planned]
 * 券商接口 `packages/brokers` [planned]
 
 ### 额外扩展（超出原路线图）

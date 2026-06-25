@@ -47,3 +47,4 @@
 * Portfolio Strategy Engine（`backtesting-v0.1`）：新增顶层包 `packages/backtesting/`（signals/allocation/risk/performance/engine），对一组股票在指定区间执行仓位分配、买卖规则、风险熔断和回测评估，第一阶段仅用价格/技术信号（动量、RSI、均线金死叉），不接入完整 AI 评分以避免财报数据的未来穿越问题，详见 `docs/standards/PORTFOLIO_STRATEGY_STANDARD.md`
 * 新增 `PriceHistoryCache`/`BacktestRun` 表（`packages/db/models.py`），历史价格 24 小时缓存，回测配置与结果落库
 * 新增 `POST /backtests/run`（项目第一个 POST 接口），前端组合策略工作流已接入并端到端联调
+* Portfolio Strategy Engine 升级到 `backtesting-v0.2`：`packages/data_sources/sec_financials.py` 新增 `parse_companyfacts_series`，按每条 XBRL 财务事实最早的 `filed` 日期重建历史财报快照；新增 `StrategyConfig.signal_mode="ai_score"`，复用 algorithm-v0.3 的基本面/成长/估值/技术/波动风险五因子（新闻情绪因子因无历史新闻归档数据源被排除，剩余权重按比例重新归一化），回测仅在调仓日已披露的财报范围内打分，避免未来数据穿越；新增 `FinancialFactsCache` 表缓存历史财报系列；提取 `packages/algorithm_layer/financial_factors.py`（基本面/成长/估值评分）和 `technical_indicators.volatility_risk_score`，供实时推荐和回测共用，已用核心回归测试验证「财报数据在披露日之前不可见」

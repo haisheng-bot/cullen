@@ -14,14 +14,16 @@ from datetime import date, datetime, timedelta, timezone
 from packages.backtesting import allocation, performance, risk, signals
 from packages.backtesting.schemas import (
     REBALANCE_FREQUENCIES,
+    SIGNAL_MODES,
     BacktestResult,
     EquityPoint,
     StrategyConfig,
     SymbolContribution,
     Trade,
 )
+from packages.data_sources.sec_financials import AnnualFinancials
 
-ALGORITHM_VERSION = "backtesting-v0.1"
+ALGORITHM_VERSION = "backtesting-v0.2"
 
 
 @dataclass
@@ -58,21 +60,33 @@ class PortfolioBacktestEngine:
         self,
         history_fetcher: Callable[[str], list[tuple[str, float]]],
         shares_outstanding_fetcher: Callable[[str], float | None] | None = None,
+        financials_fetcher: Callable[[str], list[AnnualFinancials]] | None = None,
     ) -> None:
         """`history_fetcher(symbol)` must return the full available
         (date_iso, close) history for a symbol, any order. Used for every
-        symbol plus the benchmark.
+        symbol plus the benchmark. `financials_fetcher(symbol)` must return
+        every fiscal year's `AnnualFinancials` (with `filed_date` populated,
+        e.g. via `parse_companyfacts_series`) — required when a config uses
+        `signal_mode="ai_score"`.
         """
         self.history_fetcher = history_fetcher
         self.shares_outstanding_fetcher = shares_outstanding_fetcher or (lambda symbol: None)
+        self.financials_fetcher = financials_fetcher
 
     def run(self, config: StrategyConfig) -> BacktestResult:
         _validate_config(config)
+        if config.signal_mode == "ai_score" and self.financials_fetcher is None:
+            raise ValueError("signal_mode='ai_score' requires a financials_fetcher to be configured")
 
         series_by_symbol = {
             symbol: self._load_series(symbol)
             for symbol in [*config.symbols, config.benchmark_symbol]
         }
+        financials_by_symbol = (
+            {symbol: self.financials_fetcher(symbol) for symbol in config.symbols}
+            if config.signal_mode == "ai_score"
+            else {}
+        )
         benchmark_series = series_by_symbol[config.benchmark_symbol]
         master_dates = [
             d for d in benchmark_series.dates if config.start_date <= d <= config.end_date
@@ -115,7 +129,7 @@ class PortfolioBacktestEngine:
 
             if current_date in rebalance_dates:
                 in_circuit_breaker = False
-                self._rebalance(config, series_by_symbol, state, prices, current_date)
+                self._rebalance(config, series_by_symbol, financials_by_symbol, state, prices, current_date)
                 portfolio_value = _mark_to_market(state, prices)
 
             benchmark_price = benchmark_series.price_on_or_before(current_date)
@@ -147,6 +161,7 @@ class PortfolioBacktestEngine:
         self,
         config: StrategyConfig,
         series_by_symbol: dict[str, _SymbolSeries],
+        financials_by_symbol: dict[str, list[AnnualFinancials]],
         state: _RunState,
         prices: dict[str, float | None],
         current_date: str,
@@ -156,14 +171,14 @@ class PortfolioBacktestEngine:
             if price is None:
                 continue
             closes = series_by_symbol[symbol].closes_through(current_date)
-            score, _ = signals.technical_score(closes)
+            technical, _ = signals.technical_score(closes)
             cross_state = signals.ma_cross_state(closes)
             reasons = []
             if risk.is_stop_loss_breached(
                 state.positions[symbol].entry_price, price, config.exit_rules.stop_loss_percent
             ):
                 reasons.append("触发止损")
-            if score <= config.exit_rules.max_technical_score:
+            if technical <= config.exit_rules.max_technical_score:
                 reasons.append(f"技术分跌破 {config.exit_rules.max_technical_score}")
             # Unlike entry_rules (where None means "no restriction, always
             # passes"), a None exit filter must mean "this check is
@@ -173,6 +188,10 @@ class PortfolioBacktestEngine:
                 cross_state, config.exit_rules.require_ma_cross
             ):
                 reasons.append("均线状态触发卖出条件")
+            if config.signal_mode == "ai_score" and config.exit_rules.max_ai_score is not None:
+                ai = _composite_score(config, closes, financials_by_symbol.get(symbol, []), current_date, technical)
+                if ai <= config.exit_rules.max_ai_score:
+                    reasons.append(f"AI综合评分跌破 {config.exit_rules.max_ai_score}")
             if reasons:
                 _close_position(state, symbol, price, current_date, "、".join(reasons))
 
@@ -183,7 +202,8 @@ class PortfolioBacktestEngine:
             if price is None:
                 continue
             closes = series_by_symbol[symbol].closes_through(current_date)
-            score, _ = signals.technical_score(closes)
+            technical, _ = signals.technical_score(closes)
+            score = _composite_score(config, closes, financials_by_symbol.get(symbol, []), current_date, technical)
             eligible_scores[symbol] = score
             eligible_closes[symbol] = closes
 
@@ -196,15 +216,21 @@ class PortfolioBacktestEngine:
             closes = series_by_symbol[symbol].closes_through(current_date)
             if not closes:
                 continue
-            score, _ = signals.technical_score(closes)
+            technical, _ = signals.technical_score(closes)
             momentum = signals.momentum_percent(closes)
             cross_state = signals.ma_cross_state(closes)
-            passes_score = score >= config.entry_rules.min_technical_score
+            score = _composite_score(config, closes, financials_by_symbol.get(symbol, []), current_date, technical)
+            passes_score = technical >= config.entry_rules.min_technical_score
             passes_momentum = config.entry_rules.min_momentum_percent is None or (
                 momentum is not None and momentum >= config.entry_rules.min_momentum_percent
             )
             passes_cross = signals.matches_ma_cross_filter(cross_state, config.entry_rules.require_ma_cross)
-            if passes_score and passes_momentum and passes_cross:
+            passes_ai = (
+                config.signal_mode != "ai_score"
+                or config.entry_rules.min_ai_score is None
+                or score >= config.entry_rules.min_ai_score
+            )
+            if passes_score and passes_momentum and passes_cross and passes_ai:
                 eligible_scores[symbol] = score
                 eligible_closes[symbol] = closes
 
@@ -306,6 +332,25 @@ def _reduce_position(state: _RunState, symbol: str, price: float, shares: float,
         state.positions.pop(symbol)
 
 
+def _composite_score(
+    config: StrategyConfig,
+    closes: list[float],
+    annual_series: list[AnnualFinancials],
+    as_of_date: str,
+    technical: int,
+) -> int:
+    """The score used for entry/exit ai-threshold checks and for ranking/
+    weighting eligible symbols. In `signal_mode="technical"` this is just
+    `technical` (no extra computation); in `"ai_score"` mode it's the
+    point-in-time-safe composite from `signals.ai_score`.
+    """
+    if config.signal_mode != "ai_score":
+        return technical
+    latest, previous = signals.select_financials_as_of(annual_series, as_of_date)
+    score, _ = signals.ai_score(latest, previous, closes)
+    return score
+
+
 def _validate_config(config: StrategyConfig) -> None:
     if not config.symbols:
         raise ValueError("symbols is required")
@@ -313,6 +358,8 @@ def _validate_config(config: StrategyConfig) -> None:
         raise ValueError("start_date must be before end_date")
     if config.rebalance_frequency not in REBALANCE_FREQUENCIES:
         raise ValueError(f"unsupported rebalance frequency: {config.rebalance_frequency}")
+    if config.signal_mode not in SIGNAL_MODES:
+        raise ValueError(f"unsupported signal mode: {config.signal_mode}")
     if not 0 <= config.allocation.min_cash_weight < 1:
         raise ValueError("min_cash_weight must be in [0, 1)")
     if not 0 < config.allocation.max_position_weight <= 1:
@@ -394,6 +441,7 @@ def _build_result(config: StrategyConfig, equity_curve: list[EquityPoint], state
         symbols=config.symbols,
         start_date=config.start_date,
         end_date=config.end_date,
+        signal_mode=config.signal_mode,
         initial_cash=config.initial_cash,
         final_value=final_value,
         total_return_percent=round(total_return, 2),
@@ -427,11 +475,19 @@ def _build_suggestions(best_symbol: str | None, worst_symbol: str | None) -> lis
 
 
 def _build_risks(config: StrategyConfig) -> list[str]:
-    risks = [
-        "回测信号仅基于价格/技术指标（动量、RSI、均线），未使用财报基本面数据，"
-        "与 /stocks/{symbol}/recommendation 的完整 AI 评分不是同一套逻辑。",
-        "历史回测结果不代表未来表现，不构成任何投资建议。",
-    ]
+    if config.signal_mode == "ai_score":
+        risks = [
+            "AI 综合评分基于按披露日期重建的历史财报快照（基本面/成长/估值/技术/波动风险），"
+            "不含新闻情绪因子（无历史新闻归档数据源，权重已按比例分配至其余因子），"
+            "与 /stocks/{symbol}/recommendation 的实时评分权重不完全相同。",
+            "历史回测结果不代表未来表现，不构成任何投资建议。",
+        ]
+    else:
+        risks = [
+            "回测信号仅基于价格/技术指标（动量、RSI、均线），未使用财报基本面数据，"
+            "与 /stocks/{symbol}/recommendation 的完整 AI 评分不是同一套逻辑。",
+            "历史回测结果不代表未来表现，不构成任何投资建议。",
+        ]
     if config.risk.max_sector_exposure is not None and not config.sector_map:
         risks.append("未提供 sector_map，行业暴露限制未生效。")
     return risks

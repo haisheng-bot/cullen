@@ -16,7 +16,7 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * **M3 AI 分析**：部分完成。Model Layer 统一接口、Output Validator、Agent 基类和 SEC Filing Agent 已落地并端到端联调；News Agent / Report Agent 尚未开发。
 * **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.2.2`，已接入 SEC 真实财务数据和真实技术指标：基本面（净利润率+ROC）/成长性/估值（P/E+EV/EBIT）/技术面（RSI/均线金死叉/动量）/风险五因子），并通过新增的 Workflow Layer（`stocks/screening`）实现批量选股排序；基于大模型的 AI Scoring Agent、研究报告生成尚未开发（`packages/scoring` 仍为空）。
 * **M5 前端展示**：部分完成。美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分、组合策略工作流）已可用，独立的股票深度分析页和研究报告页尚未开发。
-* **M6 Portfolio Strategy / Backtesting**：部分完成。`packages/backtesting` 已提供价格技术面回测、仓位分配、风险约束和 `/backtests/run` API；券商接口 `packages/brokers` 尚未开发。
+* **M6 Portfolio Strategy / Backtesting**：部分完成。`packages/backtesting` 已提供价格技术面回测（`signal_mode="technical"`）和按披露日期重建历史财报快照的 AI 评分回测（`signal_mode="ai_score"`，`backtesting-v0.2`，新闻情绪因子因无历史新闻归档暂不支持）、仓位分配、风险约束和 `/backtests/run` API；券商接口 `packages/brokers` 尚未开发。
 
 额外完成的扩展能力（超出原始路线图，但已落地并有测试）：
 

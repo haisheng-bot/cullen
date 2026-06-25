@@ -34,6 +34,7 @@ from packages.data_sources.price_history import PriceHistoryError, YahooFinanceH
 from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
 from packages.data_sources.sec_financials import SECFinancialsClient, SECFinancialsError
 from packages.db.backtest_runs import write_backtest_run
+from packages.db.financial_facts_cache import get_or_fetch_annual_series
 from packages.db.price_history_cache import get_or_fetch_closes
 from packages.db.session import check_database_connection, session_scope
 from packages.db.stock_scores import get_score_history, write_screening_result
@@ -153,9 +154,22 @@ def _fetch_shares_outstanding(symbol: str) -> float | None:
     return facts.latest.shares_outstanding if facts.latest else None
 
 
+def _fetch_cached_annual_financials(symbol: str) -> list:
+    """Best-effort: a stock missing SEC XBRL data degrades to an empty
+    series (the engine then scores it with NO_DATA_SCORE neutrals), not a
+    failed backtest — same convention as `_fetch_financial_factors`.
+    """
+    try:
+        with session_scope() as session:
+            return get_or_fetch_annual_series(session, sec_financials_client, symbol)
+    except SECFinancialsError:
+        return []
+
+
 backtest_engine = PortfolioBacktestEngine(
     history_fetcher=_fetch_cached_closes,
     shares_outstanding_fetcher=_fetch_shares_outstanding,
+    financials_fetcher=_fetch_cached_annual_financials,
 )
 
 POPULAR_US_STOCKS = [
@@ -406,12 +420,14 @@ class EntryRulesRequest(BaseModel):
     min_technical_score: int = 60
     min_momentum_percent: float | None = None
     require_ma_cross: str | None = None
+    min_ai_score: int | None = None
 
 
 class ExitRulesRequest(BaseModel):
     max_technical_score: int = 40
     stop_loss_percent: float | None = 0.08
     require_ma_cross: str | None = None
+    max_ai_score: int | None = None
 
 
 class RiskControlsRequest(BaseModel):
@@ -432,6 +448,7 @@ class BacktestRunRequest(BaseModel):
     initial_cash: float = 10_000.0
     rebalance_frequency: str = "monthly"
     benchmark_symbol: str = "SPY"
+    signal_mode: str = "technical"
     allocation: AllocationConfigRequest = Field(default_factory=AllocationConfigRequest)
     entry_rules: EntryRulesRequest = Field(default_factory=EntryRulesRequest)
     exit_rules: ExitRulesRequest = Field(default_factory=ExitRulesRequest)
@@ -448,6 +465,7 @@ def _to_strategy_config(request: BacktestRunRequest) -> StrategyConfig:
         initial_cash=request.initial_cash,
         rebalance_frequency=request.rebalance_frequency,
         benchmark_symbol=request.benchmark_symbol.upper(),
+        signal_mode=request.signal_mode,
         allocation=AllocationConfig(**request.allocation.model_dump()),
         entry_rules=EntryRules(**request.entry_rules.model_dump()),
         exit_rules=ExitRules(**request.exit_rules.model_dump()),

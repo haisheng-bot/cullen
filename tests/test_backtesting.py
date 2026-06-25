@@ -12,6 +12,29 @@ from packages.backtesting.schemas import (
     RiskControls,
     StrategyConfig,
 )
+from packages.data_sources.sec_financials import AnnualFinancials
+
+
+def _annual_financials(end_date: str, filed_date: str | None, revenue: float, **overrides) -> AnnualFinancials:
+    fields = dict(
+        fiscal_year=None,
+        end_date=end_date,
+        revenue=revenue,
+        net_income=None,
+        eps_diluted=None,
+        total_assets=None,
+        stockholders_equity=None,
+        shares_outstanding=None,
+        operating_income=None,
+        current_assets=None,
+        current_liabilities=None,
+        net_fixed_assets=None,
+        cash=None,
+        total_debt=None,
+        filed_date=filed_date,
+    )
+    fields.update(overrides)
+    return AnnualFinancials(**fields)
 
 
 def _weekday_dates(start: str, count: int) -> list[str]:
@@ -57,6 +80,92 @@ class SignalsTest(unittest.TestCase):
     def test_matches_ma_cross_filter_rejects_unknown_value(self) -> None:
         with self.assertRaises(ValueError):
             signals.matches_ma_cross_filter("flat", "not_a_real_filter")
+
+
+class SelectFinancialsAsOfTest(unittest.TestCase):
+    def test_excludes_fiscal_years_filed_after_as_of_date(self) -> None:
+        series = [
+            _annual_financials("2024-12-31", "2025-02-15", revenue=200.0),
+            _annual_financials("2023-12-31", "2024-02-15", revenue=100.0),
+        ]
+
+        latest, previous = signals.select_financials_as_of(series, "2024-06-01")
+
+        self.assertEqual("2023-12-31", latest.end_date)
+        self.assertIsNone(previous)
+
+    def test_includes_a_fiscal_year_on_its_exact_filed_date(self) -> None:
+        series = [_annual_financials("2024-12-31", "2025-02-15", revenue=200.0)]
+
+        latest, _ = signals.select_financials_as_of(series, "2025-02-15")
+
+        self.assertEqual("2024-12-31", latest.end_date)
+
+    def test_excludes_entries_with_no_filed_date(self) -> None:
+        series = [_annual_financials("2024-12-31", None, revenue=200.0)]
+
+        latest, previous = signals.select_financials_as_of(series, "2030-01-01")
+
+        self.assertIsNone(latest)
+        self.assertIsNone(previous)
+
+    def test_returns_latest_and_previous_once_both_are_filed(self) -> None:
+        series = [
+            _annual_financials("2024-12-31", "2025-02-15", revenue=200.0),
+            _annual_financials("2023-12-31", "2024-02-15", revenue=100.0),
+        ]
+
+        latest, previous = signals.select_financials_as_of(series, "2025-03-01")
+
+        self.assertEqual("2024-12-31", latest.end_date)
+        self.assertEqual("2023-12-31", previous.end_date)
+
+
+class AiScoreTest(unittest.TestCase):
+    def test_no_financials_falls_back_to_neutral_fundamentals_and_valuation(self) -> None:
+        closes = [c for _, c in _trending_closes(100.0, 0.0, 30)]
+
+        score, explanation = signals.ai_score(None, None, closes)
+
+        self.assertIn("未提供财务数据", explanation)
+        self.assertIn("未提供估值相关数据", explanation)
+        self.assertGreaterEqual(score, 0)
+        self.assertLessEqual(score, 100)
+
+    def test_matches_hand_computed_weighted_composite(self) -> None:
+        closes = [100.0] * 29 + [110.0]
+        latest = _annual_financials(
+            "2024-12-31",
+            "2025-02-15",
+            revenue=1000.0,
+            net_income=200.0,
+            eps_diluted=10.0,
+        )
+        previous = _annual_financials("2023-12-31", "2024-02-15", revenue=800.0)
+
+        score, _ = signals.ai_score(latest, previous, closes)
+
+        from packages.algorithm_layer.financial_factors import fundamentals_score, growth_score, valuation_score
+        from packages.algorithm_layer.schemas import FinancialFactorsInput
+        from packages.algorithm_layer.technical_indicators import volatility_risk_score
+
+        factors = FinancialFactorsInput(revenue=1000.0, previous_revenue=800.0, net_income=200.0, eps_diluted=10.0)
+        fundamentals, _ = fundamentals_score(factors)
+        growth, _ = growth_score(factors)
+        valuation, _ = valuation_score(factors, 110.0)
+        technical, _ = signals.technical_score(closes)
+        volatility, _ = volatility_risk_score(closes)
+        expected = round(
+            fundamentals * signals.AI_SCORE_WEIGHTS["fundamentals"]
+            + growth * signals.AI_SCORE_WEIGHTS["growth"]
+            + valuation * signals.AI_SCORE_WEIGHTS["valuation"]
+            + technical * signals.AI_SCORE_WEIGHTS["technical"]
+            + volatility * signals.AI_SCORE_WEIGHTS["volatility_risk"]
+        )
+        self.assertEqual(max(0, min(100, expected)), score)
+
+    def test_weights_sum_to_one(self) -> None:
+        self.assertAlmostEqual(1.0, sum(signals.AI_SCORE_WEIGHTS.values()))
 
 
 class AllocationTest(unittest.TestCase):
@@ -217,8 +326,13 @@ class PerformanceTest(unittest.TestCase):
 
 
 class PortfolioBacktestEngineTest(unittest.TestCase):
-    def _make_engine(self, series: dict[str, list[tuple[str, float]]]) -> PortfolioBacktestEngine:
-        return PortfolioBacktestEngine(history_fetcher=lambda symbol: series[symbol])
+    def _make_engine(
+        self, series: dict[str, list[tuple[str, float]]], financials: dict[str, list] | None = None
+    ) -> PortfolioBacktestEngine:
+        return PortfolioBacktestEngine(
+            history_fetcher=lambda symbol: series[symbol],
+            financials_fetcher=(lambda symbol: financials.get(symbol, [])) if financials is not None else None,
+        )
 
     def test_run_produces_full_result_and_separates_contributors(self) -> None:
         series = {
@@ -247,7 +361,7 @@ class PortfolioBacktestEngineTest(unittest.TestCase):
         self.assertGreaterEqual(result.max_drawdown_percent, 0.0)
         self.assertIsNotNone(result.benchmark_total_return_percent)
         self.assertTrue(result.risks)
-        self.assertEqual("backtesting-v0.1", result.algorithm_version)
+        self.assertEqual("backtesting-v0.2", result.algorithm_version)
 
     def test_run_rejects_empty_symbols(self) -> None:
         engine = self._make_engine({"SPY": _trending_closes(400.0, 0.0, 30)})
@@ -269,6 +383,49 @@ class PortfolioBacktestEngineTest(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             engine.run(config)
+
+    def test_run_rejects_ai_score_mode_without_financials_fetcher(self) -> None:
+        engine = self._make_engine({"SPY": _trending_closes(400.0, 0.0, 30), "A": _trending_closes(10.0, 0.0, 30)})
+        config = StrategyConfig(
+            strategy_name="x", symbols=["A"], start_date="2022-01-01", end_date="2022-06-01", signal_mode="ai_score"
+        )
+        with self.assertRaises(ValueError):
+            engine.run(config)
+
+    def test_run_in_ai_score_mode_only_enters_after_financials_are_disclosed(self) -> None:
+        # The core lookahead-bias regression test for V2: a fiscal year's
+        # financials must not move the entry decision before their own
+        # filed_date, even though the engine has the full annual series
+        # in memory for the whole backtest.
+        dates = _weekday_dates("2022-01-03", 150)
+        flat_closes = [(d, 100.0) for d in dates]
+        series = {"GOOD": flat_closes, "SPY": flat_closes}
+        closes_only = [c for _, c in flat_closes]
+
+        annual = _annual_financials("2021-12-31", "2022-03-15", revenue=1000.0, net_income=300.0)
+        score_before, _ = signals.ai_score(None, None, closes_only)
+        score_after, _ = signals.ai_score(annual, None, closes_only)
+        self.assertLess(score_before, score_after, "strong disclosed financials should raise the ai_score")
+        threshold = round((score_before + score_after) / 2)
+
+        engine = self._make_engine(series, financials={"GOOD": [annual]})
+        config = StrategyConfig(
+            strategy_name="ai_score_lookahead_check",
+            symbols=["GOOD"],
+            start_date="2022-01-03",
+            end_date="2022-06-01",
+            rebalance_frequency="monthly",
+            signal_mode="ai_score",
+            entry_rules=EntryRules(min_technical_score=0, min_ai_score=threshold),
+        )
+
+        result = engine.run(config)
+
+        early_trades = [t for t in result.trades if t.date < "2022-03-15"]
+        late_trades = [t for t in result.trades if t.date >= "2022-03-15"]
+        self.assertEqual([], early_trades, "must not enter before financials are disclosed (lookahead bias)")
+        self.assertTrue(any(t.action == "buy" for t in late_trades), "should enter once financials are disclosed")
+        self.assertEqual("ai_score", result.signal_mode)
 
     def test_circuit_breaker_freezes_value_after_drawdown_breach(self) -> None:
         # CRASH falls >12% in one day partway through, then keeps falling

@@ -6,6 +6,8 @@ docs/standards/ALGORITHM_STANDARD.md section 8.
 """
 from __future__ import annotations
 
+from statistics import mean
+
 MIN_CLOSES_FOR_INDICATORS = 25
 
 
@@ -141,3 +143,23 @@ def technical_indicator_score(closes: list[float]) -> tuple[int, str]:
         f"均线(5/20)状态：{CROSS_LABELS[cross_state]}"
     )
     return max(0, min(100, composite)), explanation
+
+
+def calculate_volatility_percent(closes: list[float]) -> float:
+    """(max - min) / average over `closes`, as a % — a simple range-based
+    volatility estimate (not stdev-based), shared by the live recommendation
+    and `ai_score`'s volatility_risk factor.
+    """
+    if not closes:
+        return 0.0
+    average_close = mean(closes)
+    if average_close == 0:
+        return 0.0
+    return (max(closes) - min(closes)) / average_close * 100
+
+
+def volatility_risk_score(closes: list[float]) -> tuple[int, str]:
+    """Higher volatility -> lower (riskier) score, floored/capped to [20, 95]."""
+    volatility_percent = calculate_volatility_percent(closes)
+    score = max(20, min(95, round(95 - volatility_percent * 18)))
+    return score, f"区间波动估算 {volatility_percent:.2f}%"

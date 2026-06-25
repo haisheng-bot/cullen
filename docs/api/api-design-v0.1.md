@@ -509,6 +509,7 @@ POST /backtests/run
   "initial_cash": 10000,
   "rebalance_frequency": "monthly",
   "benchmark_symbol": "SPY",
+  "signal_mode": "ai_score",
   "allocation": {
     "method": "technical_score_weighted",
     "max_position_weight": 0.25,
@@ -517,12 +518,14 @@ POST /backtests/run
   "entry_rules": {
     "min_technical_score": 60,
     "min_momentum_percent": 0,
-    "require_ma_cross": null
+    "require_ma_cross": null,
+    "min_ai_score": 65
   },
   "exit_rules": {
     "max_technical_score": 40,
     "stop_loss_percent": 0.08,
-    "require_ma_cross": null
+    "require_ma_cross": null,
+    "max_ai_score": 35
   },
   "risk": {
     "max_portfolio_drawdown": 0.12,
@@ -554,9 +557,12 @@ POST /backtests/run
 * generated_at
 * risk_disclaimer
 
+`signal_mode` 取值 `"technical"`（默认，仅价格/技术信号）或 `"ai_score"`（`backtesting-v0.2`：基本面/成长/估值/技术/波动风险五因子综合评分，按披露日期重建历史财报快照、不含新闻情绪因子）。`min_technical_score`/`max_technical_score` 两种模式下都生效；`min_ai_score`/`max_ai_score` 只在 `signal_mode="ai_score"` 时生效。
+
 合规说明：
 
 * 回测结果只代表历史模拟，不代表未来收益。
+* `signal_mode="ai_score"` 不含新闻情绪因子（无历史新闻归档数据源），与 `/stocks/{symbol}/recommendation` 实时评分权重不完全相同。
 * 组合建议必须人工复核，不允许默认自动下单。
 * 本系统仅用于投资研究辅助，不构成任何投资建议。
 
