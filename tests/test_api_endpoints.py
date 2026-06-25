@@ -162,10 +162,11 @@ class FakeScreeningWorkflow:
                     sector="Technology",
                     total_score=80,
                     recommendation="观察",
+                    factors=[{"name": "technical", "score": 80, "weight": 0.2, "explanation": "test"}],
                     reasons=["区间走势为正，短线动量偏强。"],
                     risks=["推荐等级仅表示研究关注优先级，不代表买入建议。"],
                     source="test-source",
-                    algorithm_version="algorithm-v0.2",
+                    algorithm_version="algorithm-v0.2.1",
                 )
             ],
             skipped=[],
@@ -202,6 +203,8 @@ class ApiEndpointsTest(unittest.TestCase):
         self.original_sec_filing_agent = main.sec_filing_agent
         self.original_universe_scanner = main.universe_scanner
         self.original_screening_workflow = main.screening_workflow
+        self.original_persist_screening_result = main._persist_screening_result
+        self.original_fetch_score_history = main._fetch_score_history
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
         main.sec_filing_client = FakeSECFilingClient()
@@ -211,6 +214,20 @@ class ApiEndpointsTest(unittest.TestCase):
         main.sec_filing_agent = FakeSECFilingAgent()
         main.universe_scanner = FakeUniverseScanner()
         main.screening_workflow = FakeScreeningWorkflow()
+        self.persisted_screening_results: list = []
+        main._persist_screening_result = self.persisted_screening_results.append
+        main._fetch_score_history = lambda symbol, limit: [
+            {
+                "screened_at": "2026-06-25T13:32:00+00:00",
+                "rank": 1,
+                "total_score": 80,
+                "recommendation": "观察",
+                "factors": [{"name": "technical", "score": 80, "weight": 0.2, "explanation": "test"}],
+                "reasons": ["区间走势为正，短线动量偏强。"],
+                "risks": [],
+                "algorithm_version": "algorithm-v0.2.1",
+            }
+        ]
 
     def tearDown(self) -> None:
         main.trend_client = self.original_client
@@ -222,6 +239,8 @@ class ApiEndpointsTest(unittest.TestCase):
         main.sec_filing_agent = self.original_sec_filing_agent
         main.universe_scanner = self.original_universe_scanner
         main.screening_workflow = self.original_screening_workflow
+        main._persist_screening_result = self.original_persist_screening_result
+        main._fetch_score_history = self.original_fetch_score_history
 
     def test_popular_stocks_endpoint(self) -> None:
         payload = main.get_popular_us_stocks()
@@ -287,6 +306,15 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual(1, payload["scored_count"])
         self.assertEqual("AAPL", payload["candidates"][0]["symbol"])
         self.assertEqual(1, payload["candidates"][0]["rank"])
+        self.assertEqual(1, len(self.persisted_screening_results))
+
+    def test_score_history_endpoint(self) -> None:
+        payload = main.get_stock_score_history("AAPL", limit=10)
+
+        self.assertEqual("AAPL", payload["symbol"])
+        self.assertEqual(1, len(payload["items"]))
+        self.assertEqual(80, payload["items"][0]["total_score"])
+        self.assertEqual("algorithm-v0.2.1", payload["items"][0]["algorithm_version"])
 
     def test_recommendation_endpoint(self) -> None:
         payload = main.get_stock_recommendation("AAPL")

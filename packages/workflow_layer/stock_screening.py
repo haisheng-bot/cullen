@@ -99,6 +99,7 @@ class StockScreeningWorkflow:
             sector=item.sector or "",
             total_score=result.total_score,
             recommendation=result.recommendation,
+            factors=[factor.to_dict() for factor in result.factors],
             reasons=result.reasons,
             risks=result.risks,
             source=result.source,

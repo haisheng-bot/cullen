@@ -23,7 +23,8 @@ from packages.data_sources.fred import FREDClient, FREDError
 from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
 from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
 from packages.data_sources.sec_financials import SECFinancialsClient, SECFinancialsError
-from packages.db.session import check_database_connection
+from packages.db.session import check_database_connection, session_scope
+from packages.db.stock_scores import get_score_history, write_screening_result
 from packages.model_layer.factory import build_default_router
 from packages.model_layer.validator import OutputValidationError
 from packages.news_layer.news_policy import NewsPolicyClient, NewsPolicyError
@@ -199,9 +200,48 @@ def get_stock_recommendation(symbol: str) -> dict:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
+def _persist_screening_result(result) -> None:
+    with session_scope() as session:
+        write_screening_result(session, result)
+
+
 @app.get("/stocks/screening")
 def get_stock_screening(limit: int = Query(20, ge=1, le=50)) -> dict:
-    return screening_workflow.screen(limit=limit).to_dict()
+    result = screening_workflow.screen(limit=limit)
+    _persist_screening_result(result)
+    return result.to_dict()
+
+
+def _fetch_score_history(symbol: str, limit: int) -> list[dict]:
+    with session_scope() as session:
+        history = get_score_history(session, symbol, limit=limit)
+        return [
+            {
+                "screened_at": record.screened_at.isoformat(),
+                "rank": record.rank,
+                "total_score": record.total_score,
+                "recommendation": record.recommendation,
+                "factors": record.factors,
+                "reasons": record.reasons,
+                "risks": record.risks,
+                "algorithm_version": record.algorithm_version,
+            }
+            for record in history
+        ]
+
+
+@app.get("/stocks/{symbol}/score-history")
+def get_stock_score_history(symbol: str, limit: int = Query(30, ge=1, le=200)) -> dict:
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "symbol": normalized_symbol,
+        "items": _fetch_score_history(normalized_symbol, limit),
+        "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。",
+    }
 
 
 @app.get("/stocks/{symbol}/trend")

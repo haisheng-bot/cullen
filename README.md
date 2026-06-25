@@ -127,7 +127,9 @@ Agent 基类见 `packages/ai_agents/base.py`，后续 News Agent、Report Agent 
 GET http://127.0.0.1:8000/stocks/screening?limit=20
 ```
 
-`StockScreeningWorkflow`（`packages/workflow_layer/stock_screening.py`）把 Universe Layer 的候选池（Most Active Top 100）逐个用 Algorithm Layer v0.2.1 打分，并发请求（最多 8 个并发）后按总分排序返回。这是"自己选股"场景的核心入口：不指定单一股票，直接看候选池里排序靠前的标的。已用真实数据端到端联调（5 只股票全部评分成功，约 19 秒）。
+`StockScreeningWorkflow`（`packages/workflow_layer/stock_screening.py`）把 Universe Layer 的候选池（Most Active Top 100）逐个用 Algorithm Layer v0.2.1 打分，并发请求（最多 8 个并发）后按总分排序返回。这是"自己选股"场景的核心入口：不指定单一股票，直接看候选池里排序靠前的标的。已用真实数据端到端联调（20 只股票全部评分成功，约 56 秒）。
+
+每次调用都会把候选评分写入 `stock_scores` 表（`packages/db/stock_scores.py`），通过 `GET /stocks/{symbol}/score-history` 可以读出某只股票历次评分，方便对比"这只股票最近几次扫描分数是涨是跌"——这是把 AI 选股从一次性即时计算变成有历史记录的个人工具的关键一步。
 
 ### 技术面因子（algorithm-v0.2.1）
 

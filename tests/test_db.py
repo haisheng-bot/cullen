@@ -4,8 +4,10 @@ from packages.config import Settings
 from packages.db.audit import write_audit_log
 from packages.db.models import AuditLog, Base
 from packages.db.session import build_engine
+from packages.db.stock_scores import get_score_history, write_screening_result
 from packages.model_layer.mock_provider import MockModelProvider
 from packages.model_layer.schemas import RISK_DISCLAIMER, ModelRequest
+from packages.workflow_layer.schemas import ScreeningCandidate, ScreeningResult
 from sqlalchemy.orm import Session
 
 
@@ -76,6 +78,60 @@ class AuditLogPersistenceTest(unittest.TestCase):
         self.assertEqual("news_sentiment", row.task_type)
         self.assertIn("Summarize NVDA news.", row.input_summary)
         self.assertEqual(RISK_DISCLAIMER, row.risk_disclaimer)
+
+
+class StockScorePersistenceTest(unittest.TestCase):
+    def _make_result(self, total_score: int = 80) -> ScreeningResult:
+        return ScreeningResult(
+            market="US",
+            requested_limit=5,
+            scored_count=1,
+            candidates=[
+                ScreeningCandidate(
+                    rank=1,
+                    symbol="AAPL",
+                    name="Apple Inc.",
+                    sector="Technology",
+                    total_score=total_score,
+                    recommendation="观察",
+                    factors=[{"name": "technical", "score": total_score, "weight": 0.2, "explanation": "test"}],
+                    reasons=["区间走势为正，短线动量偏强。"],
+                    risks=[],
+                    source="test-source",
+                    algorithm_version="algorithm-v0.2.1",
+                )
+            ],
+            skipped=[],
+            source="test-source",
+            generated_at="2026-06-25T13:32:00+00:00",
+        )
+
+    def test_write_screening_result_persists_each_candidate(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            records = write_screening_result(session, self._make_result())
+            self.assertEqual(1, len(records))
+            self.assertEqual("AAPL", records[0].symbol)
+            self.assertEqual(80, records[0].total_score)
+            session.commit()
+
+    def test_get_score_history_returns_newest_first(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            write_screening_result(session, self._make_result(total_score=60))
+            session.commit()
+        with Session(engine) as session:
+            write_screening_result(session, self._make_result(total_score=85))
+            session.commit()
+
+        with Session(engine) as session:
+            history = get_score_history(session, "aapl", limit=10)
+
+        self.assertEqual(2, len(history))
+        self.assertEqual(85, history[0].total_score)
+        self.assertEqual(60, history[1].total_score)
 
 
 if __name__ == "__main__":

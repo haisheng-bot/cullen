@@ -40,3 +40,4 @@
 * Algorithm Layer 升级到 `algorithm-v0.2`：加入基本面、成长性、估值三个真实数据因子，与原技术面/风险因子合并为五维度评分，`/stocks/{symbol}/recommendation` 已接入真实 SEC 财务数据并端到端联调
 * Workflow Layer 和 AI 选股批量排序：`packages/workflow_layer/stock_screening.py` 把候选池逐个用 Algorithm Layer 并发评分排序，接入 `/stocks/screening`，已端到端联调
 * Algorithm Layer 升级到 `algorithm-v0.2.1`：technical 因子改用真实技术指标（`packages/algorithm_layer/technical_indicators.py` 计算 RSI-14、MA(5/20) 金叉死叉、10 日动量），取代原区间涨跌幅粗略估算，日线数据不足时自动退化为旧估算并提示，`/stocks/{symbol}/recommendation` 与 `/stocks/screening` 均已接入并端到端联调
+* 选股结果落库存历史：新增 `stock_scores` 表（`packages/db/models.py`），`/stocks/screening` 每次调用都会把候选评分写入数据库，新增 `/stocks/{symbol}/score-history` 读取某只股票历次评分，已用真实数据端到端联调

@@ -391,9 +391,10 @@ GET /stocks/screening?limit=20
 
 用途：
 
-* 调用 Workflow Layer（`packages/workflow_layer/stock_screening.py`），编排 Universe Layer（候选池）→ 数据源（实时走势 + SEC 财务数据）→ Algorithm Layer（评分）
+* 调用 Workflow Layer（`packages/workflow_layer/stock_screening.py`），编排 Universe Layer（候选池）→ 数据源（实时走势 + SEC 财务数据 + 近 1 年日线）→ Algorithm Layer（评分）
 * 对候选池逐个并发评分（最多 8 个并发请求），按 `total_score` 降序排列
 * 单只股票数据获取失败时跳过并记录在 `skipped`，不影响其余候选
+* 每个候选评分会写入 `stock_scores` 表（见 4.2 节），用于跨天对比同一只股票的分数变化
 
 请求参数：
 
@@ -401,7 +402,7 @@ GET /stocks/screening?limit=20
 limit  候选池大小，同时也是评分数量上限，默认 20，最大 50
 ```
 
-性能说明：每只股票需要额外请求 SEC 财务数据，受 SEC 服务端响应速度影响，`limit=20` 时实测约 1 分钟内完成；这是个人使用工具，未做更激进的并发或缓存优化。
+性能说明：每只股票需要额外请求 SEC 财务数据和近 1 年日线，受 Yahoo/SEC 服务端响应速度影响，`limit=20` 时实测约 56 秒完成；这是个人使用工具，未做更激进的并发或缓存优化。
 
 响应示例：
 
@@ -413,11 +414,18 @@ limit  候选池大小，同时也是评分数量上限，默认 20，最大 50
   "candidates": [
     {
       "rank": 1,
-      "symbol": "PATH",
-      "name": "UiPath Inc.",
+      "symbol": "SOFI",
+      "name": "SoFi Technologies, Inc.",
       "sector": "",
-      "total_score": 67,
+      "total_score": 69,
       "recommendation": "中性",
+      "factors": [
+        {"name": "fundamentals", "score": 95, "weight": 0.3, "explanation": "净利润率约 77.7%（基于最近年度 SEC 财报）"},
+        {"name": "growth", "score": 78, "weight": 0.2, "explanation": "营收同比增长约 23.1%（基于最近两个年度 SEC 财报）"},
+        {"name": "valuation", "score": 40, "weight": 0.2, "explanation": "按最新价格估算 P/E 约 44.4（绝对档位估算，非行业相对）"},
+        {"name": "technical", "score": 74, "weight": 0.2, "explanation": "动量(10日) +5.10%，RSI(14) 54.8，均线(5/20)状态：多头排列"},
+        {"name": "volatility_risk", "score": 20, "weight": 0.1, "explanation": "区间波动估算 6.76%"}
+      ],
       "reasons": ["区间走势为正，短线动量偏强。"],
       "risks": ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。"],
       "source": "Yahoo Finance chart API",
@@ -431,7 +439,49 @@ limit  候选池大小，同时也是评分数量上限，默认 20，最大 50
 }
 ```
 
-已用真实候选池数据做过线上联调（10 只股票，全部评分成功，按分排序正确）。
+已用真实候选池数据做过线上联调（20 只股票，全部评分成功，按分排序正确）。
+
+### 4.2 选股历史
+
+```text
+GET /stocks/{symbol}/score-history?limit=30
+```
+
+用途：
+
+* 读取 `stock_scores` 表中某只股票历次 `/stocks/screening` 评分记录，按时间倒序返回
+* 用于个人使用场景下对比"这只股票的分数是涨是跌"，而不是每次都是无状态的即时计算
+
+请求参数：
+
+```text
+limit  返回条数上限，默认 30，最大 200
+```
+
+响应示例：
+
+```json
+{
+  "symbol": "SOFI",
+  "items": [
+    {
+      "screened_at": "2026-06-25T11:03:12.789243",
+      "rank": 1,
+      "total_score": 69,
+      "recommendation": "中性",
+      "factors": [
+        {"name": "fundamentals", "score": 95, "weight": 0.3, "explanation": "净利润率约 77.7%（基于最近年度 SEC 财报）"}
+      ],
+      "reasons": ["区间走势为正，短线动量偏强。"],
+      "risks": ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。"],
+      "algorithm_version": "algorithm-v0.2.1"
+    }
+  ],
+  "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
+}
+```
+
+已用真实数据做过线上联调：调用一次 `/stocks/screening` 后再读取 `/stocks/SOFI/score-history`，记录正确落库并可读出。
 
 ## 5. 响应要求
 

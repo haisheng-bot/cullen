@@ -14,6 +14,7 @@ class ScreeningCandidate:
     sector: str
     total_score: int
     recommendation: str
+    factors: list[dict[str, Any]]
     reasons: list[str]
     risks: list[str]
     source: str
@@ -27,6 +28,7 @@ class ScreeningCandidate:
             "sector": self.sector,
             "total_score": self.total_score,
             "recommendation": self.recommendation,
+            "factors": self.factors,
             "reasons": self.reasons,
             "risks": self.risks,
             "source": self.source,
