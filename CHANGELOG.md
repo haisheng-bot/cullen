@@ -38,3 +38,4 @@
 * Model Layer 路由工厂 `build_default_router()`：无 Key 时 fallback 到 mock provider，配置任意模型 Key 后自动切换 litellm provider
 * SEC EDGAR XBRL 财务数据源（`packages/data_sources/sec_financials.py`），免费读取营收/净利润/EPS/股东权益等真实财报数据
 * Algorithm Layer 升级到 `algorithm-v0.2`：加入基本面、成长性、估值三个真实数据因子，与原技术面/风险因子合并为五维度评分，`/stocks/{symbol}/recommendation` 已接入真实 SEC 财务数据并端到端联调
+* Workflow Layer 和 AI 选股批量排序：`packages/workflow_layer/stock_screening.py` 把候选池逐个用 Algorithm Layer 并发评分排序，接入 `/stocks/screening`，已端到端联调

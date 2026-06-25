@@ -14,6 +14,7 @@ from packages.news_layer.schemas import NewsItem, NewsPolicyResponse
 from packages.universe_layer.schemas import UniverseResult, UniverseStock
 from packages.ai_agents.base import AgentResult
 from packages.model_layer.schemas import RISK_DISCLAIMER, ModelResponse, TokenUsage
+from packages.workflow_layer.schemas import ScreeningCandidate, ScreeningResult
 
 
 class FakeTrendClient:
@@ -147,6 +148,32 @@ class FakeSECFilingAgent:
         )
 
 
+class FakeScreeningWorkflow:
+    def screen(self, limit: int = 20) -> ScreeningResult:
+        return ScreeningResult(
+            market="US",
+            requested_limit=limit,
+            scored_count=1,
+            candidates=[
+                ScreeningCandidate(
+                    rank=1,
+                    symbol="AAPL",
+                    name="Apple Inc.",
+                    sector="Technology",
+                    total_score=80,
+                    recommendation="观察",
+                    reasons=["区间走势为正，短线动量偏强。"],
+                    risks=["推荐等级仅表示研究关注优先级，不代表买入建议。"],
+                    source="test-source",
+                    algorithm_version="algorithm-v0.2",
+                )
+            ],
+            skipped=[],
+            source="test-source",
+            generated_at="2026-06-25T13:32:00+00:00",
+        )
+
+
 class FakeUniverseScanner:
     def scan(self, limit: int = 100) -> UniverseResult:
         return UniverseResult(
@@ -174,6 +201,7 @@ class ApiEndpointsTest(unittest.TestCase):
         self.original_news_policy_client = main.news_policy_client
         self.original_sec_filing_agent = main.sec_filing_agent
         self.original_universe_scanner = main.universe_scanner
+        self.original_screening_workflow = main.screening_workflow
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
         main.sec_filing_client = FakeSECFilingClient()
@@ -182,6 +210,7 @@ class ApiEndpointsTest(unittest.TestCase):
         main.news_policy_client = FakeNewsPolicyClient()
         main.sec_filing_agent = FakeSECFilingAgent()
         main.universe_scanner = FakeUniverseScanner()
+        main.screening_workflow = FakeScreeningWorkflow()
 
     def tearDown(self) -> None:
         main.trend_client = self.original_client
@@ -192,6 +221,7 @@ class ApiEndpointsTest(unittest.TestCase):
         main.news_policy_client = self.original_news_policy_client
         main.sec_filing_agent = self.original_sec_filing_agent
         main.universe_scanner = self.original_universe_scanner
+        main.screening_workflow = self.original_screening_workflow
 
     def test_popular_stocks_endpoint(self) -> None:
         payload = main.get_popular_us_stocks()
@@ -249,6 +279,14 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("AAPL", payload["symbol"])
         self.assertEqual(3, payload["years"])
         self.assertEqual("management_change", payload["items"][0]["category"])
+
+    def test_stock_screening_endpoint(self) -> None:
+        payload = main.get_stock_screening(limit=5)
+
+        self.assertEqual("US", payload["market"])
+        self.assertEqual(1, payload["scored_count"])
+        self.assertEqual("AAPL", payload["candidates"][0]["symbol"])
+        self.assertEqual(1, payload["candidates"][0]["rank"])
 
     def test_recommendation_endpoint(self) -> None:
         payload = main.get_stock_recommendation("AAPL")

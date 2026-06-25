@@ -9,6 +9,7 @@ GET /stocks/{symbol}
 GET /stocks/popular
 GET /stocks/search
 GET /stocks/universe/most-active
+GET /stocks/screening
 GET /stocks/{symbol}/quote
 GET /stocks/{symbol}/recommendation
 GET /stocks/{symbol}/history
@@ -378,7 +379,61 @@ GET /stocks/{symbol}/sec-summary
 
 已用真实 SEC EDGAR 数据（AAPL）做过线上联调，并确认 `audit_logs` 落库成功。
 
-## 4. 响应要求
+## 4. AI 选股 Workflow API
+
+对应 `docs/product/requirements-analysis.md` 第 4.1 节"AI 选股"场景：用户不指定单一标的，系统从候选池里扫描并输出排序后的候选列表。
+
+### 4.1 批量选股排序
+
+```text
+GET /stocks/screening?limit=20
+```
+
+用途：
+
+* 调用 Workflow Layer（`packages/workflow_layer/stock_screening.py`），编排 Universe Layer（候选池）→ 数据源（实时走势 + SEC 财务数据）→ Algorithm Layer（评分）
+* 对候选池逐个并发评分（最多 8 个并发请求），按 `total_score` 降序排列
+* 单只股票数据获取失败时跳过并记录在 `skipped`，不影响其余候选
+
+请求参数：
+
+```text
+limit  候选池大小，同时也是评分数量上限，默认 20，最大 50
+```
+
+性能说明：每只股票需要额外请求 SEC 财务数据，受 SEC 服务端响应速度影响，`limit=20` 时实测约 1 分钟内完成；这是个人使用工具，未做更激进的并发或缓存优化。
+
+响应示例：
+
+```json
+{
+  "market": "US",
+  "requested_limit": 10,
+  "scored_count": 10,
+  "candidates": [
+    {
+      "rank": 1,
+      "symbol": "PATH",
+      "name": "UiPath Inc.",
+      "sector": "",
+      "total_score": 67,
+      "recommendation": "中性",
+      "reasons": ["区间走势为正，短线动量偏强。"],
+      "risks": ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。"],
+      "source": "Yahoo Finance chart API",
+      "algorithm_version": "algorithm-v0.2"
+    }
+  ],
+  "skipped": [],
+  "source": "Yahoo Finance predefined most_actives + Algorithm Layer",
+  "generated_at": "2026-06-25T10:04:57.520340+00:00",
+  "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
+}
+```
+
+已用真实候选池数据做过线上联调（10 只股票，全部评分成功，按分排序正确）。
+
+## 5. 响应要求
 
 所有 AI 分析接口必须返回：
 

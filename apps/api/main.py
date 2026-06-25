@@ -23,6 +23,7 @@ from packages.model_layer.factory import build_default_router
 from packages.model_layer.validator import OutputValidationError
 from packages.news_layer.news_policy import NewsPolicyClient, NewsPolicyError
 from packages.universe_layer.most_active import MostActiveUniverseScanner
+from packages.workflow_layer.stock_screening import StockScreeningWorkflow
 
 
 app = FastAPI(
@@ -50,6 +51,32 @@ universe_scanner = MostActiveUniverseScanner()
 model_router = build_default_router()
 sec_filing_agent = SECFilingAgent(model_router)
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
+
+
+def _fetch_financial_factors(symbol: str) -> FinancialFactorsInput | None:
+    """Best-effort: a stock missing SEC XBRL data should not break recommendations."""
+    try:
+        facts = sec_financials_client.fetch_financial_facts(symbol)
+    except SECFinancialsError:
+        return None
+    if facts.latest is None:
+        return None
+    return FinancialFactorsInput(
+        revenue=facts.latest.revenue,
+        previous_revenue=facts.previous.revenue if facts.previous else None,
+        net_income=facts.latest.net_income,
+        eps_diluted=facts.latest.eps_diluted,
+        stockholders_equity=facts.latest.stockholders_equity,
+        shares_outstanding=facts.latest.shares_outstanding,
+    )
+
+
+screening_workflow = StockScreeningWorkflow(
+    universe_scanner=universe_scanner,
+    trend_client=trend_client,
+    algorithm=recommendation_algorithm,
+    financial_factors_fetcher=_fetch_financial_factors,
+)
 
 POPULAR_US_STOCKS = [
     {"symbol": "AAPL", "name": "Apple Inc.", "sector": "Technology"},
@@ -151,22 +178,9 @@ def get_stock_recommendation(symbol: str) -> dict:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-def _fetch_financial_factors(symbol: str) -> FinancialFactorsInput | None:
-    """Best-effort: a stock missing SEC XBRL data should not break recommendations."""
-    try:
-        facts = sec_financials_client.fetch_financial_facts(symbol)
-    except SECFinancialsError:
-        return None
-    if facts.latest is None:
-        return None
-    return FinancialFactorsInput(
-        revenue=facts.latest.revenue,
-        previous_revenue=facts.previous.revenue if facts.previous else None,
-        net_income=facts.latest.net_income,
-        eps_diluted=facts.latest.eps_diluted,
-        stockholders_equity=facts.latest.stockholders_equity,
-        shares_outstanding=facts.latest.shares_outstanding,
-    )
+@app.get("/stocks/screening")
+def get_stock_screening(limit: int = Query(20, ge=1, le=50)) -> dict:
+    return screening_workflow.screen(limit=limit).to_dict()
 
 
 @app.get("/stocks/{symbol}/trend")
