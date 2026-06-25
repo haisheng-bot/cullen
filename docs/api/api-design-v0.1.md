@@ -11,6 +11,7 @@ GET /stocks/search
 GET /stocks/universe/most-active
 GET /stocks/{symbol}/quote
 GET /stocks/{symbol}/recommendation
+GET /stocks/{symbol}/history
 GET /stocks/{symbol}/financials
 GET /stocks/{symbol}/news
 GET /stocks/{symbol}/score
@@ -78,13 +79,61 @@ GET /stocks/universe/most-active?limit=100
 * 行业
 * 分析师评级
 
-### 2.4 实时走势
+### 2.4 历史日线（yfinance，免费）
+
+```text
+GET /stocks/{symbol}/history?range=10y&interval=1d
+```
+
+用途：
+
+* 提供近 10 年的免费历史日 / 周 / 月线（开高低收量）
+* 用于长周期回测和趋势研究，区别于 2.5 节的分钟级实时走势
+
+数据来源：
+
+* Yahoo Finance chart API（yfinance 同源公开接口）
+
+请求参数：
+
+```text
+symbol    美股代码，例如 AAPL
+range     范围：1y, 2y, 5y, 10y, max
+interval  间隔：1d, 1wk, 1mo
+```
+
+响应示例：
+
+```json
+{
+  "symbol": "AAPL",
+  "range": "10y",
+  "interval": "1mo",
+  "currency": "USD",
+  "exchange_name": "NMS",
+  "points": [
+    {
+      "date": "2016-07-01",
+      "open": 23.8725,
+      "high": 26.1375,
+      "low": 23.5925,
+      "close": 26.0525,
+      "volume": 2743118400
+    }
+  ],
+  "source": "Yahoo Finance chart API (yfinance-compatible)",
+  "analysis_time": "2026-06-25T13:31:00+00:00",
+  "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
+}
+```
+
+### 2.5 实时走势
 
 ```text
 GET /stocks/{symbol}/trend?range=1d&interval=1m
 ```
 
-### 2.5 推荐算法
+### 2.6 推荐算法
 
 ```text
 GET /stocks/{symbol}/recommendation

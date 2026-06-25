@@ -44,10 +44,10 @@
 
 ### M2 数据源
 
-* yfinance
+* yfinance（近 10 年免费历史日 / 周 / 月线，`packages/data_sources/price_history.py`） [verified]
 * SEC EDGAR
 * FRED
-* 实时走势 API 接入
+* 实时走势 API 接入 [usable]
 
 ### M3 AI 分析
 

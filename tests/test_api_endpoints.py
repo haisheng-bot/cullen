@@ -6,6 +6,7 @@ if importlib.util.find_spec("fastapi") is None:
 
 from apps.api import main
 from packages.data_sources.market_trend import TrendPoint, TrendResponse
+from packages.data_sources.price_history import HistoryPoint, HistoryResponse
 from packages.universe_layer.schemas import UniverseResult, UniverseStock
 
 
@@ -22,6 +23,23 @@ class FakeTrendClient:
             points=[
                 TrendPoint(timestamp="2026-06-25T13:30:00+00:00", close=100.0, volume=1000),
                 TrendPoint(timestamp="2026-06-25T13:31:00+00:00", close=102.0, volume=1200),
+            ],
+            source="test-source",
+            analysis_time="2026-06-25T13:32:00+00:00",
+        )
+
+
+class FakeHistoryClient:
+    def fetch_history(self, symbol: str, range_: str = "10y", interval: str = "1d") -> HistoryResponse:
+        return HistoryResponse(
+            symbol=symbol,
+            range=range_,
+            interval=interval,
+            currency="USD",
+            exchange_name="NMS",
+            points=[
+                HistoryPoint(date="2016-06-20", open=95.0, high=96.0, low=94.0, close=95.8, volume=1_000_000),
+                HistoryPoint(date="2016-06-21", open=97.0, high=98.5, low=96.5, close=98.0, volume=1_200_000),
             ],
             source="test-source",
             analysis_time="2026-06-25T13:32:00+00:00",
@@ -48,12 +66,15 @@ class FakeUniverseScanner:
 class ApiEndpointsTest(unittest.TestCase):
     def setUp(self) -> None:
         self.original_client = main.trend_client
+        self.original_history_client = main.history_client
         self.original_universe_scanner = main.universe_scanner
         main.trend_client = FakeTrendClient()
+        main.history_client = FakeHistoryClient()
         main.universe_scanner = FakeUniverseScanner()
 
     def tearDown(self) -> None:
         main.trend_client = self.original_client
+        main.history_client = self.original_history_client
         main.universe_scanner = self.original_universe_scanner
 
     def test_popular_stocks_endpoint(self) -> None:
@@ -74,6 +95,14 @@ class ApiEndpointsTest(unittest.TestCase):
 
         self.assertEqual("AAPL", payload["symbol"])
         self.assertEqual(2, len(payload["points"]))
+
+    def test_history_endpoint(self) -> None:
+        payload = main.get_stock_price_history("AAPL", range_="10y", interval="1d")
+
+        self.assertEqual("AAPL", payload["symbol"])
+        self.assertEqual("10y", payload["range"])
+        self.assertEqual(2, len(payload["points"]))
+        self.assertEqual(95.0, payload["points"][0]["open"])
 
     def test_recommendation_endpoint(self) -> None:
         payload = main.get_stock_recommendation("AAPL")

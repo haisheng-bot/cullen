@@ -13,6 +13,7 @@ from packages.data_sources.market_trend import (
     YahooFinanceChartClient,
     normalize_symbol,
 )
+from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
 from packages.db.session import check_database_connection
 from packages.universe_layer.most_active import MostActiveUniverseScanner
 
@@ -32,6 +33,7 @@ app.add_middleware(
 )
 
 trend_client = YahooFinanceChartClient()
+history_client = YahooFinanceHistoryClient()
 recommendation_algorithm = TrendRecommendationAlgorithm()
 universe_scanner = MostActiveUniverseScanner()
 WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
@@ -147,4 +149,21 @@ def get_stock_trend(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except MarketTrendError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/stocks/{symbol}/history")
+def get_stock_price_history(
+    symbol: str,
+    range_: str = Query("10y", alias="range"),
+    interval: str = "1d",
+) -> dict:
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+        return history_client.fetch_history(
+            normalized_symbol, range_=range_, interval=interval
+        ).to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PriceHistoryError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
