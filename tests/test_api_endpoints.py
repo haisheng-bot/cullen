@@ -15,6 +15,7 @@ from packages.universe_layer.schemas import UniverseResult, UniverseStock
 from packages.ai_agents.base import AgentResult
 from packages.model_layer.schemas import RISK_DISCLAIMER, ModelResponse, TokenUsage
 from packages.workflow_layer.schemas import ScreeningCandidate, ScreeningResult
+from packages.backtesting.schemas import BacktestResult, EquityPoint, StrategyConfig, SymbolContribution
 
 
 class FakeTrendClient:
@@ -175,6 +176,43 @@ class FakeScreeningWorkflow:
         )
 
 
+class FakeBacktestEngine:
+    def run(self, config: StrategyConfig) -> BacktestResult:
+        return BacktestResult(
+            strategy_name=config.strategy_name,
+            symbols=config.symbols,
+            start_date=config.start_date,
+            end_date=config.end_date,
+            initial_cash=config.initial_cash,
+            final_value=11_000.0,
+            total_return_percent=10.0,
+            annualized_return_percent=9.5,
+            max_drawdown_percent=8.0,
+            sharpe_ratio=1.1,
+            win_rate_percent=60.0,
+            best_contributor="AAPL",
+            worst_contributor="MSFT",
+            contributions=[
+                SymbolContribution(symbol="AAPL", pnl_cash=800.0, contribution_percent=8.0),
+                SymbolContribution(symbol="MSFT", pnl_cash=200.0, contribution_percent=2.0),
+            ],
+            benchmark_symbol=config.benchmark_symbol,
+            benchmark_total_return_percent=7.0,
+            alpha_percent=2.5,
+            beta=1.0,
+            equity_curve=[
+                EquityPoint(date=config.start_date, portfolio_value=config.initial_cash, benchmark_value=config.initial_cash),
+                EquityPoint(date=config.end_date, portfolio_value=11_000.0, benchmark_value=10_700.0),
+            ],
+            trades=[],
+            suggestions=["建议降低 MSFT 权重，提高 AAPL 权重。"],
+            risks=["历史回测结果不代表未来表现，不构成任何投资建议。"],
+            source="test-source",
+            algorithm_version="backtesting-v0.1",
+            generated_at="2026-06-25T13:32:00+00:00",
+        )
+
+
 class FakeUniverseScanner:
     def scan(self, limit: int = 100) -> UniverseResult:
         return UniverseResult(
@@ -205,6 +243,8 @@ class ApiEndpointsTest(unittest.TestCase):
         self.original_screening_workflow = main.screening_workflow
         self.original_persist_screening_result = main._persist_screening_result
         self.original_fetch_score_history = main._fetch_score_history
+        self.original_backtest_engine = main.backtest_engine
+        self.original_persist_backtest_run = main._persist_backtest_run
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
         main.sec_filing_client = FakeSECFilingClient()
@@ -214,8 +254,13 @@ class ApiEndpointsTest(unittest.TestCase):
         main.sec_filing_agent = FakeSECFilingAgent()
         main.universe_scanner = FakeUniverseScanner()
         main.screening_workflow = FakeScreeningWorkflow()
+        main.backtest_engine = FakeBacktestEngine()
         self.persisted_screening_results: list = []
         main._persist_screening_result = self.persisted_screening_results.append
+        self.persisted_backtest_runs: list = []
+        main._persist_backtest_run = lambda config, result: self.persisted_backtest_runs.append(
+            (config, result)
+        )
         main._fetch_score_history = lambda symbol, limit: [
             {
                 "screened_at": "2026-06-25T13:32:00+00:00",
@@ -241,6 +286,8 @@ class ApiEndpointsTest(unittest.TestCase):
         main.screening_workflow = self.original_screening_workflow
         main._persist_screening_result = self.original_persist_screening_result
         main._fetch_score_history = self.original_fetch_score_history
+        main.backtest_engine = self.original_backtest_engine
+        main._persist_backtest_run = self.original_persist_backtest_run
 
     def test_popular_stocks_endpoint(self) -> None:
         payload = main.get_popular_us_stocks()
@@ -330,6 +377,22 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("US", payload["market"])
         self.assertEqual("us_most_active_top_100", payload["universe_name"])
         self.assertEqual(2, len(payload["items"]))
+
+    def test_run_backtest_endpoint(self) -> None:
+        request = main.BacktestRunRequest(
+            strategy_name="my_strategy",
+            symbols=["aapl", "msft"],
+            start_date="2023-01-01",
+            end_date="2023-12-31",
+        )
+
+        payload = main.run_backtest(request)
+
+        self.assertEqual(["AAPL", "MSFT"], payload["symbols"])
+        self.assertEqual("AAPL", payload["best_contributor"])
+        self.assertEqual("backtesting-v0.1", payload["algorithm_version"])
+        self.assertTrue(payload["risks"])
+        self.assertEqual(1, len(self.persisted_backtest_runs))
 
 
 if __name__ == "__main__":

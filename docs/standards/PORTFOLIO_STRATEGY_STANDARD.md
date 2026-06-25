@@ -2,7 +2,7 @@
 
 ## 1. 定位
 
-Portfolio Strategy 是 OpenStock AI 的组合策略工作流，负责把每日股票池、策略库、约束条件和回测结果串成可复核的组合建议。
+Portfolio Strategy Engine 是 OpenStock AI 的组合投资策略模块，负责对一组股票在指定时间区间内进行仓位分配、买卖规则执行、风险控制、回测评估和结果解释。这个模块可以作为 OpenStock AI 的第二核心，仅次于 Model Layer。
 
 该模块只用于投资研究辅助，不构成任何投资建议。
 
@@ -34,7 +34,25 @@ Portfolio Strategy 不应写在前端页面或 Agent 内部。
 * Model Layer：后续负责对回测结果做自然语言解释和审计，不直接计算收益。
 * Data Layer：提供历史价格、行情、行业和后续财报/新闻数据。
 
+代码落地在 `packages/backtesting/`（与 `algorithm_layer/`、`workflow_layer/` 同级的顶层包，对应文档里的 Algorithm / Backtesting Layer）：
+
+```text
+packages/backtesting/
+├── schemas.py      策略配置、规则、回测结果等数据结构
+├── signals.py       Signal Engine：复用 algorithm_layer/technical_indicators.py 的技术指标
+├── allocation.py    Position Sizing：等权 / 低波动 / 技术评分 / 市值加权 + 仓位上限与现金底线
+├── risk.py          Risk Engine：止损、组合最大回撤熔断、行业暴露检查
+├── engine.py        Strategy Engine + Backtest Engine：PortfolioBacktestEngine.run()
+└── performance.py   Performance Evaluator：收益、回撤、Sharpe、胜率、Alpha/Beta
+```
+
 ## 4. 第一阶段范围
+
+**第一阶段为什么只用技术面信号，不直接用 `/stocks/{symbol}/recommendation` 的完整 AI 评分：**
+
+现有 AI 评分依赖 SEC 年报基本面因子，而 `packages/data_sources/sec_financials.py` 目前只暴露最新 1-2 个财年数据，没有保留每条 XBRL 财务事实的实际披露日期（`filed` 字段）。如果直接把这套评分接入回测，会在历史调仓日"看到"当时还没披露的财报数据，即未来数据穿越（lookahead bias），回测结果会失真且无法被信任。要修复需要新增按披露日期重建历史可见财报快照的能力，而且年报频率对月度调仓也偏稀疏（多数月份没有新数据）。
+
+价格 / 技术指标（动量、RSI、均线金死叉）天然不存在这个问题——它们是某个历史日期之前收盘价序列的纯函数，只要截到调仓日为止取数即可保证不穿越。因此第一阶段（`backtesting-v0.1`）的买卖规则和仓位评分只使用技术面信号，命名为 `technical_score` 而非 `ai_score`，避免被误读为验证了完整的 5 维 AI 评分。基于完整 AI 评分（含基本面）的回测是第二阶段（见第 6 节版本管理），依赖先完成按披露日期重建历史财报快照的工作。
 
 第一阶段实现：
 
@@ -104,11 +122,13 @@ POST /backtests/run
 
 ## 6. 版本管理
 
+代码中的实际版本号是 `BacktestResult.algorithm_version`（`packages/backtesting/engine.py` 的 `ALGORITHM_VERSION` 常量），与下表一一对应：
+
 ```text
-portfolio-strategy-v0.1  技术面组合回测与约束配置 [released]
-portfolio-strategy-v0.2  加入 Model Layer 回测解释 [planned]
-portfolio-strategy-v0.3  加入财报、估值、新闻情绪组合约束 [planned]
-portfolio-strategy-v1.0  稳定组合策略工作流 [planned]
+backtesting-v0.1  技术面组合回测与约束配置（仅 technical_score，无基本面因子） [released]
+backtesting-v0.2  接入按披露日期重建的历史财报快照，回测规则可使用 ai_score [planned]
+backtesting-v0.3  加入 Model Layer 回测结果自然语言解释 [planned]
+backtesting-v1.0  稳定组合策略工作流 [planned]
 ```
 
 版本号必须出现在文档、API 结果或界面说明中，便于回溯。

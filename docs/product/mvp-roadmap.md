@@ -73,6 +73,13 @@
 * 股票分析页面（独立深度分析页，区别于操作工作台） [planned]
 * 研究报告页面 [planned]
 
+### M6 Portfolio Strategy / Backtesting
+
+* Portfolio Strategy Engine（`packages/backtesting`，`backtesting-v0.1`：仓位分配、技术面信号买卖规则、风险熔断、回测指标）[verified]
+* `POST /backtests/run` + 前端组合策略工作流（Universe → Strategy Library → Constraints → Backtest → Recommendation） [usable]
+* 接入完整 AI 评分（含基本面因子）的回测，依赖按披露日期重建历史财报快照 [planned]
+* 券商接口 `packages/brokers` [planned]
+
 ### 额外扩展（超出原路线图）
 
 * Universe Layer：每日扫描美股最活跃 Top 100 候选池（`packages/universe_layer`） [verified]

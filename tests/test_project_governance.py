@@ -165,7 +165,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             "运行回测（Backtest）",
             "AI 自动分析结果（收益、风险、原因）",
             "生成投资组合建议（Portfolio Recommendation）",
-            "portfolio-strategy-v0.1",
+            "backtesting-v0.1",
             "POST /backtests/run",
         ]
         missing_standard = [term for term in required_standard_terms if term not in standard]

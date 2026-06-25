@@ -43,3 +43,7 @@
 * Algorithm Layer 升级到 `algorithm-v0.2.1`：technical 因子改用真实技术指标（`packages/algorithm_layer/technical_indicators.py` 计算 RSI-14、MA(5/20) 金叉死叉、10 日动量），取代原区间涨跌幅粗略估算，日线数据不足时自动退化为旧估算并提示，`/stocks/{symbol}/recommendation` 与 `/stocks/screening` 均已接入并端到端联调
 * 选股结果落库存历史：新增 `stock_scores` 表（`packages/db/models.py`），`/stocks/screening` 每次调用都会把候选评分写入数据库，新增 `/stocks/{symbol}/score-history` 读取某只股票历次评分，已用真实数据端到端联调
 * Algorithm Layer 升级到 `algorithm-v0.2.2`：`fundamentals`/`valuation` 因子加入 Magic Formula 经典指标 ROC（资本回报率）和 EV/EBIT，跟原有净利润率/P/E 各占 50% 权重，新增 SEC XBRL 标签读取（营业利润、流动资产/负债、固定资产、现金、负债），任一指标缺数据时自动退化为只用另一半，已用真实 AAPL/SOFI 等多只股票数据端到端联调
+* Algorithm Layer 升级到 `algorithm-v0.3`：推荐评分加入规则化新闻情绪因子
+* Portfolio Strategy Engine（`backtesting-v0.1`）：新增顶层包 `packages/backtesting/`（signals/allocation/risk/performance/engine），对一组股票在指定区间执行仓位分配、买卖规则、风险熔断和回测评估，第一阶段仅用价格/技术信号（动量、RSI、均线金死叉），不接入完整 AI 评分以避免财报数据的未来穿越问题，详见 `docs/standards/PORTFOLIO_STRATEGY_STANDARD.md`
+* 新增 `PriceHistoryCache`/`BacktestRun` 表（`packages/db/models.py`），历史价格 24 小时缓存，回测配置与结果落库
+* 新增 `POST /backtests/run`（项目第一个 POST 接口），前端组合策略工作流已接入并端到端联调
