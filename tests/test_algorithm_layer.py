@@ -34,7 +34,7 @@ class AlgorithmLayerTest(unittest.TestCase):
         result = TrendRecommendationAlgorithm().recommend(data)
 
         self.assertEqual("AAPL", result.symbol)
-        self.assertEqual("algorithm-v0.2.1", result.algorithm_version)
+        self.assertEqual("algorithm-v0.2.2", result.algorithm_version)
         self.assertGreaterEqual(result.total_score, 0)
         self.assertLessEqual(result.total_score, 100)
         self.assertEqual(5, len(result.factors))
@@ -74,6 +74,46 @@ class AlgorithmLayerTest(unittest.TestCase):
         self.assertGreater(factors_by_name["fundamentals"].score, 50)
         self.assertGreater(factors_by_name["growth"].score, 50)
         self.assertNotIn("未提供财务数据", " ".join(result.risks))
+        # No Magic Formula inputs (operating_income, current_assets, ...)
+        # were provided, so fundamentals/valuation fall back to net
+        # margin/P/E only and should say so explicitly.
+        self.assertIn("缺 ROC 数据", factors_by_name["fundamentals"].explanation)
+        self.assertIn("缺企业价值数据", factors_by_name["valuation"].explanation)
+
+    def test_recommendation_blends_magic_formula_metrics_when_provided(self) -> None:
+        data = RecommendationInput(
+            symbol="AAPL",
+            latest_price=104.0,
+            previous_close=100.0,
+            points=[
+                AlgorithmPoint(timestamp="2026-06-25T13:30:00+00:00", close=100.0, volume=1000),
+                AlgorithmPoint(timestamp="2026-06-25T13:32:00+00:00", close=104.0, volume=1800),
+            ],
+            source="test-source",
+            analysis_time="2026-06-25T13:33:00+00:00",
+            financial_factors=FinancialFactorsInput(
+                revenue=416_161_000_000,
+                previous_revenue=391_035_000_000,
+                net_income=112_010_000_000,
+                eps_diluted=7.46,
+                stockholders_equity=73_733_000_000,
+                shares_outstanding=14_773_260_000,
+                operating_income=130_000_000_000,
+                current_assets=150_000_000_000,
+                current_liabilities=130_000_000_000,
+                net_fixed_assets=45_000_000_000,
+                cash=30_000_000_000,
+                total_debt=85_000_000_000,
+            ),
+        )
+
+        result = TrendRecommendationAlgorithm().recommend(data)
+
+        factors_by_name = {factor.name: factor for factor in result.factors}
+        self.assertIn("ROC", factors_by_name["fundamentals"].explanation)
+        self.assertIn("EV/EBIT", factors_by_name["valuation"].explanation)
+        self.assertNotIn("缺", factors_by_name["fundamentals"].explanation)
+        self.assertNotIn("缺", factors_by_name["valuation"].explanation)
 
     def test_technical_factor_falls_back_without_daily_history(self) -> None:
         data = RecommendationInput(

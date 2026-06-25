@@ -146,6 +146,7 @@ Algorithm Layer 必须可以单独开发和测试。
 algorithm-v0.1    趋势型推荐算法 [released]
 algorithm-v0.2    加入财务和估值因子（基于 SEC XBRL company facts） [released]
 algorithm-v0.2.1  技术面因子升级为真实技术指标（RSI/均线金死叉/动量） [released]
+algorithm-v0.2.2  基本面/估值因子加入 Magic Formula 指标（ROC、EV/EBIT） [released]
 algorithm-v0.3    加入新闻情绪因子 [planned]
 algorithm-v0.4    加入风险模型 [planned]
 algorithm-v1.0    稳定推荐算法 [planned]
@@ -180,4 +181,18 @@ MA(5/20) 金叉/死叉状态      30%
 ```
 
 当日线收盘价少于 `MIN_CLOSES_FOR_INDICATORS`（25 条，约一个半月）时——例如新上市股票——退化为 v0.2 之前基于当日内走势的粗略估算，并在 `explanation` 字段中说明"日线数据不足"，不影响接口可用性。RSI/均线状态等中间值通过 `factors[].explanation` 暴露，供未来前端替换面板上的占位 RSI/均线标签使用。
+
+### 9.3 algorithm-v0.2.2 Magic Formula 指标说明
+
+`fundamentals`（净利润率）和 `valuation`（P/E）单看都偏单一维度：净利润率不反映资本使用效率，P/E 不反映负债和现金对企业真实估值的影响。v0.2.2 引入 Joel Greenblatt「Magic Formula」用的两个经典指标，跟原有指标各占 50% 权重：
+
+```text
+fundamentals = 净利润率 50% + ROC（资本回报率）50%
+valuation    = P/E 50% + EV/EBIT 50%
+```
+
+* **ROC** = 营业利润(EBIT) / (净营运资本 + 净固定资产)，净营运资本 = 流动资产 − 流动负债。衡量赚一块钱营业利润占用了多少资本，跟净利润率（赚一块钱收入剩多少利润）是两个独立维度。资本极轻的公司（比如净营运资本为负、固定资产很少）ROC 可能算出几百%，这是公式本身的真实特征（Magic Formula 对轻资产公司一向如此），不是计算错误，分数会按下面的带宽封顶。
+* **EV/EBIT** = 企业价值(市值 + 总负债 − 现金) / 营业利润(EBIT)，跟 P/E 的差别是把负债和现金也计入，复用 P/E 的绝对档位评分函数（`_pe_band_score`）。
+
+两个新指标都依赖 SEC XBRL 的 `OperatingIncomeLoss`/`AssetsCurrent`/`LiabilitiesCurrent`/`PropertyPlantAndEquipmentNet`/`CashAndCashEquivalentsAtCarryingValue`/`LongTermDebtNoncurrent` 等标签，覆盖率低于营收/净利润（部分行业，例如金融类公司，不一定有标准的 `OperatingIncomeLoss`）。任一指标缺数据时该因子自动退化为只用另一个指标，并在 `explanation` 中注明"缺 ROC 数据"/"缺企业价值数据"；两个都缺时退化为中性分 50，跟 v0.2 行为一致，不影响接口可用性。
 

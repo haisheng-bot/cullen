@@ -14,7 +14,7 @@ OpenStock AI 是一个开源 AI 美股分析与推荐系统，核心能力是 AI
 * **M1 后端基础**：完成。FastAPI、统一配置管理、数据库连接（默认本地 SQLite，可切换 Postgres）、`audit_logs` 表、Docker Compose、数据库初始化脚本均可用。
 * **M2 数据源**：完成。yfinance 风格历史日线、SEC EDGAR 财报申报、FRED 宏观数据（需自备免费 Key）、Yahoo 实时走势均已接入并有测试覆盖。
 * **M3 AI 分析**：部分完成。Model Layer 统一接口、Output Validator、Agent 基类和 SEC Filing Agent 已落地并端到端联调；News Agent / Report Agent 尚未开发。
-* **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.2.1`，已接入 SEC 真实财务数据和真实技术指标：基本面/成长性/估值/技术面（RSI/均线金死叉/动量）/风险五因子），并通过新增的 Workflow Layer（`stocks/screening`）实现批量选股排序；基于大模型的 AI Scoring Agent、研究报告生成尚未开发（`packages/scoring` 仍为空）。
+* **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.2.2`，已接入 SEC 真实财务数据和真实技术指标：基本面（净利润率+ROC）/成长性/估值（P/E+EV/EBIT）/技术面（RSI/均线金死叉/动量）/风险五因子），并通过新增的 Workflow Layer（`stocks/screening`）实现批量选股排序；基于大模型的 AI Scoring Agent、研究报告生成尚未开发（`packages/scoring` 仍为空）。
 * **M5 前端展示**：部分完成。美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分）已可用，独立的股票深度分析页和研究报告页尚未开发。
 * 尚未开始：模拟交易与回测（`packages/backtesting`、`packages/brokers` 仍为空）。
 
@@ -127,13 +127,17 @@ Agent 基类见 `packages/ai_agents/base.py`，后续 News Agent、Report Agent 
 GET http://127.0.0.1:8000/stocks/screening?limit=20
 ```
 
-`StockScreeningWorkflow`（`packages/workflow_layer/stock_screening.py`）把 Universe Layer 的候选池（Most Active Top 100）逐个用 Algorithm Layer v0.2.1 打分，并发请求（最多 8 个并发）后按总分排序返回。这是"自己选股"场景的核心入口：不指定单一股票，直接看候选池里排序靠前的标的。已用真实数据端到端联调（20 只股票全部评分成功，约 56 秒）。
+`StockScreeningWorkflow`（`packages/workflow_layer/stock_screening.py`）把 Universe Layer 的候选池（Most Active Top 100）逐个用 Algorithm Layer v0.2.2 打分，并发请求（最多 8 个并发）后按总分排序返回。这是"自己选股"场景的核心入口：不指定单一股票，直接看候选池里排序靠前的标的。已用真实数据端到端联调（20 只股票全部评分成功，约 56 秒）。
 
 每次调用都会把候选评分写入 `stock_scores` 表（`packages/db/stock_scores.py`），通过 `GET /stocks/{symbol}/score-history` 可以读出某只股票历次评分，方便对比"这只股票最近几次扫描分数是涨是跌"——这是把 AI 选股从一次性即时计算变成有历史记录的个人工具的关键一步。
 
 ### 技术面因子（algorithm-v0.2.1）
 
 `technical` 因子不再是粗略的区间涨跌幅估算，而是基于近 1 年日线收盘价（`packages/data_sources/price_history.py`）计算的真实技术指标（`packages/algorithm_layer/technical_indicators.py`）：10 日动量（40%）、RSI-14（30%）、均线 5/20 金叉死叉状态（30%）。日线数据不足（如新上市股票）时自动退化为旧的区间走势粗估，并在 `explanation` 中说明。计算出的 RSI 数值和均线状态通过 `factors[].explanation` 字段暴露，可用于替换前端面板上现有的占位 RSI/均线标签。
+
+### 基本面/估值因子加入 Magic Formula 指标（algorithm-v0.2.2）
+
+`fundamentals` 因子加入 ROC（资本回报率 = 营业利润 / (净营运资本 + 净固定资产)），跟净利润率各占 50%；`valuation` 因子加入 EV/EBIT（企业价值 / 营业利润），跟 P/E 各占 50%。这是 Joel Greenblatt「Magic Formula」选股法用的两个经典指标，衡量原来的净利润率/P/E 漏掉的资本使用效率和负债/现金对真实估值的影响。任一指标缺 SEC 财报数据时自动退化为只用另一半，两者都缺时退化为中性分，详见 `docs/standards/ALGORITHM_STANDARD.md` 第 9.3 节。
 
 ## 后端基础（配置 / 数据库 / audit_logs）
 

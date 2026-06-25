@@ -1,7 +1,9 @@
-"""SEC EDGAR XBRL company facts: revenue, net income, EPS, equity, shares.
+"""SEC EDGAR XBRL company facts: revenue, net income, EPS, equity, shares,
+plus the operating income / working capital / debt / cash figures needed
+for Magic Formula-style metrics (EBIT/EV earnings yield, ROC).
 
 Free, key-less, reuses SECFilingClient for ticker -> CIK resolution.
-Used by Algorithm Layer (algorithm-v0.2) to compute fundamentals,
+Used by Algorithm Layer (algorithm-v0.2+) to compute fundamentals,
 growth, and valuation factors from real filed financial data instead
 of price action alone.
 """
@@ -32,6 +34,16 @@ EQUITY_TAGS = (
     "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",
 )
 SHARES_OUTSTANDING_TAGS = ("CommonStockSharesOutstanding", "CommonStockSharesIssued")
+OPERATING_INCOME_TAGS = ("OperatingIncomeLoss",)
+CURRENT_ASSETS_TAGS = ("AssetsCurrent",)
+CURRENT_LIABILITIES_TAGS = ("LiabilitiesCurrent",)
+NET_FIXED_ASSETS_TAGS = ("PropertyPlantAndEquipmentNet",)
+CASH_TAGS = (
+    "CashAndCashEquivalentsAtCarryingValue",
+    "CashAndCashEquivalentsAtCarryingValueIncludingDiscontinuedOperations",
+)
+LONG_TERM_DEBT_TAGS = ("LongTermDebtNoncurrent", "LongTermDebt")
+CURRENT_DEBT_TAGS = ("DebtCurrent", "LongTermDebtCurrent", "ShortTermBorrowings")
 
 
 class SECFinancialsError(RuntimeError):
@@ -48,6 +60,12 @@ class AnnualFinancials:
     total_assets: float | None
     stockholders_equity: float | None
     shares_outstanding: float | None
+    operating_income: float | None
+    current_assets: float | None
+    current_liabilities: float | None
+    net_fixed_assets: float | None
+    cash: float | None
+    total_debt: float | None
 
 
 @dataclass(frozen=True)
@@ -107,6 +125,13 @@ def parse_companyfacts_payload(payload: dict[str, Any], symbol: str, cik: str) -
     assets_series = _annual_series(us_gaap, ASSETS_TAGS)
     equity_series = _annual_series(us_gaap, EQUITY_TAGS)
     shares_series = _annual_series(us_gaap, SHARES_OUTSTANDING_TAGS)
+    operating_income_series = _annual_series(us_gaap, OPERATING_INCOME_TAGS)
+    current_assets_series = _annual_series(us_gaap, CURRENT_ASSETS_TAGS)
+    current_liabilities_series = _annual_series(us_gaap, CURRENT_LIABILITIES_TAGS)
+    net_fixed_assets_series = _annual_series(us_gaap, NET_FIXED_ASSETS_TAGS)
+    cash_series = _annual_series(us_gaap, CASH_TAGS)
+    long_term_debt_series = _annual_series(us_gaap, LONG_TERM_DEBT_TAGS)
+    current_debt_series = _annual_series(us_gaap, CURRENT_DEBT_TAGS)
 
     end_dates = sorted(
         {entry["end"] for entry in revenue_series + net_income_series + eps_series},
@@ -116,6 +141,8 @@ def parse_companyfacts_payload(payload: dict[str, Any], symbol: str, cik: str) -
     def build(end_date: str | None) -> AnnualFinancials | None:
         if end_date is None:
             return None
+        long_term_debt = _value_for_end(long_term_debt_series, end_date) or 0
+        current_debt = _value_for_end(current_debt_series, end_date) or 0
         return AnnualFinancials(
             fiscal_year=_value_for_end(revenue_series, end_date, "fy"),
             end_date=end_date,
@@ -125,6 +152,12 @@ def parse_companyfacts_payload(payload: dict[str, Any], symbol: str, cik: str) -
             total_assets=_value_for_end(assets_series, end_date),
             stockholders_equity=_value_for_end(equity_series, end_date),
             shares_outstanding=_value_for_end(shares_series, end_date),
+            operating_income=_value_for_end(operating_income_series, end_date),
+            current_assets=_value_for_end(current_assets_series, end_date),
+            current_liabilities=_value_for_end(current_liabilities_series, end_date),
+            net_fixed_assets=_value_for_end(net_fixed_assets_series, end_date),
+            cash=_value_for_end(cash_series, end_date),
+            total_debt=long_term_debt + current_debt,
         )
 
     latest_end = end_dates[0] if end_dates else None

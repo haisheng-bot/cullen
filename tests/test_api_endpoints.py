@@ -166,7 +166,7 @@ class FakeScreeningWorkflow:
                     reasons=["区间走势为正，短线动量偏强。"],
                     risks=["推荐等级仅表示研究关注优先级，不代表买入建议。"],
                     source="test-source",
-                    algorithm_version="algorithm-v0.2.1",
+                    algorithm_version="algorithm-v0.2.2",
                 )
             ],
             skipped=[],
@@ -225,7 +225,7 @@ class ApiEndpointsTest(unittest.TestCase):
                 "factors": [{"name": "technical", "score": 80, "weight": 0.2, "explanation": "test"}],
                 "reasons": ["区间走势为正，短线动量偏强。"],
                 "risks": [],
-                "algorithm_version": "algorithm-v0.2.1",
+                "algorithm_version": "algorithm-v0.2.2",
             }
         ]
 
@@ -314,14 +314,14 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("AAPL", payload["symbol"])
         self.assertEqual(1, len(payload["items"]))
         self.assertEqual(80, payload["items"][0]["total_score"])
-        self.assertEqual("algorithm-v0.2.1", payload["items"][0]["algorithm_version"])
+        self.assertEqual("algorithm-v0.2.2", payload["items"][0]["algorithm_version"])
 
     def test_recommendation_endpoint(self) -> None:
         payload = main.get_stock_recommendation("AAPL")
 
         self.assertEqual("AAPL", payload["symbol"])
         self.assertIn(payload["recommendation"], {"强关注", "观察", "中性", "回避"})
-        self.assertEqual("algorithm-v0.2.1", payload["algorithm_version"])
+        self.assertEqual("algorithm-v0.2.2", payload["algorithm_version"])
         self.assertTrue(payload["factors"])
 
     def test_most_active_universe_endpoint(self) -> None:

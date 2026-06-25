@@ -74,6 +74,12 @@ def _fetch_financial_factors(symbol: str) -> FinancialFactorsInput | None:
         eps_diluted=facts.latest.eps_diluted,
         stockholders_equity=facts.latest.stockholders_equity,
         shares_outstanding=facts.latest.shares_outstanding,
+        operating_income=facts.latest.operating_income,
+        current_assets=facts.latest.current_assets,
+        current_liabilities=facts.latest.current_liabilities,
+        net_fixed_assets=facts.latest.net_fixed_assets,
+        cash=facts.latest.cash,
+        total_debt=facts.latest.total_debt,
     )
 
 

@@ -16,7 +16,12 @@ class AlgorithmPoint:
 
 @dataclass(frozen=True)
 class FinancialFactorsInput:
-    """Optional real fundamentals, from SEC XBRL company facts (algorithm-v0.2)."""
+    """Optional real fundamentals, from SEC XBRL company facts (algorithm-v0.2).
+
+    `operating_income`/`current_assets`/`current_liabilities`/`net_fixed_assets`/
+    `cash`/`total_debt` (algorithm-v0.2.2) back the Magic Formula-style ROC and
+    EV/EBIT earnings yield metrics that enrich the fundamentals/valuation factors.
+    """
 
     revenue: float | None = None
     previous_revenue: float | None = None
@@ -24,6 +29,12 @@ class FinancialFactorsInput:
     eps_diluted: float | None = None
     stockholders_equity: float | None = None
     shares_outstanding: float | None = None
+    operating_income: float | None = None
+    current_assets: float | None = None
+    current_liabilities: float | None = None
+    net_fixed_assets: float | None = None
+    cash: float | None = None
+    total_debt: float | None = None
 
 
 @dataclass(frozen=True)

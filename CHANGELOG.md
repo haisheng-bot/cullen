@@ -41,3 +41,4 @@
 * Workflow Layer 和 AI 选股批量排序：`packages/workflow_layer/stock_screening.py` 把候选池逐个用 Algorithm Layer 并发评分排序，接入 `/stocks/screening`，已端到端联调
 * Algorithm Layer 升级到 `algorithm-v0.2.1`：technical 因子改用真实技术指标（`packages/algorithm_layer/technical_indicators.py` 计算 RSI-14、MA(5/20) 金叉死叉、10 日动量），取代原区间涨跌幅粗略估算，日线数据不足时自动退化为旧估算并提示，`/stocks/{symbol}/recommendation` 与 `/stocks/screening` 均已接入并端到端联调
 * 选股结果落库存历史：新增 `stock_scores` 表（`packages/db/models.py`），`/stocks/screening` 每次调用都会把候选评分写入数据库，新增 `/stocks/{symbol}/score-history` 读取某只股票历次评分，已用真实数据端到端联调
+* Algorithm Layer 升级到 `algorithm-v0.2.2`：`fundamentals`/`valuation` 因子加入 Magic Formula 经典指标 ROC（资本回报率）和 EV/EBIT，跟原有净利润率/P/E 各占 50% 权重，新增 SEC XBRL 标签读取（营业利润、流动资产/负债、固定资产、现金、负债），任一指标缺数据时自动退化为只用另一半，已用真实 AAPL/SOFI 等多只股票数据端到端联调

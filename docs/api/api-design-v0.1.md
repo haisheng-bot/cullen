@@ -260,15 +260,15 @@ GET /stocks/{symbol}/recommendation
 * 返回股票评分和推荐等级
 * 展示因子分、推荐理由和风险
 
-当前算法：`algorithm-v0.2.1`，五个因子：
+当前算法：`algorithm-v0.2.2`，五个因子：
 
-* `fundamentals` 基本面（净利润率，30%）—— 来自 SEC XBRL company facts
+* `fundamentals` 基本面（净利润率 50% + ROC 资本回报率 50%，合计 30%）—— 来自 SEC XBRL company facts
 * `growth` 成长性（营收同比，20%）—— 来自 SEC XBRL company facts
-* `valuation` 估值（P/E 绝对档位，20%）—— 结合实时价格与 EPS
+* `valuation` 估值（P/E 50% + EV/EBIT 50%，合计 20%）—— 结合实时价格、EPS、负债与现金
 * `technical` 技术面（动量 10 日 40% + RSI(14) 30% + 均线 5/20 金死叉 30%，权重小计 20%）—— 来自近 1 年日线收盘价，数据不足时退化为区间走势粗估
 * `volatility_risk` 风险（区间波动，10%）
 
-某只股票缺少可用财务数据时，`fundamentals`/`growth`/`valuation` 退化为中性分（50分），并在 `risks` 中提示。权重过渡说明见 `docs/standards/ALGORITHM_STANDARD.md` 第 9.1 节。
+ROC、EV/EBIT 是 Joel Greenblatt「Magic Formula」用的两个经典指标，详见 `docs/standards/ALGORITHM_STANDARD.md` 第 9.3 节。某只股票缺少可用财务数据时，对应指标自动退化为只用另一半，两者都缺时该因子退化为中性分（50分），并在 `risks`/`explanation` 中提示。权重过渡说明见 `docs/standards/ALGORITHM_STANDARD.md` 第 9.1 节。
 
 说明：推荐算法仅用于研究关注优先级，不构成买卖建议。
 
@@ -277,20 +277,20 @@ GET /stocks/{symbol}/recommendation
 ```json
 {
   "symbol": "AAPL",
-  "total_score": 64,
+  "total_score": 59,
   "recommendation": "中性",
   "factors": [
-    {"name": "fundamentals", "score": 90, "weight": 0.3, "explanation": "净利润率约 26.9%（基于最近年度 SEC 财报）"},
+    {"name": "fundamentals", "score": 92, "weight": 0.3, "explanation": "净利润率约 26.9%，资本回报率(ROC)约 413.7%（基于最近年度 SEC 财报）"},
     {"name": "growth", "score": 58, "weight": 0.2, "explanation": "营收同比增长约 6.4%（基于最近两个年度 SEC 财报）"},
-    {"name": "valuation", "score": 55, "weight": 0.2, "explanation": "按最新价格估算 P/E 约 39.3（绝对档位估算，非行业相对）"},
-    {"name": "technical", "score": 46, "weight": 0.2, "explanation": "动量(10日) +0.87%，RSI(14) 32.7，均线(5/20)状态：空头排列"},
-    {"name": "volatility_risk", "score": 55, "weight": 0.1, "explanation": "区间波动估算 2.23%"}
+    {"name": "valuation", "score": 55, "weight": 0.2, "explanation": "P/E 约 37.5，EV/EBIT 约 31.5（绝对档位估算，非行业相对）"},
+    {"name": "technical", "score": 28, "weight": 0.2, "explanation": "动量(10日) -4.07%，RSI(14) 24.6，均线(5/20)状态：空头排列"},
+    {"name": "volatility_risk", "score": 30, "weight": 0.1, "explanation": "区间波动估算 3.63%"}
   ],
   "reasons": ["区间走势为负，短线动量偏弱。", "当前价格低于或接近前收盘价。", "区间波动较高，需要结合风险承受能力观察。"],
-  "risks": ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。"],
+  "risks": ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。", "短线波动较大，评分可能快速变化。"],
   "source": "Yahoo Finance chart API",
-  "algorithm_version": "algorithm-v0.2.1",
-  "analysis_time": "2026-06-25T10:48:53.949057+00:00",
+  "algorithm_version": "algorithm-v0.2.2",
+  "analysis_time": "2026-06-25T14:30:46.957647+00:00",
   "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
 }
 ```
@@ -429,7 +429,7 @@ limit  候选池大小，同时也是评分数量上限，默认 20，最大 50
       "reasons": ["区间走势为正，短线动量偏强。"],
       "risks": ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。"],
       "source": "Yahoo Finance chart API",
-      "algorithm_version": "algorithm-v0.2.1"
+      "algorithm_version": "algorithm-v0.2.2"
     }
   ],
   "skipped": [],
@@ -474,7 +474,7 @@ limit  返回条数上限，默认 30，最大 200
       ],
       "reasons": ["区间走势为正，短线动量偏强。"],
       "risks": ["新闻情绪因子尚未接入（计划 algorithm-v0.3），估值评分为绝对档位启发式，非行业相对。"],
-      "algorithm_version": "algorithm-v0.2.1"
+      "algorithm_version": "algorithm-v0.2.2"
     }
   ],
   "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
