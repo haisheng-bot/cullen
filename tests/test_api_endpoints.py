@@ -1,5 +1,6 @@
 import importlib.util
 import unittest
+from datetime import date
 
 if importlib.util.find_spec("fastapi") is None:
     raise unittest.SkipTest("FastAPI is not installed in this Python environment")
@@ -10,6 +11,11 @@ from packages.data_sources.price_history import HistoryPoint, HistoryResponse
 from packages.data_sources.fred import FREDObservation, FREDSeriesResponse
 from packages.data_sources.sec_filings import Filing, FilingListResponse
 from packages.data_sources.sec_financials import SECFinancialsError
+from packages.data_sources.tiger_openapi import (
+    TigerOpenAPIClient,
+    TigerOpenAPIConfig,
+    TigerOpenAPIError,
+)
 from packages.news_layer.schemas import NewsItem, NewsPolicyResponse
 from packages.universe_layer.schemas import UniverseResult, UniverseStock
 from packages.ai_agents.base import AgentResult
@@ -149,6 +155,29 @@ class FakeSECFilingAgent:
         )
 
 
+class FakeReportAgent:
+    def run(self, symbol: str, *, trace_id: str | None = None, write_audit: bool = True) -> AgentResult:
+        response = ModelResponse(
+            provider="mock",
+            model_name="mock-model-v0",
+            task_type="stock_research_report",
+            output="AAPL scores 70/100 with positive momentum and steady recent news coverage.",
+            citations=["test-source", "https://example.com/news/1"],
+            confidence=0.5,
+            token_usage=TokenUsage(input_tokens=10, output_tokens=10, total_tokens=20),
+            cost_estimate=0.0,
+            latency_ms=1,
+            trace_id="trace-report-001",
+            input_summary="Algorithm score and recent news for AAPL",
+        )
+        return AgentResult(
+            symbol=symbol,
+            task_type="stock_research_report",
+            response=response,
+            generated_at="2026-06-25T13:32:00+00:00",
+        )
+
+
 class FakeScreeningWorkflow:
     def screen(self, limit: int = 20) -> ScreeningResult:
         return ScreeningResult(
@@ -231,6 +260,41 @@ class FakeUniverseScanner:
         )
 
 
+class FakeTigerQuoteAdapter:
+    def get_quote(self, symbol: str) -> dict:
+        return {
+            "symbol": symbol,
+            "price": 210.5,
+            "previous_close": 200.0,
+            "currency": "USD",
+            "exchange": "NASDAQ",
+        }
+
+
+class FakeTigerKlineAdapter:
+    def get_kline(self, symbol: str, period: str, start_date: date, end_date: date) -> list[dict]:
+        return [
+            {
+                "date": "2026-06-24",
+                "open": 198.0,
+                "high": 201.0,
+                "low": 197.0,
+                "close": 200.0,
+                "volume": 900000,
+                "amount": 180000000,
+            },
+            {
+                "date": "2026-06-25",
+                "open": 200.0,
+                "high": 211.0,
+                "low": 198.0,
+                "close": 210.5,
+                "volume": 1000000,
+                "amount": 210500000,
+            },
+        ]
+
+
 class ApiEndpointsTest(unittest.TestCase):
     def setUp(self) -> None:
         self.original_client = main.trend_client
@@ -240,12 +304,18 @@ class ApiEndpointsTest(unittest.TestCase):
         self.original_fred_client = main.fred_client
         self.original_news_policy_client = main.news_policy_client
         self.original_sec_filing_agent = main.sec_filing_agent
+        self.original_report_agent = main.report_agent
+        self.original_tiger_openapi_client = main.tiger_openapi_client
         self.original_universe_scanner = main.universe_scanner
         self.original_screening_workflow = main.screening_workflow
         self.original_persist_screening_result = main._persist_screening_result
         self.original_fetch_score_history = main._fetch_score_history
         self.original_backtest_engine = main.backtest_engine
+        self.original_portfolio_research_workflow = main.portfolio_research_workflow
         self.original_persist_backtest_run = main._persist_backtest_run
+        self.original_list_portfolios = main._list_portfolios
+        self.original_add_portfolio_symbol = main._add_portfolio_symbol
+        self.original_remove_portfolio_symbol = main._remove_portfolio_symbol
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
         main.sec_filing_client = FakeSECFilingClient()
@@ -253,15 +323,43 @@ class ApiEndpointsTest(unittest.TestCase):
         main.fred_client = FakeFREDClient()
         main.news_policy_client = FakeNewsPolicyClient()
         main.sec_filing_agent = FakeSECFilingAgent()
+        main.report_agent = FakeReportAgent()
+        main.tiger_openapi_client = TigerOpenAPIClient(
+            config=TigerOpenAPIConfig(None, None, None, None, env="sandbox")
+        )
         main.universe_scanner = FakeUniverseScanner()
         main.screening_workflow = FakeScreeningWorkflow()
         main.backtest_engine = FakeBacktestEngine()
+        main.portfolio_research_workflow = main.PortfolioResearchWorkflow(
+            universe_scanner=main.universe_scanner,
+            backtest_engine=main.backtest_engine,
+        )
         self.persisted_screening_results: list = []
         main._persist_screening_result = self.persisted_screening_results.append
         self.persisted_backtest_runs: list = []
         main._persist_backtest_run = lambda config, result: self.persisted_backtest_runs.append(
             (config, result)
         )
+        self.fake_portfolios: dict[str, list[str]] = {"Core Watch": ["AAPL"]}
+        main._list_portfolios = lambda: [
+            {"name": name, "symbols": symbols, "updated_at": "2026-06-25T13:32:00+00:00"}
+            for name, symbols in self.fake_portfolios.items()
+        ]
+
+        def fake_add_portfolio_symbol(name: str, symbol: str) -> dict:
+            symbols = self.fake_portfolios.setdefault(name, [])
+            if symbol not in symbols:
+                symbols.append(symbol)
+            return {"name": name, "symbols": symbols, "updated_at": "2026-06-25T13:32:00+00:00"}
+
+        def fake_remove_portfolio_symbol(name: str, symbol: str):
+            if name not in self.fake_portfolios:
+                return None
+            self.fake_portfolios[name] = [item for item in self.fake_portfolios[name] if item != symbol]
+            return {"name": name, "symbols": self.fake_portfolios[name], "updated_at": "2026-06-25T13:32:00+00:00"}
+
+        main._add_portfolio_symbol = fake_add_portfolio_symbol
+        main._remove_portfolio_symbol = fake_remove_portfolio_symbol
         main._fetch_score_history = lambda symbol, limit: [
             {
                 "screened_at": "2026-06-25T13:32:00+00:00",
@@ -283,12 +381,18 @@ class ApiEndpointsTest(unittest.TestCase):
         main.fred_client = self.original_fred_client
         main.news_policy_client = self.original_news_policy_client
         main.sec_filing_agent = self.original_sec_filing_agent
+        main.report_agent = self.original_report_agent
+        main.tiger_openapi_client = self.original_tiger_openapi_client
         main.universe_scanner = self.original_universe_scanner
         main.screening_workflow = self.original_screening_workflow
         main._persist_screening_result = self.original_persist_screening_result
         main._fetch_score_history = self.original_fetch_score_history
         main.backtest_engine = self.original_backtest_engine
+        main.portfolio_research_workflow = self.original_portfolio_research_workflow
         main._persist_backtest_run = self.original_persist_backtest_run
+        main._list_portfolios = self.original_list_portfolios
+        main._add_portfolio_symbol = self.original_add_portfolio_symbol
+        main._remove_portfolio_symbol = self.original_remove_portfolio_symbol
 
     def test_popular_stocks_endpoint(self) -> None:
         payload = main.get_popular_us_stocks()
@@ -302,6 +406,73 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("AAPL", payload["symbol"])
         self.assertEqual(102.0, payload["price"])
         self.assertEqual(2.0, payload["change"])
+
+    def test_tiger_status_endpoint_is_read_only(self) -> None:
+        payload = main.get_tiger_openapi_status()
+
+        self.assertFalse(payload["configured"])
+        self.assertFalse(payload["trading_enabled"])
+        self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
+
+    def test_tiger_quote_endpoint_returns_503_when_not_configured(self) -> None:
+        with self.assertRaises(main.HTTPException) as context:
+            main.get_tiger_stock_quote("AAPL")
+
+        self.assertEqual(503, context.exception.status_code)
+        self.assertIn("not configured", context.exception.detail)
+
+    def test_tiger_quote_endpoint_uses_read_only_adapter(self) -> None:
+        import tempfile
+
+        with tempfile.NamedTemporaryFile() as key_file:
+            main.tiger_openapi_client = TigerOpenAPIClient(
+                config=TigerOpenAPIConfig(
+                    tiger_id="tiger-id",
+                    account="paper-account",
+                    license="paper-license",
+                    private_key_path=key_file.name,
+                    env="sandbox",
+                ),
+                quote_adapter=FakeTigerQuoteAdapter(),
+            )
+
+            payload = main.get_tiger_stock_quote("aapl")
+
+        self.assertEqual("AAPL", payload["symbol"])
+        self.assertEqual(210.5, payload["price"])
+        self.assertEqual("Tiger Brokers OpenAPI", payload["source"])
+
+    def test_tiger_history_endpoint_returns_503_when_not_configured(self) -> None:
+        with self.assertRaises(main.HTTPException) as context:
+            main.get_tiger_stock_history("AAPL", years=3, period="day")
+
+        self.assertEqual(503, context.exception.status_code)
+        self.assertIn("not configured", context.exception.detail)
+
+    def test_tiger_history_endpoint_uses_read_only_kline_adapter(self) -> None:
+        import tempfile
+
+        with tempfile.NamedTemporaryFile() as key_file:
+            main.tiger_openapi_client = TigerOpenAPIClient(
+                config=TigerOpenAPIConfig(
+                    tiger_id="tiger-id",
+                    account="paper-account",
+                    license="paper-license",
+                    private_key_path=key_file.name,
+                    env="sandbox",
+                ),
+                kline_adapter=FakeTigerKlineAdapter(),
+            )
+
+            payload = main.get_tiger_stock_history("aapl", years=3, period="day")
+
+        self.assertEqual("AAPL", payload["symbol"])
+        self.assertEqual("day", payload["period"])
+        self.assertEqual(3, payload["years"])
+        self.assertEqual(2, len(payload["points"]))
+        self.assertEqual(900000, payload["points"][0]["volume"])
+        self.assertEqual(210500000.0, payload["points"][1]["amount"])
+        self.assertEqual("historical_kline_reference", payload["data_scope"])
 
     def test_trend_endpoint(self) -> None:
         payload = main.get_stock_trend("AAPL", range_="1d", interval="1m")
@@ -339,6 +510,14 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("sec_filing_summary", payload["task_type"])
         self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
         self.assertIn("10-Q", payload["conclusion"])
+
+    def test_report_agent_endpoint(self) -> None:
+        payload = main.get_stock_report("AAPL")
+
+        self.assertEqual("AAPL", payload["symbol"])
+        self.assertEqual("stock_research_report", payload["task_type"])
+        self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
+        self.assertIn("70/100", payload["conclusion"])
 
     def test_news_policy_endpoint(self) -> None:
         payload = main.get_stock_news_policy("AAPL", years=3, limit=10)
@@ -413,6 +592,58 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("ai_score", config.signal_mode)
         self.assertEqual(65, config.entry_rules.min_ai_score)
         self.assertEqual(35, config.exit_rules.max_ai_score)
+
+    def test_portfolio_research_workflow_endpoint(self) -> None:
+        request = main.PortfolioResearchWorkflowRequest(
+            portfolio_name="API Workflow",
+            universe_limit=2,
+            selected_symbols=["aapl", "msft"],
+            backtest=main.BacktestRunRequest(
+                strategy_name="API Portfolio Workflow",
+                symbols=["nvda"],
+                start_date="2023-01-01",
+                end_date="2023-12-31",
+            ),
+        )
+
+        payload = main.run_portfolio_research_workflow(request)
+
+        self.assertEqual("portfolio_research_workflow", payload["workflow_name"])
+        self.assertEqual("portfolio-research-workflow-v0.1", payload["workflow_version"])
+        self.assertEqual("Recommendation Ready", payload["state"])
+        self.assertEqual("API Workflow", payload["portfolio"]["name"])
+        self.assertEqual(["AAPL", "MSFT"], payload["portfolio"]["symbols"])
+        self.assertEqual(["AAPL", "MSFT"], payload["backtest"]["symbols"])
+        self.assertEqual("research_candidate", payload["portfolio_recommendation"]["action"])
+        self.assertIn("回测总收益 10.0%", payload["ai_summary"]["key_findings"][0])
+        self.assertEqual(7, len(payload["node_results"]))
+        self.assertEqual(1, len(self.persisted_backtest_runs))
+
+    def test_get_portfolios_endpoint(self) -> None:
+        payload = main.get_portfolios()
+
+        self.assertEqual([{"name": "Core Watch", "symbols": ["AAPL"], "updated_at": "2026-06-25T13:32:00+00:00"}], payload["items"])
+
+    def test_add_portfolio_symbol_endpoint(self) -> None:
+        payload = main.add_portfolio_symbol("Momentum", main.PortfolioSymbolRequest(symbol="tsla"))
+
+        self.assertEqual("Momentum", payload["name"])
+        self.assertEqual(["TSLA"], payload["symbols"])
+
+    def test_add_portfolio_symbol_endpoint_rejects_invalid_symbol(self) -> None:
+        with self.assertRaises(Exception):
+            main.add_portfolio_symbol("Momentum", main.PortfolioSymbolRequest(symbol=""))
+
+    def test_remove_portfolio_symbol_endpoint(self) -> None:
+        payload = main.remove_portfolio_symbol("Core Watch", "aapl")
+
+        self.assertEqual([], payload["symbols"])
+
+    def test_remove_portfolio_symbol_endpoint_404_for_missing_portfolio(self) -> None:
+        with self.assertRaises(main.HTTPException) as context:
+            main.remove_portfolio_symbol("Nonexistent", "AAPL")
+
+        self.assertEqual(404, context.exception.status_code)
 
 
 if __name__ == "__main__":

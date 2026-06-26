@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from pydantic import BaseModel, Field
 
+from packages.ai_agents.report_agent import ReportAgent
 from packages.ai_agents.sec_filing_agent import SECFilingAgent
 from packages.algorithm_layer.recommendation import TrendRecommendationAlgorithm
 from packages.algorithm_layer.schemas import (
@@ -33,8 +34,10 @@ from packages.data_sources.fred import FREDClient, FREDError
 from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
 from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
 from packages.data_sources.sec_financials import SECFinancialsClient, SECFinancialsError
+from packages.data_sources.tiger_openapi import TigerOpenAPIClient, TigerOpenAPIError
 from packages.db.backtest_runs import write_backtest_run
 from packages.db.financial_facts_cache import get_or_fetch_annual_series
+from packages.db.portfolios import add_symbol, ensure_default_portfolios, list_portfolios, remove_symbol
 from packages.db.price_history_cache import get_or_fetch_closes
 from packages.db.session import check_database_connection, session_scope
 from packages.db.stock_scores import get_score_history, write_screening_result
@@ -42,6 +45,10 @@ from packages.model_layer.factory import build_default_router
 from packages.model_layer.validator import OutputValidationError
 from packages.news_layer.news_policy import NewsPolicyClient, NewsPolicyError
 from packages.universe_layer.most_active import MostActiveUniverseScanner
+from packages.workflow_layer.portfolio_research import (
+    PortfolioResearchRequest,
+    PortfolioResearchWorkflow,
+)
 from packages.workflow_layer.stock_screening import StockScreeningWorkflow
 
 
@@ -65,6 +72,7 @@ sec_filing_client = SECFilingClient()
 sec_financials_client = SECFinancialsClient(filing_client=sec_filing_client)
 fred_client = FREDClient()
 news_policy_client = NewsPolicyClient()
+tiger_openapi_client = TigerOpenAPIClient.from_settings()
 recommendation_algorithm = TrendRecommendationAlgorithm()
 universe_scanner = MostActiveUniverseScanner()
 model_router = build_default_router()
@@ -136,6 +144,16 @@ screening_workflow = StockScreeningWorkflow(
     news_signals_fetcher=_fetch_news_signals,
 )
 
+report_agent = ReportAgent(
+    model_router,
+    trend_client=trend_client,
+    recommendation_algorithm=recommendation_algorithm,
+    news_policy_client=news_policy_client,
+    financial_factors_fetcher=_fetch_financial_factors,
+    technical_series_fetcher=_fetch_technical_series,
+    news_signals_fetcher=_fetch_news_signals,
+)
+
 
 def _fetch_cached_closes(symbol: str) -> list[tuple[str, float]]:
     with session_scope() as session:
@@ -146,12 +164,15 @@ def _fetch_shares_outstanding(symbol: str) -> float | None:
     """Best-effort, latest known share count (not point-in-time) — see
     docs/standards/PORTFOLIO_STRATEGY_STANDARD.md for why that's an
     acceptable approximation for market_cap_weighted allocation.
+
+    Reuses the already-cached annual financials series (`get_or_fetch_annual_series`,
+    24h TTL) instead of a second, uncached SEC EDGAR companyfacts fetch — the
+    series already carries `shares_outstanding` per fiscal year, most recent first.
     """
-    try:
-        facts = sec_financials_client.fetch_financial_facts(symbol)
-    except SECFinancialsError:
-        return None
-    return facts.latest.shares_outstanding if facts.latest else None
+    for year in _fetch_cached_annual_financials(symbol):
+        if year.shares_outstanding is not None:
+            return year.shares_outstanding
+    return None
 
 
 def _fetch_cached_annual_financials(symbol: str) -> list:
@@ -170,6 +191,10 @@ backtest_engine = PortfolioBacktestEngine(
     history_fetcher=_fetch_cached_closes,
     shares_outstanding_fetcher=_fetch_shares_outstanding,
     financials_fetcher=_fetch_cached_annual_financials,
+)
+portfolio_research_workflow = PortfolioResearchWorkflow(
+    universe_scanner=universe_scanner,
+    backtest_engine=backtest_engine,
 )
 
 POPULAR_US_STOCKS = [
@@ -201,6 +226,11 @@ def health() -> dict[str, str]:
 @app.get("/health/db")
 def health_db() -> dict[str, str]:
     return {"status": "ok" if check_database_connection() else "unavailable"}
+
+
+@app.get("/integrations/tiger/status")
+def get_tiger_openapi_status() -> dict:
+    return tiger_openapi_client.status().to_dict()
 
 
 @app.get("/stocks/popular")
@@ -246,6 +276,34 @@ def get_stock_quote(symbol: str) -> dict:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except MarketTrendError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/stocks/{symbol}/tiger/quote")
+def get_tiger_stock_quote(symbol: str) -> dict:
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+        return tiger_openapi_client.fetch_quote(normalized_symbol).to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except TigerOpenAPIError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@app.get("/stocks/{symbol}/tiger/history")
+def get_tiger_stock_history(
+    symbol: str,
+    years: int = Query(3, ge=1, le=3),
+    period: str = Query("day"),
+) -> dict:
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+        return tiger_openapi_client.fetch_kline(
+            normalized_symbol, period=period, years=years
+        ).to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except TigerOpenAPIError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @app.get("/stocks/{symbol}/recommendation")
@@ -318,6 +376,66 @@ def get_stock_score_history(symbol: str, limit: int = Query(30, ge=1, le=200)) -
     }
 
 
+class PortfolioSymbolRequest(BaseModel):
+    symbol: str
+
+
+def _portfolio_to_dict(portfolio) -> dict:
+    return {
+        "name": portfolio.name,
+        "symbols": portfolio.symbols,
+        "updated_at": portfolio.updated_at.isoformat() if portfolio.updated_at else None,
+    }
+
+
+def _list_portfolios() -> list[dict]:
+    with session_scope() as session:
+        ensure_default_portfolios(session)
+        return [_portfolio_to_dict(portfolio) for portfolio in list_portfolios(session)]
+
+
+def _add_portfolio_symbol(name: str, symbol: str) -> dict:
+    with session_scope() as session:
+        portfolio = add_symbol(session, name, symbol)
+        return _portfolio_to_dict(portfolio)
+
+
+def _remove_portfolio_symbol(name: str, symbol: str) -> dict | None:
+    with session_scope() as session:
+        portfolio = remove_symbol(session, name, symbol)
+        return _portfolio_to_dict(portfolio) if portfolio else None
+
+
+@app.get("/portfolios")
+def get_portfolios() -> dict:
+    """Named watchlists used by the workbench's Portfolio Strategy panel,
+    persisted so they survive page reloads instead of resetting to defaults.
+    """
+    return {"items": _list_portfolios()}
+
+
+@app.post("/portfolios/{name}/symbols")
+def add_portfolio_symbol(name: str, request: PortfolioSymbolRequest) -> dict:
+    try:
+        normalized_symbol = normalize_symbol(request.symbol)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _add_portfolio_symbol(name, normalized_symbol)
+
+
+@app.delete("/portfolios/{name}/symbols/{symbol}")
+def remove_portfolio_symbol(name: str, symbol: str) -> dict:
+    try:
+        normalized_symbol = normalize_symbol(symbol)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    result = _remove_portfolio_symbol(name, normalized_symbol)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"portfolio not found: {name}")
+    return result
+
+
 @app.get("/stocks/{symbol}/trend")
 def get_stock_trend(
     symbol: str,
@@ -375,6 +493,16 @@ def get_stock_sec_summary(symbol: str) -> dict:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except (SECFilingError, OutputValidationError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/stocks/{symbol}/report")
+def get_stock_report(symbol: str) -> dict:
+    try:
+        return report_agent.run(symbol).to_dict()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except (MarketTrendError, NewsPolicyError, OutputValidationError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
@@ -456,6 +584,13 @@ class BacktestRunRequest(BaseModel):
     sector_map: dict[str, str] = Field(default_factory=dict)
 
 
+class PortfolioResearchWorkflowRequest(BaseModel):
+    portfolio_name: str = "Workflow Portfolio"
+    universe_limit: int = Field(default=100, ge=1, le=100)
+    selected_symbols: list[str] | None = None
+    backtest: BacktestRunRequest
+
+
 def _to_strategy_config(request: BacktestRunRequest) -> StrategyConfig:
     return StrategyConfig(
         strategy_name=request.strategy_name,
@@ -479,6 +614,30 @@ def _persist_backtest_run(config: StrategyConfig, result) -> None:
         write_backtest_run(session, config, result)
 
 
+def _portfolio_research_response(run_result) -> dict:
+    payload = run_result.payload
+    strategy_config = payload.get("final_strategy_config")
+    backtest_result = payload.get("backtest_result")
+    return {
+        "workflow_name": run_result.workflow_name,
+        "workflow_version": run_result.workflow_version,
+        "trace_id": run_result.trace_id,
+        "state": run_result.state.value,
+        "started_at": run_result.started_at,
+        "completed_at": run_result.completed_at,
+        "node_results": [node.to_dict() for node in run_result.node_results],
+        "universe": payload.get("universe"),
+        "portfolio": payload.get("portfolio"),
+        "strategy": payload.get("strategy"),
+        "constraints": payload.get("constraints"),
+        "backtest": backtest_result.to_dict() if backtest_result else payload.get("backtest"),
+        "ai_summary": payload.get("ai_summary"),
+        "portfolio_recommendation": payload.get("portfolio_recommendation"),
+        "strategy_config": strategy_config.to_dict() if strategy_config else None,
+        "risk_disclaimer": run_result.risk_disclaimer,
+    }
+
+
 @app.post("/backtests/run")
 def run_backtest(request: BacktestRunRequest) -> dict:
     config = _to_strategy_config(request)
@@ -490,3 +649,26 @@ def run_backtest(request: BacktestRunRequest) -> dict:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     _persist_backtest_run(config, result)
     return result.to_dict()
+
+
+@app.post("/workflows/portfolio-research")
+def run_portfolio_research_workflow(request: PortfolioResearchWorkflowRequest) -> dict:
+    config = _to_strategy_config(request.backtest)
+    workflow_request = PortfolioResearchRequest(
+        strategy_config=config,
+        universe_limit=request.universe_limit,
+        portfolio_name=request.portfolio_name,
+        selected_symbols=request.selected_symbols,
+    )
+    try:
+        result = portfolio_research_workflow.run(workflow_request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PriceHistoryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    final_config = result.payload.get("final_strategy_config")
+    backtest_result = result.payload.get("backtest_result")
+    if final_config is not None and backtest_result is not None:
+        _persist_backtest_run(final_config, backtest_result)
+    return _portfolio_research_response(result)

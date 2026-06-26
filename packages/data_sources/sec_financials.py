@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from http.client import IncompleteRead
 import json
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -125,7 +126,7 @@ class SECFinancialsClient:
         try:
             with urlopen(request, timeout=20) as response:
                 payload = json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        except (HTTPError, URLError, TimeoutError, IncompleteRead, json.JSONDecodeError) as exc:
             raise SECFinancialsError(f"Failed to fetch SEC company facts for {normalized_symbol}") from exc
 
         return payload, normalized_symbol, cik

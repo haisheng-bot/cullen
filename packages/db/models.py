@@ -93,6 +93,24 @@ class FinancialFactsCache(Base):
     )
 
 
+class Portfolio(Base):
+    """A user-maintained named group of symbols (watchlist). Persists what
+    used to be in-memory-only frontend state, so it survives page reloads
+    and feeds the Portfolio Strategy backtest workflow as a stable input.
+    """
+
+    __tablename__ = "portfolios"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    symbols: Mapped[list] = mapped_column(JSON, default=list)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
 class BacktestRun(Base):
     """One row per Portfolio Strategy Engine backtest run
     (`POST /backtests/run`), per docs/standards/PORTFOLIO_STRATEGY_STANDARD.md.

@@ -8,6 +8,7 @@ from packages.db.audit import write_audit_log
 from packages.db.backtest_runs import write_backtest_run
 from packages.db.financial_facts_cache import get_or_fetch_annual_series
 from packages.db.models import AuditLog, Base
+from packages.db.portfolios import add_symbol, ensure_default_portfolios, list_portfolios, remove_symbol
 from packages.db.price_history_cache import get_or_fetch_closes
 from packages.db.session import build_engine
 from packages.db.stock_scores import get_score_history, write_screening_result
@@ -266,6 +267,65 @@ class BacktestRunPersistenceTest(unittest.TestCase):
             self.assertEqual(["AAPL"], record.config["symbols"])
             self.assertAlmostEqual(11_000.0, record.result["final_value"])
             session.commit()
+
+
+class PortfolioPersistenceTest(unittest.TestCase):
+    def test_ensure_default_portfolios_seeds_once(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            ensure_default_portfolios(session)
+            session.commit()
+        with Session(engine) as session:
+            ensure_default_portfolios(session)
+            session.commit()
+
+        with Session(engine) as session:
+            portfolios = list_portfolios(session)
+
+        self.assertEqual(5, len(portfolios))
+        core_watch = next(p for p in portfolios if p.name == "Core Watch")
+        self.assertEqual(["AAPL", "MSFT", "NVDA"], core_watch.symbols)
+
+    def test_add_symbol_creates_portfolio_and_is_idempotent(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            add_symbol(session, "Momentum", "TSLA")
+            session.commit()
+        with Session(engine) as session:
+            add_symbol(session, "Momentum", "TSLA")
+            session.commit()
+
+        with Session(engine) as session:
+            portfolios = list_portfolios(session)
+
+        self.assertEqual(1, len(portfolios))
+        self.assertEqual(["TSLA"], portfolios[0].symbols)
+
+    def test_remove_symbol_drops_it_from_portfolio(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            add_symbol(session, "Momentum", "TSLA")
+            add_symbol(session, "Momentum", "NVDA")
+            session.commit()
+        with Session(engine) as session:
+            remove_symbol(session, "Momentum", "TSLA")
+            session.commit()
+
+        with Session(engine) as session:
+            portfolio = list_portfolios(session)[0]
+
+        self.assertEqual(["NVDA"], portfolio.symbols)
+
+    def test_remove_symbol_returns_none_for_missing_portfolio(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            result = remove_symbol(session, "Nonexistent", "AAPL")
+
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

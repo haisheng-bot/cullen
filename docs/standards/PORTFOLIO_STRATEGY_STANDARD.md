@@ -28,7 +28,7 @@ Portfolio Strategy 不应写在前端页面或 Agent 内部。
 
 职责分层：
 
-* Application Layer：展示组合、约束、回测结果和免责声明。
+* Application Layer：展示组合、约束（含基础/高级两级配置和提交前字段校验）、回测结果（指标卡片、净值曲线图、交易明细表）和免责声明；6 步流程状态随组合/配置/运行进度动态更新。
 * Workflow Layer：编排 Universe、Strategy、Backtest、Model Analysis。
 * Algorithm / Backtesting Layer：执行仓位分配、信号规则、风险控制和回测指标计算。
 * Model Layer：后续负责对回测结果做自然语言解释和审计，不直接计算收益。
@@ -82,8 +82,9 @@ packages/backtesting/
   * 最低现金比例
   * 回测年限
   * 初始资金
+  * 高级设置（默认折叠）：信号模式（`technical`/`ai_score`）、再平衡频率、基准代码、止损 %
 * 调用 `POST /backtests/run` 执行历史回测。
-* 输出收益、年化收益、最大回撤、Sharpe、Alpha、交易次数、贡献股票、风险提示。
+* 输出收益、年化收益、最大回撤、Sharpe、Alpha、贡献股票、风险提示，以及净值曲线图（组合 vs 基准）和完整交易明细表。
 
 第一阶段不做（第二阶段已完成）：
 

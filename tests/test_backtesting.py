@@ -363,6 +363,40 @@ class PortfolioBacktestEngineTest(unittest.TestCase):
         self.assertTrue(result.risks)
         self.assertEqual("backtesting-v0.2", result.algorithm_version)
 
+    def test_market_cap_weighted_fetches_shares_outstanding_once_per_symbol_per_run(self) -> None:
+        # Regression test: shares_outstanding_fetcher backs an uncached, slow
+        # SEC EDGAR fetch in production. It must be pre-fetched once per
+        # symbol per run, not re-invoked on every rebalance date.
+        series = {
+            "UP": _trending_closes(100.0, 0.003, 320),
+            "DOWN": _trending_closes(100.0, -0.003, 320),
+            "SPY": _trending_closes(400.0, 0.0008, 320),
+        }
+        call_counts: dict[str, int] = {}
+
+        def counting_fetcher(symbol: str) -> float:
+            call_counts[symbol] = call_counts.get(symbol, 0) + 1
+            return 1_000_000.0
+
+        engine = PortfolioBacktestEngine(
+            history_fetcher=lambda symbol: series[symbol],
+            shares_outstanding_fetcher=counting_fetcher,
+        )
+        config = StrategyConfig(
+            strategy_name="market_cap_weighted_caching",
+            symbols=["UP", "DOWN"],
+            start_date="2022-03-01",
+            end_date="2022-12-30",
+            rebalance_frequency="monthly",
+            entry_rules=EntryRules(min_technical_score=0),
+            allocation=AllocationConfig(method="market_cap_weighted"),
+        )
+
+        result = engine.run(config)
+
+        self.assertGreater(len(result.trades), 0)
+        self.assertEqual({"UP": 1, "DOWN": 1}, call_counts)
+
     def test_run_rejects_empty_symbols(self) -> None:
         engine = self._make_engine({"SPY": _trending_closes(400.0, 0.0, 30)})
         config = StrategyConfig(strategy_name="x", symbols=[], start_date="2022-01-01", end_date="2022-06-01")

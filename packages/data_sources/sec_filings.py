@@ -8,7 +8,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from http.client import IncompleteRead
 import json
+import threading
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -62,16 +64,23 @@ class SECFilingClient:
 
     def __init__(self) -> None:
         self._cik_cache: dict[str, str] = {}
+        self._cik_cache_lock = threading.Lock()
 
     def get_cik(self, symbol: str) -> str:
         normalized_symbol = normalize_symbol(symbol)
-        if normalized_symbol in self._cik_cache:
-            return self._cik_cache[normalized_symbol]
+        if normalized_symbol not in self._cik_cache:
+            with self._cik_cache_lock:
+                # Re-check after acquiring the lock: another thread may have
+                # populated the cache while we were waiting (otherwise N
+                # concurrent cold symbols redundantly download the same
+                # multi-thousand-ticker mapping file N times).
+                if normalized_symbol not in self._cik_cache:
+                    payload = self._fetch_json(TICKER_MAP_URL)
+                    self._cik_cache.update(parse_ticker_map_full(payload))
 
-        payload = self._fetch_json(TICKER_MAP_URL)
-        cik = parse_ticker_map_payload(payload, normalized_symbol)
-        self._cik_cache[normalized_symbol] = cik
-        return cik
+        if normalized_symbol not in self._cik_cache:
+            raise SECFilingError(f"No SEC CIK found for symbol {normalized_symbol}")
+        return self._cik_cache[normalized_symbol]
 
     def list_filings(
         self,
@@ -89,7 +98,7 @@ class SECFilingClient:
         try:
             with urlopen(request, timeout=15) as response:
                 return json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        except (HTTPError, URLError, TimeoutError, IncompleteRead, json.JSONDecodeError) as exc:
             raise SECFilingError(f"Failed to fetch SEC EDGAR data from {url}") from exc
 
 
@@ -99,6 +108,19 @@ def parse_ticker_map_payload(payload: dict[str, Any], symbol: str) -> str:
         if str(entry.get("ticker", "")).upper() == normalized_symbol:
             return str(entry["cik_str"]).zfill(10)
     raise SECFilingError(f"No SEC CIK found for symbol {normalized_symbol}")
+
+
+def parse_ticker_map_full(payload: dict[str, Any]) -> dict[str, str]:
+    """Every ticker -> CIK pair in one pass, so a single download of the
+    (shared, multi-thousand-entry) mapping file can resolve any symbol for
+    the rest of the process's lifetime instead of one download per symbol.
+    """
+    mapping: dict[str, str] = {}
+    for entry in payload.values():
+        ticker = str(entry.get("ticker", "")).upper()
+        if ticker:
+            mapping[ticker] = str(entry["cik_str"]).zfill(10)
+    return mapping
 
 
 def parse_submissions_payload(

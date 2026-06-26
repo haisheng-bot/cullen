@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     polygon_api_key: str | None = None
     fred_api_key: str | None = None
 
+    tiger_id: str | None = None
+    tiger_account: str | None = None
+    tiger_license: str | None = None
+    tiger_private_key_path: str | None = None
+    tiger_env: str = "sandbox"
+
 
 @lru_cache
 def get_settings() -> Settings:

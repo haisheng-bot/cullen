@@ -41,12 +41,17 @@ class ProjectGovernanceTest(unittest.TestCase):
             "docs/standards/ALGORITHM_STANDARD.md",
             "docs/standards/UNIVERSE_STANDARD.md",
             "docs/standards/NEWS_POLICY_STANDARD.md",
+            "docs/standards/WORKFLOW_ENGINE_STANDARD.md",
             "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md",
+            "docs/standards/TIGER_OPENAPI_STANDARD.md",
             "docs/standards/version-management.md",
             "docs/standards/github-collaboration.md",
             "docs/standards/agile-iteration.md",
             "docs/standards/AI_TOOL_COLLABORATION.md",
             "docs/product/PRD.md",
+            "docs/product/PERSONAL_PRODUCTIVITY_GOAL.md",
+            "docs/product/PROJECT_PLAN_PROGRESS.md",
+            "docs/product/IMPLEMENTATION_GAP_ANALYSIS.md",
             "docs/product/requirements-analysis.md",
             "docs/architecture/system-design.md",
             "docs/architecture/ai-development-architecture.md",
@@ -63,11 +68,16 @@ class ProjectGovernanceTest(unittest.TestCase):
             "docs/standards/ALGORITHM_STANDARD.md",
             "docs/standards/UNIVERSE_STANDARD.md",
             "docs/standards/NEWS_POLICY_STANDARD.md",
+            "docs/standards/WORKFLOW_ENGINE_STANDARD.md",
             "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md",
+            "docs/standards/TIGER_OPENAPI_STANDARD.md",
             "docs/standards/github-collaboration.md",
             "docs/standards/agile-iteration.md",
             "docs/standards/AI_TOOL_COLLABORATION.md",
             "docs/product/PRD.md",
+            "docs/product/PERSONAL_PRODUCTIVITY_GOAL.md",
+            "docs/product/PROJECT_PLAN_PROGRESS.md",
+            "docs/product/IMPLEMENTATION_GAP_ANALYSIS.md",
             "docs/product/requirements-analysis.md",
             "docs/architecture/system-design.md",
             "docs/architecture/ai-development-architecture.md",
@@ -79,13 +89,18 @@ class ProjectGovernanceTest(unittest.TestCase):
     def test_product_prd_defines_investment_research_platform(self) -> None:
         prd = (ROOT / "docs/product/PRD.md").read_text(encoding="utf-8")
         requirements = (ROOT / "docs/product/requirements-analysis.md").read_text(encoding="utf-8")
+        productivity_goal = (ROOT / "docs/product/PERSONAL_PRODUCTIVITY_GOAL.md").read_text(encoding="utf-8")
+        plan_progress = (ROOT / "docs/product/PROJECT_PLAN_PROGRESS.md").read_text(encoding="utf-8")
+        gap_analysis = (ROOT / "docs/product/IMPLEMENTATION_GAP_ANALYSIS.md").read_text(encoding="utf-8")
 
         required_terms = [
             "AI Investment Research Platform",
+            "Personal Productivity Goal",
             "Stock Screener",
             "Stock Research",
             "Portfolio",
             "Strategy Engine",
+            "Workflow Engine",
             "Portfolio Optimizer",
             "Risk Engine",
             "Backtesting Engine",
@@ -97,8 +112,57 @@ class ProjectGovernanceTest(unittest.TestCase):
         missing = [term for term in required_terms if term not in prd]
         self.assertEqual([], missing)
         self.assertIn("AI Investment Research Platform", requirements)
+        self.assertIn("AI Portfolio Operating System", requirements)
         self.assertIn("Portfolio", requirements)
         self.assertIn("Strategy Workflow", requirements)
+        self.assertIn("个人股票研究生产力工具", productivity_goal)
+        self.assertIn("每日股票池扫描", productivity_goal)
+        self.assertIn("研究报告归档", productivity_goal)
+        self.assertIn("次日复盘", productivity_goal)
+        self.assertIn("项目计划与进度总表", plan_progress)
+        self.assertIn("进度差异", plan_progress)
+        self.assertIn("同步触发", plan_progress)
+        self.assertIn("Portfolio Research Workflow", plan_progress)
+        self.assertIn("最近一次同步", plan_progress)
+        self.assertIn("需求与实际开发差距分析", gap_analysis)
+        self.assertIn("前端接入 Portfolio Research Workflow", gap_analysis)
+        self.assertIn("Risk Engine v0.1", gap_analysis)
+        self.assertIn("Portfolio Optimizer v0.1", gap_analysis)
+
+    def test_workflow_engine_standard_defines_orchestration_boundary(self) -> None:
+        standard = (ROOT / "docs/standards/WORKFLOW_ENGINE_STANDARD.md").read_text(encoding="utf-8")
+        architecture = (ROOT / "docs/architecture/system-design.md").read_text(encoding="utf-8")
+        source = (ROOT / "packages/workflow_layer/engine.py").read_text(encoding="utf-8")
+
+        required_terms = [
+            "Workflow Engine",
+            "AI Portfolio Operating System",
+            "Universe Builder",
+            "Portfolio Builder",
+            "Factor Engine",
+            "Strategy Engine",
+            "Constraint Engine",
+            "Backtesting Engine",
+            "Risk Engine",
+            "AI Research Agent",
+            "Recommendation Engine",
+            "Report Engine",
+            "Rebalance Engine",
+            "Created",
+            "Configured",
+            "Waiting",
+            "Running",
+            "Completed",
+            "AI Reviewing",
+            "Recommendation Ready",
+            "Archived",
+            "trace_id",
+            "duration_ms",
+            "不得直接调用具体模型 SDK",
+        ]
+        combined = "\n".join([standard, architecture, source])
+        missing = [term for term in required_terms if term not in combined]
+        self.assertEqual([], missing)
 
     def test_github_templates_cover_ai_and_compliance_workflow(self) -> None:
         pr_template = (ROOT / ".github/pull_request_template.md").read_text(encoding="utf-8")
@@ -260,6 +324,30 @@ class ProjectGovernanceTest(unittest.TestCase):
         missing = [term for term in required_terms if term not in html]
         self.assertEqual([], missing)
 
+    def test_tiger_openapi_is_read_only_data_source(self) -> None:
+        standard = (ROOT / "docs/standards/TIGER_OPENAPI_STANDARD.md").read_text(encoding="utf-8")
+        api_doc = (ROOT / "docs/api/api-design-v0.1.md").read_text(encoding="utf-8")
+        env_example = (ROOT / ".env.example").read_text(encoding="utf-8")
+        source = (ROOT / "packages/data_sources/tiger_openapi.py").read_text(encoding="utf-8")
+
+        required_terms = [
+            "Tiger OpenAPI",
+            "只读",
+            "trading_enabled=false",
+            "GET /integrations/tiger/status",
+            "GET /stocks/{symbol}/tiger/quote",
+            "GET /stocks/{symbol}/tiger/history",
+            "近 3 年历史 K 线参考数据",
+            "不得读取、抓取、逆向或自动操作用户已打开的老虎 App",
+            "TIGER_ID",
+            "TIGER_ACCOUNT",
+            "TIGER_LICENSE",
+            "TIGER_PRIVATE_KEY_PATH",
+        ]
+        combined = "\n".join([standard, api_doc, env_example, source])
+        missing = [term for term in required_terms if term not in combined]
+        self.assertEqual([], missing)
+
     def test_main_analysis_sections_follow_requested_order(self) -> None:
         html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
 
@@ -284,10 +372,8 @@ class ProjectGovernanceTest(unittest.TestCase):
         required_terms = [
             "chart-inspector",
             "pointermove",
-            "mousemove",
             "updateChartHover",
             "updateChartHoverFromClientPoint",
-            "document.addEventListener(\"mousemove\"",
             "document.addEventListener(\"pointermove\"",
             "offsetX",
             "chartSizeKey",

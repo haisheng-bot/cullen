@@ -299,6 +299,25 @@
         border-radius: 8px;
         background: #fbfcff;
         padding: 8px;
+        transition: border-color 0.2s, background 0.2s;
+      }
+
+      .workflow-step[data-step-state="active"] {
+        border-color: var(--indigo);
+        background: #eef0fb;
+      }
+
+      .workflow-step[data-step-state="active"] .step-index {
+        background: var(--indigo);
+      }
+
+      .workflow-step[data-step-state="done"] {
+        border-color: var(--green);
+        background: #eaf6f0;
+      }
+
+      .workflow-step[data-step-state="done"] .step-index {
+        background: var(--green);
       }
 
       .step-index {
@@ -468,6 +487,104 @@
         justify-content: space-between;
         gap: 10px;
         margin-top: 10px;
+      }
+
+      .advanced-settings {
+        margin-top: 10px;
+        border-top: 1px solid var(--line);
+        padding-top: 8px;
+      }
+
+      .advanced-settings summary {
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .advanced-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .field-errors {
+        margin: 8px 0 0;
+        padding: 8px 10px;
+        border: 1px solid var(--red);
+        border-radius: 6px;
+        background: #fdecec;
+        color: var(--red);
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .field-errors ul {
+        margin: 0;
+        padding-left: 16px;
+      }
+
+      .field-invalid {
+        border-color: var(--red) !important;
+      }
+
+      .run-backtest-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .spinner {
+        width: 13px;
+        height: 13px;
+        border: 2px solid rgba(255, 255, 255, 0.45);
+        border-top-color: white;
+        border-radius: 999px;
+        animation: spin 0.7s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .equity-chart-card {
+        margin-top: 10px;
+        padding: 10px;
+      }
+
+      .equity-chart-card canvas {
+        height: 220px;
+      }
+
+      .trades-table-wrap {
+        margin-top: 10px;
+        max-height: 220px;
+        overflow-y: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .trades-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+
+      .trades-table th, .trades-table td {
+        padding: 6px 8px;
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+
+      .trades-table th {
+        position: sticky;
+        top: 0;
+        background: var(--panel-2);
+        color: var(--muted);
+        font-weight: 750;
       }
 
       .symbol { font-weight: 750; }
@@ -1062,42 +1179,42 @@
           </div>
 
           <div class="workflow-steps">
-            <div class="workflow-step">
+            <div class="workflow-step" id="step-universe" data-step-state="pending">
               <span class="step-index">1</span>
               <div>
                 <div class="step-title">股票池 Universe</div>
                 <div class="step-copy" id="workflow-universe-summary">Most Active Top 100 · 选择组合后运行回测</div>
               </div>
             </div>
-            <div class="workflow-step">
+            <div class="workflow-step" id="step-strategy" data-step-state="pending">
               <span class="step-index">2</span>
               <div>
                 <div class="step-title">策略库 Strategy Library</div>
                 <div class="step-copy">选择仓位分配和测试算法。</div>
               </div>
             </div>
-            <div class="workflow-step">
+            <div class="workflow-step" id="step-constraints" data-step-state="pending">
               <span class="step-index">3</span>
               <div>
                 <div class="step-title">配置约束 Constraints</div>
                 <div class="step-copy">收益目标、回撤、仓位和现金比例。</div>
               </div>
             </div>
-            <div class="workflow-step">
+            <div class="workflow-step" id="step-backtest" data-step-state="pending">
               <span class="step-index">4</span>
               <div>
                 <div class="step-title">运行回测 Backtest</div>
                 <div class="step-copy">调用 Backtesting Engine。</div>
               </div>
             </div>
-            <div class="workflow-step">
+            <div class="workflow-step" id="step-ai-analysis" data-step-state="pending">
               <span class="step-index">5</span>
               <div>
                 <div class="step-title">AI 自动分析结果</div>
                 <div class="step-copy">解释收益、风险和贡献原因。</div>
               </div>
             </div>
-            <div class="workflow-step">
+            <div class="workflow-step" id="step-recommendation" data-step-state="pending">
               <span class="step-index">6</span>
               <div>
                 <div class="step-title">Portfolio Recommendation</div>
@@ -1158,9 +1275,43 @@
                 </div>
               </div>
 
+              <details class="advanced-settings" id="advanced-settings">
+                <summary>高级设置 Advanced</summary>
+                <div class="advanced-grid">
+                  <div class="constraint-field">
+                    <label for="signal-mode">信号模式</label>
+                    <select id="signal-mode">
+                      <option value="technical" selected>Technical（技术信号）</option>
+                      <option value="ai_score">AI Score（五因子综合评分）</option>
+                    </select>
+                  </div>
+                  <div class="constraint-field">
+                    <label for="rebalance-frequency">再平衡频率</label>
+                    <select id="rebalance-frequency">
+                      <option value="weekly">每周</option>
+                      <option value="monthly" selected>每月</option>
+                      <option value="quarterly">每季度</option>
+                    </select>
+                  </div>
+                  <div class="constraint-field">
+                    <label for="benchmark-symbol">基准代码</label>
+                    <input id="benchmark-symbol" type="text" value="SPY" maxlength="10" />
+                  </div>
+                  <div class="constraint-field">
+                    <label for="stop-loss-percent">止损 %</label>
+                    <input id="stop-loss-percent" type="number" value="8" min="1" max="50" step="1" />
+                  </div>
+                </div>
+              </details>
+
+              <div class="field-errors" id="field-errors" hidden></div>
+
               <div class="workflow-actions">
                 <div class="workflow-note">算法测试仅使用历史价格和技术信号，后续可接入财报、估值和新闻情绪。</div>
-                <button class="run-backtest-button" id="run-backtest-button" type="button">Run Backtest</button>
+                <button class="run-backtest-button" id="run-backtest-button" type="button">
+                  <span class="spinner" id="run-backtest-spinner" hidden></span>
+                  <span id="run-backtest-button-label">Run Backtest</span>
+                </button>
               </div>
             </div>
 
@@ -1173,6 +1324,24 @@
               </div>
               <div class="backtest-results" id="backtest-results">
                 <div class="workflow-note">等待回测结果：收益、风险、贡献、原因会在这里展示。</div>
+              </div>
+              <div class="card chart-card equity-chart-card" id="equity-chart-card" hidden>
+                <canvas id="equity-chart"></canvas>
+              </div>
+              <div class="trades-table-wrap" id="trades-table-wrap" hidden>
+                <table class="trades-table" id="trades-table">
+                  <thead>
+                    <tr>
+                      <th>日期</th>
+                      <th>代码</th>
+                      <th>操作</th>
+                      <th>价格</th>
+                      <th>股数</th>
+                      <th>原因</th>
+                    </tr>
+                  </thead>
+                  <tbody id="trades-table-body"></tbody>
+                </table>
               </div>
               <div class="workflow-note" id="portfolio-recommendation">先选择组合并运行回测。本系统仅用于投资研究辅助，不构成任何投资建议。</div>
             </div>
@@ -1251,6 +1420,12 @@
           <button id="action-backtest">模拟回测</button>
         </div>
 
+        <div class="section-title">AI 研究报告</div>
+        <div class="analysis" id="report-panel">
+          <div class="note" id="report-status">点击「生成研究报告」，由 Report Agent 综合五因子评分与近期资讯生成一段研究结论。</div>
+          <div class="note" id="report-conclusion" style="display: none;"></div>
+        </div>
+
         <div class="section-title">AI 研究评分</div>
         <div class="analysis">
           <div class="score">
@@ -1280,13 +1455,9 @@
         lastTrend: null,
         chartHoverIndex: null,
         chartSizeKey: "",
-        portfolios: {
-          "Core Watch": ["AAPL", "MSFT", "NVDA"],
-          "Momentum": [],
-          "AI Theme": [],
-          "Semiconductor": [],
-          "Risk Hedge": [],
-        },
+        portfolios: {},
+        uxStrategyTouched: false,
+        uxConstraintsTouched: false,
       };
 
       const stockList = document.getElementById("stock-list");
@@ -1303,8 +1474,20 @@
       const minCashInput = document.getElementById("min-cash");
       const backtestYearsInput = document.getElementById("backtest-years");
       const initialCashInput = document.getElementById("initial-cash");
+      const signalModeSelect = document.getElementById("signal-mode");
+      const rebalanceFrequencySelect = document.getElementById("rebalance-frequency");
+      const benchmarkSymbolInput = document.getElementById("benchmark-symbol");
+      const stopLossPercentInput = document.getElementById("stop-loss-percent");
+      const advancedSettings = document.getElementById("advanced-settings");
+      const fieldErrorsEl = document.getElementById("field-errors");
       const runBacktestButton = document.getElementById("run-backtest-button");
+      const runBacktestSpinner = document.getElementById("run-backtest-spinner");
+      const runBacktestButtonLabel = document.getElementById("run-backtest-button-label");
       const backtestResults = document.getElementById("backtest-results");
+      const equityChartCard = document.getElementById("equity-chart-card");
+      const equityChartCanvas = document.getElementById("equity-chart");
+      const tradesTableWrap = document.getElementById("trades-table-wrap");
+      const tradesTableBody = document.getElementById("trades-table-body");
       const portfolioRecommendation = document.getElementById("portfolio-recommendation");
       const backtestSelectionSummary = document.getElementById("backtest-selection-summary");
       const workflowUniverseSummary = document.getElementById("workflow-universe-summary");
@@ -1384,6 +1567,15 @@
         return response.json();
       }
 
+      async function deleteJson(path) {
+        const response = await fetch(`${API}${path}`, { method: "DELETE" });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${response.status}`);
+        }
+        return response.json();
+      }
+
       async function requestOptional(path) {
         try {
           return await request(path);
@@ -1428,20 +1620,66 @@
         });
       }
 
-      function addCurrentSymbolToPortfolio() {
+      async function loadPortfolios() {
+        const data = await request("/portfolios");
+        state.portfolios = {};
+        data.items.forEach((portfolio) => {
+          state.portfolios[portfolio.name] = portfolio.symbols;
+        });
+        renderPortfolioList();
+        renderBacktestSelectionSummary();
+      }
+
+      async function addCurrentSymbolToPortfolio() {
         const strategy = portfolioStrategy.value;
-        const symbols = state.portfolios[strategy] || [];
-        if (!symbols.includes(state.symbol)) {
-          state.portfolios[strategy] = [...symbols, state.symbol];
+        try {
+          const portfolio = await postJson(`/portfolios/${encodeURIComponent(strategy)}/symbols`, {
+            symbol: state.symbol,
+          });
+          state.portfolios[strategy] = portfolio.symbols;
+        } catch (error) {
+          alert(`加入组合失败：${error.message}`);
+          return;
         }
         renderPortfolioList();
         renderBacktestSelectionSummary();
       }
 
-      function removeSymbolFromPortfolio(strategy, symbol) {
-        state.portfolios[strategy] = (state.portfolios[strategy] || []).filter((item) => item !== symbol);
+      async function removeSymbolFromPortfolio(strategy, symbol) {
+        try {
+          const portfolio = await deleteJson(
+            `/portfolios/${encodeURIComponent(strategy)}/symbols/${encodeURIComponent(symbol)}`
+          );
+          state.portfolios[strategy] = portfolio.symbols;
+        } catch (error) {
+          alert(`移除股票失败：${error.message}`);
+          return;
+        }
         renderPortfolioList();
         renderBacktestSelectionSummary();
+      }
+
+      async function generateResearchReport() {
+        const statusEl = document.getElementById("report-status");
+        const conclusionEl = document.getElementById("report-conclusion");
+        statusEl.style.display = "block";
+        statusEl.textContent = `正在为 ${state.symbol} 生成研究报告…`;
+        conclusionEl.style.display = "none";
+        try {
+          const payload = await request(`/stocks/${state.symbol}/report`);
+          conclusionEl.innerHTML = `
+            <div><strong>${payload.symbol}</strong> · ${payload.model}</div>
+            <div style="margin-top: 6px;">${payload.conclusion}</div>
+            <div class="muted" style="margin-top: 6px;">数据来源：${payload.data_source.join(", ")}</div>
+            <div class="muted">${payload.risk_disclaimer}</div>
+          `;
+          statusEl.style.display = "none";
+          conclusionEl.style.display = "block";
+        } catch (error) {
+          statusEl.textContent = `生成研究报告失败：${error.message}`;
+          statusEl.style.display = "block";
+          conclusionEl.style.display = "none";
+        }
       }
 
       function renderPortfolioList() {
@@ -1482,9 +1720,50 @@
         return [...new Set((state.portfolios[activePortfolioName()] || []).map((symbol) => symbol.toUpperCase()))];
       }
 
+      const WORKFLOW_STEP_IDS = [
+        "step-universe",
+        "step-strategy",
+        "step-constraints",
+        "step-backtest",
+        "step-ai-analysis",
+        "step-recommendation",
+      ];
+
+      function setWorkflowStepStates(doneCount, activeIndex) {
+        WORKFLOW_STEP_IDS.forEach((id, index) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          if (index === activeIndex) el.dataset.stepState = "active";
+          else if (index < doneCount) el.dataset.stepState = "done";
+          else el.dataset.stepState = "pending";
+        });
+      }
+
+      function updateWorkflowSteps(stage) {
+        if (stage === "running") {
+          setWorkflowStepStates(3, 3);
+          return;
+        }
+        if (stage === "done") {
+          setWorkflowStepStates(6, -1);
+          return;
+        }
+        if (stage === "error") {
+          setWorkflowStepStates(3, -1);
+          return;
+        }
+        const portfolioReady = activePortfolioSymbols().length >= 2;
+        let doneCount = 0;
+        if (portfolioReady) doneCount = 1;
+        if (portfolioReady && state.uxStrategyTouched) doneCount = 2;
+        if (portfolioReady && state.uxStrategyTouched && state.uxConstraintsTouched) doneCount = 3;
+        setWorkflowStepStates(doneCount, portfolioReady ? -1 : 0);
+      }
+
       function renderBacktestSelectionSummary() {
         const symbols = activePortfolioSymbols();
         backtestSelectionSummary.textContent = `当前组合：${activePortfolioName()} · ${symbols.length} stocks`;
+        updateWorkflowSteps();
       }
 
       function yearsAgoDate(years) {
@@ -1510,8 +1789,9 @@
           start_date: yearsAgoDate(years),
           end_date: todayDate(),
           initial_cash: Number(initialCashInput.value || 10000),
-          rebalance_frequency: "monthly",
-          benchmark_symbol: "SPY",
+          rebalance_frequency: rebalanceFrequencySelect.value,
+          benchmark_symbol: benchmarkSymbolInput.value.trim().toUpperCase() || "SPY",
+          signal_mode: signalModeSelect.value,
           allocation: {
             method: workflowStrategy.value,
             max_position_weight: percentInputToRatio(maxPositionInput),
@@ -1524,7 +1804,7 @@
           },
           exit_rules: {
             max_technical_score: 40,
-            stop_loss_percent: 0.08,
+            stop_loss_percent: percentInputToRatio(stopLossPercentInput),
             require_ma_cross: null,
           },
           risk: {
@@ -1545,6 +1825,167 @@
         return annualized >= target
           ? `达到年化收益目标 ${target.toFixed(0)}%。`
           : `未达到年化收益目标 ${target.toFixed(0)}%，需要继续调低风险或调整股票池。`;
+      }
+
+      function validateBacktestForm() {
+        const fields = [
+          [targetReturnInput, "收益目标"],
+          [maxDrawdownInput, "最大回撤"],
+          [maxPositionInput, "单票仓位"],
+          [minCashInput, "现金比例"],
+          [initialCashInput, "初始资金"],
+          [stopLossPercentInput, "止损 %"],
+        ];
+        const errors = [];
+        fields.forEach(([input, label]) => {
+          input.classList.remove("field-invalid");
+          const value = Number(input.value);
+          const min = input.min === "" ? null : Number(input.min);
+          const max = input.max === "" ? null : Number(input.max);
+          if (Number.isNaN(value) || (min !== null && value < min) || (max !== null && value > max)) {
+            input.classList.add("field-invalid");
+            errors.push(`${label} 需在 ${min ?? "--"} 到 ${max ?? "--"} 之间`);
+          }
+        });
+        if (!benchmarkSymbolInput.value.trim()) {
+          benchmarkSymbolInput.classList.add("field-invalid");
+          errors.push("基准代码不能为空");
+        } else {
+          benchmarkSymbolInput.classList.remove("field-invalid");
+        }
+        return errors;
+      }
+
+      function renderFieldErrors(errors) {
+        if (!errors.length) {
+          fieldErrorsEl.hidden = true;
+          fieldErrorsEl.innerHTML = "";
+          return;
+        }
+        fieldErrorsEl.hidden = false;
+        fieldErrorsEl.innerHTML = `<ul>${errors.map((message) => `<li>${escapeHtml(message)}</li>`).join("")}</ul>`;
+      }
+
+      function setBacktestLoading(isLoading) {
+        runBacktestButton.disabled = isLoading;
+        runBacktestSpinner.hidden = !isLoading;
+        runBacktestButtonLabel.textContent = isLoading ? "Running..." : "Run Backtest";
+      }
+
+      function friendlyBacktestError(error) {
+        const message = error?.message || "";
+        if (/Failed to fetch|NetworkError|network/i.test(message)) {
+          return `网络连接失败，请检查本地服务是否在运行。（${message}）`;
+        }
+        if (/422|400/.test(message)) {
+          return `请求参数有误，请检查约束和高级设置后重试。（${message}）`;
+        }
+        if (/500|502|503/.test(message)) {
+          return `服务端处理回测时出错，可能是外部数据源暂时不可用，请稍后重试。（${message}）`;
+        }
+        return `回测失败：${message}`;
+      }
+
+      function drawEquityCurve(equityCurve, canvasEl) {
+        const points = (equityCurve || []).filter((p) => p && typeof p.portfolio_value === "number");
+        const ratio = window.devicePixelRatio || 1;
+        const rect = canvasEl.getBoundingClientRect();
+        canvasEl.width = Math.max(1, Math.floor(rect.width * ratio));
+        canvasEl.height = Math.max(1, Math.floor(rect.height * ratio));
+        const context = canvasEl.getContext("2d");
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        const w = rect.width;
+        const h = rect.height;
+        context.clearRect(0, 0, w, h);
+        if (!points.length) return;
+
+        const pad = { top: 14, right: 14, bottom: 26, left: 60 };
+        const plotWidth = w - pad.left - pad.right;
+        const plotHeight = h - pad.top - pad.bottom;
+        const hasBenchmark = points.some((p) => typeof p.benchmark_value === "number");
+        const benchmarkValues = points.map((p) => p.benchmark_value).filter((v) => typeof v === "number");
+        const allValues = points.map((p) => p.portfolio_value).concat(benchmarkValues);
+        const min = Math.min(...allValues);
+        const max = Math.max(...allValues);
+        const span = max - min || 1;
+        const x = (index) => pad.left + (plotWidth * index) / Math.max(points.length - 1, 1);
+        const y = (value) => pad.top + plotHeight - ((value - min) / span) * plotHeight;
+
+        context.strokeStyle = "#e4eaf2";
+        context.lineWidth = 1;
+        context.beginPath();
+        for (let i = 0; i <= 4; i++) {
+          const gridY = pad.top + (plotHeight / 4) * i;
+          context.moveTo(pad.left, gridY);
+          context.lineTo(w - pad.right, gridY);
+        }
+        context.stroke();
+
+        context.fillStyle = "#607086";
+        context.font = "11px system-ui";
+        for (let i = 0; i <= 4; i++) {
+          const value = max - (span / 4) * i;
+          context.fillText(formatMoney(value), 2, pad.top + (plotHeight / 4) * i + 4);
+        }
+
+        const drawLine = (values, color) => {
+          context.strokeStyle = color;
+          context.lineWidth = 2;
+          context.beginPath();
+          let started = false;
+          values.forEach((value, index) => {
+            if (typeof value !== "number") return;
+            const px = x(index);
+            const py = y(value);
+            if (!started) {
+              context.moveTo(px, py);
+              started = true;
+            } else {
+              context.lineTo(px, py);
+            }
+          });
+          context.stroke();
+        };
+
+        drawLine(points.map((p) => p.portfolio_value), "#0f766e");
+        if (hasBenchmark) drawLine(points.map((p) => p.benchmark_value), "#9aa3b2");
+
+        const legendY = h - 10;
+        context.fillStyle = "#0f766e";
+        context.beginPath();
+        drawRoundedRect(context, pad.left, legendY - 8, 10, 10, 2);
+        context.fill();
+        context.fillStyle = "#34404a";
+        context.font = "11px system-ui";
+        context.fillText("组合净值", pad.left + 14, legendY);
+        if (hasBenchmark) {
+          context.fillStyle = "#9aa3b2";
+          context.beginPath();
+          drawRoundedRect(context, pad.left + 78, legendY - 8, 10, 10, 2);
+          context.fill();
+          context.fillStyle = "#34404a";
+          context.fillText("基准净值", pad.left + 92, legendY);
+        }
+      }
+
+      function renderTradesTable(trades) {
+        const rows = trades || [];
+        if (!rows.length) {
+          tradesTableWrap.hidden = true;
+          tradesTableBody.innerHTML = "";
+          return;
+        }
+        tradesTableWrap.hidden = false;
+        tradesTableBody.innerHTML = rows.map((trade) => `
+          <tr>
+            <td>${escapeHtml(trade.date)}</td>
+            <td>${escapeHtml(trade.symbol)}</td>
+            <td>${escapeHtml(trade.action)}</td>
+            <td>${escapeHtml(fmt(trade.price))}</td>
+            <td>${escapeHtml(fmt(trade.shares))}</td>
+            <td>${escapeHtml(trade.reason)}</td>
+          </tr>
+        `).join("");
       }
 
       function renderBacktestResult(result) {
@@ -1577,7 +2018,11 @@
             ${risks.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
           </ul>
         `;
+        equityChartCard.hidden = false;
+        drawEquityCurve(result.equity_curve, equityChartCanvas);
+        renderTradesTable(result.trades);
         portfolioRecommendation.textContent = `${result.strategy_name}：基于历史回测，建议继续人工复核 ${result.symbols.join(", ")} 的仓位、行业集中度和回撤承受能力。${result.risk_disclaimer}`;
+        updateWorkflowSteps("done");
       }
 
       async function runPortfolioBacktest() {
@@ -1586,15 +2031,23 @@
           backtestResults.innerHTML = `<div class="workflow-note">请先在当前组合中至少加入 2 只股票，再运行回测。</div>`;
           return;
         }
-        runBacktestButton.disabled = true;
+        const errors = validateBacktestForm();
+        renderFieldErrors(errors);
+        if (errors.length) return;
+
+        setBacktestLoading(true);
+        updateWorkflowSteps("running");
+        equityChartCard.hidden = true;
+        tradesTableWrap.hidden = true;
         backtestResults.innerHTML = `<div class="workflow-note">正在运行回测：Universe → Strategy → Constraints → Backtest → AI Analysis...</div>`;
         try {
           const result = await postJson("/backtests/run", buildBacktestPayload());
           renderBacktestResult(result);
         } catch (error) {
-          backtestResults.innerHTML = `<div class="workflow-note">回测失败：${escapeHtml(error.message)}</div>`;
+          backtestResults.innerHTML = `<div class="workflow-note">${escapeHtml(friendlyBacktestError(error))}</div>`;
+          updateWorkflowSteps("error");
         } finally {
-          runBacktestButton.disabled = false;
+          setBacktestLoading(false);
         }
       }
 
@@ -1651,6 +2104,7 @@
 
       async function selectSymbol(symbol) {
         state.symbol = symbol.toUpperCase();
+        state.chartHoverIndex = null;
         document.getElementById("quote-symbol").textContent = state.symbol;
         renderStockList();
         await loadMarket();
@@ -1677,7 +2131,6 @@
             request(`/stocks/${state.symbol}/news?years=3&limit=60`),
           ]);
           state.lastTrend = trend;
-          state.chartHoverIndex = null;
           renderQuote(quote);
           drawChart(trend.points || []);
           renderMetrics(trend);
@@ -1909,6 +2362,7 @@
 
       function renderNews(news) {
         const list = document.getElementById("news-list");
+        const scrollTop = list.scrollTop;
         list.innerHTML = "";
         (news.items || []).forEach((item) => {
           const card = document.createElement("div");
@@ -1923,6 +2377,7 @@
           list.appendChild(card);
         });
         document.getElementById("news-coverage-note").textContent = news.coverage_note;
+        list.scrollTop = scrollTop;
       }
 
       function resizeCanvas() {
@@ -2185,14 +2640,22 @@
       scanUniverseButton.addEventListener("click", () => loadMostActiveUniverse(100));
       addPortfolioButton.addEventListener("click", addCurrentSymbolToPortfolio);
       portfolioStrategy.addEventListener("change", renderBacktestSelectionSummary);
+      workflowStrategy.addEventListener("change", () => {
+        state.uxStrategyTouched = true;
+        updateWorkflowSteps();
+      });
+      [targetReturnInput, maxDrawdownInput, maxPositionInput, minCashInput, backtestYearsInput, initialCashInput].forEach((input) => {
+        input.addEventListener("change", () => {
+          state.uxConstraintsTouched = true;
+          updateWorkflowSteps();
+        });
+      });
       runBacktestButton.addEventListener("click", runPortfolioBacktest);
       rangeInput.addEventListener("change", loadMarket);
       intervalInput.addEventListener("change", loadMarket);
       window.addEventListener("resize", () => state.lastTrend && drawChart(state.lastTrend.points || []));
       canvas.addEventListener("pointermove", updateChartHover);
       canvas.addEventListener("pointerdown", updateChartHover);
-      canvas.addEventListener("mousemove", updateChartHover);
-      document.addEventListener("mousemove", (event) => updateChartHoverFromClientPoint(event.clientX, event.clientY));
       document.addEventListener("pointermove", (event) => updateChartHoverFromClientPoint(event.clientX, event.clientY));
       canvas.addEventListener("pointerleave", () => {
         state.chartHoverIndex = null;
@@ -2203,13 +2666,12 @@
         updateChartHover(event);
       }, { passive: false });
 
-      document.getElementById("action-report").addEventListener("click", () => alert("研究报告功能将在下一轮接入 Model Layer。"));
+      document.getElementById("action-report").addEventListener("click", generateResearchReport);
       document.getElementById("action-score").addEventListener("click", loadMarket);
       document.getElementById("action-watch").addEventListener("click", addCurrentSymbolToPortfolio);
       document.getElementById("action-backtest").addEventListener("click", () => alert("模拟回测将在 backtesting 模块接入。"));
 
-      renderPortfolioList();
-      renderBacktestSelectionSummary();
+      loadPortfolios();
       loadMostActiveUniverse(100).then(loadMarket);
       window.setInterval(loadMarket, 60000);
     </script>

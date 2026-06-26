@@ -4,9 +4,13 @@
 
 OpenStock AI 是一个 AI Investment Research Platform。
 
+长期目标是演进为 AI Portfolio Operating System，由 Workflow Engine 编排 Universe、Portfolio、Factor、Strategy、Constraint、Backtesting、Risk、AI Research、Recommendation、Report 和 Rebalance。
+
 系统不是股票交易软件、行情软件或券商终端，而是面向美股研究、投资组合管理、策略回测、风险分析和 AI 自动研究报告的智能投资研究平台。
 
 系统面向美股市场，通过行情、财报、新闻、宏观数据、评分模型、策略引擎、回测引擎和 AI Agent，帮助用户从研究单只股票升级到研究整个 Portfolio，并生成可追溯的研究结论。
+
+OpenStock AI 的第一阶段重点，是逐步成为 Cullen 的个人股票研究生产力工具，为每日股票筛选、单股技术支持、Portfolio 跟踪、策略回测、AI 解释、研究报告归档和次日复盘提供稳定工作台。
 
 本系统仅用于投资研究辅助，不构成任何投资建议。
 
@@ -14,6 +18,8 @@ OpenStock AI 是一个 AI Investment Research Platform。
 
 系统需要提供：
 
+* Personal Productivity Workflow：每日股票池扫描、候选股排序、Portfolio 跟踪、策略回测、AI 解释和研究报告归档
+* Workflow Engine：统一编排 Universe、Portfolio、Strategy、Backtesting、Risk、AI Agent、Report 和 Rebalance，并记录节点状态、trace_id、输入输出摘要和耗时
 * Stock Screener：股票池、热门股票、主题股票、自定义股票池
 * Stock Research：单股行情、K 线、财务、财报、新闻、技术指标、AI 评分
 * Portfolio：多个组合创建、编辑、删除、导入、导出、对比
@@ -27,6 +33,7 @@ OpenStock AI 是一个 AI Investment Research Platform。
 
 ## 3. 目标用户
 
+* Cullen：把 OpenStock AI 作为个人美股研究生产力工具，完成每日筛选、研究、回测、报告和复盘
 * 个人投资者：快速筛选和理解美股标的及组合风险
 * 股票研究者：整理行情、财报、新闻和策略结果，形成研究结论
 * 组合研究者：建立 Portfolio、配置策略、运行回测和风险分析
@@ -34,6 +41,21 @@ OpenStock AI 是一个 AI Investment Research Platform。
 * 开发者：扩展数据源、评分模型、Agent、策略、优化器和回测模块
 
 ## 4. 核心场景
+
+### 4.0 个人每日研究闭环
+
+```text
+每日股票池扫描
+  -> 候选股排序
+  -> 单股深度研究
+  -> Portfolio 跟踪
+  -> 策略回测
+  -> AI 解释
+  -> 研究报告归档
+  -> 次日复盘
+```
+
+该场景是第一阶段最高优先级，详细标准见 `docs/product/PERSONAL_PRODUCTIVITY_GOAL.md`。
 
 ### 4.1 股票筛选
 
@@ -236,6 +258,7 @@ AI Report 必须支持：
 * 股票池
 * Portfolio
 * Strategy Workflow
+* Portfolio Research Workflow
 * Backtesting
 * AI Summary
 * AI Report
@@ -246,6 +269,21 @@ AI Report 必须支持：
 * 高频交易
 * 期权策略
 * 多资产配置
+
+当前需求与实际开发差距见：
+
+* `docs/product/PROJECT_PLAN_PROGRESS.md`
+* `docs/product/IMPLEMENTATION_GAP_ANALYSIS.md`
+
+下一阶段优先收口：
+
+```text
+1. 前端接入 Portfolio Research Workflow
+2. Portfolio 权重管理
+3. Risk Engine v0.1
+4. Portfolio Optimizer v0.1
+5. AI Report 归档
+```
 
 ## 9. 成功标准
 
@@ -275,4 +313,3 @@ AI 指标：
 * 回测耗时
 * Agent 执行成功率
 * 模型调用成功率
-

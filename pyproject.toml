@@ -17,6 +17,11 @@ dependencies = [
   "pydantic-settings>=2.2",
 ]
 
+[project.optional-dependencies]
+tiger = [
+  "tigeropen",
+]
+
 [tool.setuptools.packages.find]
 include = ["apps*", "packages*"]
 

@@ -17,6 +17,8 @@ OpenStock AI 的目标不是开发一个普通的股票软件，而是打造一�
 
 平台将帮助用户从研究单只股票，升级到研究整个投资组合（Portfolio），最终实现 AI 自动辅助投资分析。
 
+OpenStock AI 的第一阶段产品目标，是先逐步进化成 Cullen 的个人股票研究生产力工具，为每日美股筛选、单股研究、Portfolio 跟踪、策略回测、AI 解释和研究报告归档提供技术支持；在个人研究流程稳定之后，再逐步开放为通用 AI 投资研究平台。
+
 本系统仅用于投资研究辅助，不构成任何投资建议。
 
 ## 2. 产品定位（Product Position）
@@ -31,6 +33,12 @@ OpenStock AI 不是：
 
 > AI Investment Research Platform
 
+长期演进目标：
+
+> AI Portfolio Operating System
+
+平台将通过 Workflow Engine 编排 Universe、Portfolio、Factor、Strategy、Constraint、Backtesting、Risk、AI Research、Recommendation、Report 和 Rebalance，使 OpenStock AI 从单点股票分析工具逐步演进成持续可用的投资组合研究生产力系统。
+
 核心能力包括：
 
 * 股票研究
@@ -39,6 +47,27 @@ OpenStock AI 不是：
 * 策略回测
 * 风险分析
 * AI 自动研究报告
+
+## 2.1 个人生产力目标（Personal Productivity Goal）
+
+OpenStock AI 首先服务 Cullen 的日常股票研究流程。
+
+核心工作流：
+
+```text
+每日股票池扫描
+  -> 候选股排序
+  -> 单股深度研究
+  -> Portfolio 跟踪
+  -> 策略回测
+  -> AI 解释
+  -> 研究报告归档
+  -> 次日复盘
+```
+
+该目标的详细标准见：
+
+* `docs/product/PERSONAL_PRODUCTIVITY_GOAL.md`
 
 ## 3. 产品目标（Product Goals）
 
@@ -300,7 +329,7 @@ Model Layer
   ↓
 Algorithm Layer
   ↓
-Workflow Layer
+Workflow Engine
   ↓
 AI Agent Layer
   ↓
@@ -367,6 +396,8 @@ Application Layer
 * 股票池
 * Portfolio
 * Strategy Workflow
+* Workflow Engine 状态机与节点观测
+* Portfolio Research Workflow
 * Backtesting
 * AI Summary
 * AI Report
@@ -378,6 +409,11 @@ Application Layer
 * 期权策略
 * 多资产配置
 
+当前需求与实际开发差距见：
+
+* `docs/product/PROJECT_PLAN_PROGRESS.md`
+* `docs/product/IMPLEMENTATION_GAP_ANALYSIS.md`
+
 ## 11. 后续 Roadmap
 
 ### Phase 1
@@ -388,9 +424,12 @@ Application Layer
 
 增加：
 
+* 前端完整接入 Portfolio Research Workflow
+* Portfolio 权重管理
 * Portfolio Optimizer
 * Risk Engine
 * Advanced Strategy
+* AI Report 归档
 
 ### Phase 3
 
@@ -451,4 +490,3 @@ AI 指标：
 * 回测耗时
 * Agent 执行成功率
 * 模型调用成功率
-

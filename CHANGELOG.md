@@ -48,3 +48,15 @@
 * 新增 `PriceHistoryCache`/`BacktestRun` 表（`packages/db/models.py`），历史价格 24 小时缓存，回测配置与结果落库
 * 新增 `POST /backtests/run`（项目第一个 POST 接口），前端组合策略工作流已接入并端到端联调
 * Portfolio Strategy Engine 升级到 `backtesting-v0.2`：`packages/data_sources/sec_financials.py` 新增 `parse_companyfacts_series`，按每条 XBRL 财务事实最早的 `filed` 日期重建历史财报快照；新增 `StrategyConfig.signal_mode="ai_score"`，复用 algorithm-v0.3 的基本面/成长/估值/技术/波动风险五因子（新闻情绪因子因无历史新闻归档数据源被排除，剩余权重按比例重新归一化），回测仅在调仓日已披露的财报范围内打分，避免未来数据穿越；新增 `FinancialFactsCache` 表缓存历史财报系列；提取 `packages/algorithm_layer/financial_factors.py`（基本面/成长/估值评分）和 `technical_indicators.volatility_risk_score`，供实时推荐和回测共用，已用核心回归测试验证「财报数据在披露日之前不可见」
+* Portfolio（关注组合）持久化：新增 `portfolios` 表（`packages/db/models.py`）和 `packages/db/portfolios.py`（默认组合自动播种、增删股票），新增 `GET /portfolios`、`POST /portfolios/{name}/symbols`、`DELETE /portfolios/{name}/symbols/{symbol}`，前端「组合策略选择」从纯内存状态改为调用这三个接口，修复了刷新页面后组合清单丢失的问题，已用 Playwright 端到端验证（增删后刷新页面数据仍存在）
+* 新增 Report Agent（`packages/ai_agents/report_agent.py`），接入 `GET /stocks/{symbol}/report`：复用 `/stocks/{symbol}/recommendation` 的五因子算法评分组装逻辑和 News/Policy Layer 近期新闻，走 Agent 标准流水线（Policy Guard → Data Context Builder → Workflow Executor → Model Layer → Output Validator → Audit Logger），由模型把评分和新闻综合成一段研究结论；工作台右侧「生成研究报告」按钮已接入真实接口（此前为 `alert` 占位），已用真实数据（AAPL）端到端联调
+* 组合策略工作流前端体验改造（`apps/web/index.html`，无后端改动）：新增「高级设置」折叠区，把此前硬编码且界面不可见的 `signal_mode`（新增 `ai_score` 选项入口）、`rebalance_frequency`、`benchmark_symbol`、`exit_rules.stop_loss_percent` 改为可配置字段；回测结果新增净值曲线图（组合 vs 基准，原生 Canvas 绘制）和完整交易明细表，此前 `equity_curve`/`trades` 已在响应中但未被渲染；新增提交前字段校验（按既有 min/max 校验并高亮出错字段）、运行中 spinner 反馈、失败时的中文友好提示；6 步流程标题改为根据组合/表单/运行状态动态显示 pending/active/done，不再是纯静态文案；已用 Playwright 端到端验证（校验拦截、`ai_score` 模式请求体、图表与交易表渲染、步骤状态切换）
+* 新增 `docs/product/IMPLEMENTATION_GAP_ANALYSIS.md`，同步需求与实际开发差距：明确当前已完成架构骨架、核心 API、初版页面、初版算法、初版回测和初版 workflow；待补齐稳定数据体系、完整风险引擎、组合优化器、多 Agent 自动研究、正式报告系统和前端完整 workflow 化；README、PRD、需求分析和 MVP 路线图已同步下一阶段收口方向
+* 新增 `docs/product/PROJECT_PLAN_PROGRESS.md`，把项目计划、实际进度、进度差异、下一步和同步触发条件放在同一张表内，作为后续同步进度、同步文档、同步开发计划的主入口
+
+### Fixed
+
+* 组合策略回测（`POST /backtests/run`）使用「市值加权」（`market_cap_weighted`）分配方式时运行缓慢：`shares_outstanding_fetcher` 此前在每个调仓日对每只候选股都重新发起一次未缓存的 SEC EDGAR companyfacts 请求（最长 20 秒超时），多调仓日 × 多股票的回测会触发数百次重复网络请求；现改为 `PortfolioBacktestEngine.run()` 每只股票每次回测只预取一次（`packages/backtesting/engine.py`），且 `apps/api/main.py::_fetch_shares_outstanding` 改为复用已有 24 小时缓存的年度财报序列（`get_or_fetch_annual_series`）取股数，不再发起额外请求；新增回归测试验证调用次数不随调仓日数量增长
+* `PortfolioBacktestEngine.run()` 的历史价格 / 财报 / 股数三处按股票预取改为线程池并发（`MAX_CONCURRENT_REQUESTS = 8`，与 `StockScreeningWorkflow` 一致），冷缓存多股票回测不再逐个串行等待网络请求
+* `SECFilingClient.get_cik()`（`packages/data_sources/sec_filings.py`）此前每遇到一个未缓存过的股票代码都会重新下载一次完整的 SEC ticker→CIK 映射表（几千条记录的大文件），现改为整张表只下载一次解析进内存缓存（加锁防止并发请求重复下载），后续任意股票代码的解析不再产生网络请求
+* 修复 `_fetch_companyfacts_payload` / `_fetch_json`（`sec_financials.py` / `sec_filings.py`）未捕获 `http.client.IncompleteRead` 导致的请求崩溃：SEC EDGAR 在响应大文件时偶发连接中断，此前会让 `/stocks/{symbol}/recommendation`、`/backtests/run` 等接口直接抛出未处理异常返回 500，现已归类为「数据缺失」按既有的 best-effort 降级路径处理

@@ -7,7 +7,7 @@ Application Layer
         |
 Agent Layer
         |
-Workflow Layer
+Workflow Engine
         |
 Universe Layer
         |
@@ -66,11 +66,52 @@ Data Layer
 * yfinance
 * SEC EDGAR
 * FRED
+* Tiger OpenAPI（可选，只读，需用户自行配置 OpenAPI 凭证，支持 quote 与最多近 3 年 K 线参考数据）
 * Alpha Vantage
 * Finnhub
 * Polygon
 
-## 5. Universe Layer
+Tiger OpenAPI 不得通过抓取或自动操作老虎 App 接入；只能通过官方 OpenAPI 和 `packages/data_sources/tiger_openapi.py` 读取授权数据。第一阶段的历史行情边界是 K 线/OHLCV/成交额参考数据，不作为逐笔 tick 全量数据源。
+
+## 5. Workflow Engine
+
+Workflow Engine 位于 `packages/workflow_layer`，是 OpenStock AI 的业务编排层。
+
+Workflow Engine 负责：
+
+* Universe Builder
+* Portfolio Builder
+* Factor Engine
+* Strategy Engine
+* Constraint Engine
+* Portfolio Optimizer
+* Backtesting Engine
+* Risk Engine
+* AI Research Agent 调度
+* Recommendation Engine
+* Report Engine
+* Rebalance Engine
+* 节点状态、trace_id、输入输出摘要、耗时和失败记录
+
+Workflow Engine 不负责：
+
+* 具体因子计算
+* 直接模型供应商 SDK 调用
+* 直接券商下单
+* 硬编码外部 API Key
+
+统一状态机：
+
+```text
+Created -> Configured -> Waiting -> Running -> Completed
+  -> AI Reviewing -> Recommendation Ready -> Archived
+```
+
+详细标准见：
+
+* `docs/standards/WORKFLOW_ENGINE_STANDARD.md`
+
+## 6. Universe Layer
 
 候选池层位于 `packages/universe_layer`，用于每日扫描美股交易最活跃的 100 只股票。
 
@@ -86,7 +127,7 @@ Universe Layer 负责：
 
 * `docs/standards/UNIVERSE_STANDARD.md`
 
-## 6. Algorithm Layer
+## 7. Algorithm Layer
 
 算法层位于 `packages/algorithm_layer`，独立于 API、前端、Agent 和 Model Layer。
 
@@ -103,7 +144,7 @@ Algorithm Layer 负责：
 
 * `docs/standards/ALGORITHM_STANDARD.md`
 
-## 7. Model Layer
+## 8. Model Layer
 
 模型层位于 `packages/model_layer`，是独立于 Agent 的核心层。
 
@@ -123,7 +164,7 @@ Agent、Workflow、API 和 Data Source 不得直接调用具体模型 SDK。
 
 * `docs/standards/MODEL_STANDARD.md`
 
-## 8. News / Policy Layer
+## 9. News / Policy Layer
 
 新闻政策层位于 `packages/news_layer`，负责公司新闻、SEC 披露、政策和治理事件。
 
@@ -138,7 +179,7 @@ Agent、Workflow、API 和 Data Source 不得直接调用具体模型 SDK。
 
 * `docs/standards/NEWS_POLICY_STANDARD.md`
 
-## 9. AI Agent 层
+## 10. AI Agent 层
 
 Agent 位于 `packages/ai_agents`，至少包括：
 
@@ -150,7 +191,7 @@ Agent 位于 `packages/ai_agents`，至少包括：
 
 Agent 只负责任务定义和业务推理目标，不负责模型供应商适配。
 
-## 10. 审计日志
+## 11. 审计日志
 
 所有 AI 输出必须写入 `audit_logs`。
 

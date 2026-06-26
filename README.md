@@ -2,7 +2,11 @@
 
 OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 AI 选股、股票研究、投资组合管理、策略回测、风险分析和 AI 自动研究报告。
 
+长期目标是演进为 **AI Portfolio Operating System**：由 Workflow Engine 编排 Universe、Portfolio、Factor、Strategy、Constraint、Backtesting、Risk、AI Research、Recommendation、Report 和 Rebalance，让平台逐步成为 Cullen 的股票研究生产力工具。
+
 项目目标不是直接替用户做投资决策，而是为美股研究提供可追溯、可审计、可扩展的 AI 辅助分析系统。
+
+第一阶段，OpenStock AI 要优先成为 Cullen 的个人股票研究生产力工具：每日扫描候选股、跟踪 Portfolio、运行策略回测、生成 AI 解释和研究报告，并沉淀可复盘的历史记录。
 
 > 本系统仅用于投资研究辅助，不构成任何投资建议。
 
@@ -13,9 +17,9 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * **M0 项目重建**：完成。项目标准、需求分析、架构设计、GitHub 协作配置、基础测试已建立。
 * **M1 后端基础**：完成。FastAPI、统一配置管理、数据库连接（默认本地 SQLite，可切换 Postgres）、`audit_logs` 表、Docker Compose、数据库初始化脚本均可用。
 * **M2 数据源**：完成。yfinance 风格历史日线、SEC EDGAR 财报申报、FRED 宏观数据（需自备免费 Key）、Yahoo 实时走势均已接入并有测试覆盖。
-* **M3 AI 分析**：部分完成。Model Layer 统一接口、Output Validator、Agent 基类和 SEC Filing Agent 已落地并端到端联调；News Agent / Report Agent 尚未开发。
-* **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.2.2`，已接入 SEC 真实财务数据和真实技术指标：基本面（净利润率+ROC）/成长性/估值（P/E+EV/EBIT）/技术面（RSI/均线金死叉/动量）/风险五因子），并通过新增的 Workflow Layer（`stocks/screening`）实现批量选股排序；基于大模型的 AI Scoring Agent、研究报告生成尚未开发（`packages/scoring` 仍为空）。
-* **M5 前端展示**：部分完成。美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分、组合策略工作流）已可用，独立的股票深度分析页和研究报告页尚未开发。
+* **M3 AI 分析**：部分完成。Model Layer 统一接口、Output Validator、Agent 基类、SEC Filing Agent 和 Report Agent 已落地并端到端联调；News Agent（独立的 LLM 情绪分析）尚未开发。
+* **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.2.2`，已接入 SEC 真实财务数据和真实技术指标：基本面（净利润率+ROC）/成长性/估值（P/E+EV/EBIT）/技术面（RSI/均线金死叉/动量）/风险五因子），并通过新增的 Workflow Layer（`stocks/screening`）实现批量选股排序；研究报告生成已由 Report Agent 落地，基于大模型的 AI Scoring Agent 尚未开发（`packages/scoring` 仍为空）。
+* **M5 前端展示**：部分完成。美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分、组合策略工作流、研究报告生成）已可用，独立的股票深度分析页和独立的研究报告页尚未开发。
 * **M6 Portfolio Strategy / Backtesting**：部分完成。`packages/backtesting` 已提供价格技术面回测（`signal_mode="technical"`）和按披露日期重建历史财报快照的 AI 评分回测（`signal_mode="ai_score"`，`backtesting-v0.2`，新闻情绪因子因无历史新闻归档暂不支持）、仓位分配、风险约束和 `/backtests/run` API；券商接口 `packages/brokers` 尚未开发。
 
 额外完成的扩展能力（超出原始路线图，但已落地并有测试）：
@@ -24,6 +28,31 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * News / Policy Layer：最近新闻、SEC 披露、政策和内部任免线索（`packages/news_layer`）
 * Algorithm Layer：独立于 Model Layer 的可解释推荐算法（`packages/algorithm_layer`）
 * Portfolio Strategy：Universe → Strategy Library → Constraints → Backtest → AI Analysis → Portfolio Recommendation（`packages/backtesting`）
+* Workflow Engine：通用状态机和 `PortfolioResearchWorkflow v0.1`，接入 `POST /workflows/portfolio-research`
+
+## 当前差距
+
+详细差距见 [需求与实际开发差距分析](docs/product/IMPLEMENTATION_GAP_ANALYSIS.md)。
+
+项目计划、实际进度、差异和下一步统一维护在 [项目计划与进度总表](docs/product/PROJECT_PLAN_PROGRESS.md)。
+
+当前真实状态：
+
+```text
+已完成：架构骨架 + 核心 API + 初版页面 + 初版算法 + 初版回测 + 初版 workflow
+
+未完成：稳定数据体系 + 完整风险引擎 + 组合优化器 + 多 Agent 自动研究 + 正式报告系统 + 前端完整 workflow 化
+```
+
+下一阶段优先收口：
+
+```text
+1. 前端接入 Portfolio Research Workflow
+2. Portfolio 权重管理
+3. Risk Engine v0.1
+4. Portfolio Optimizer v0.1
+5. AI Report 归档
+```
 
 ## 文档入口
 
@@ -32,8 +61,13 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * [News / Policy Layer 标准](docs/standards/NEWS_POLICY_STANDARD.md)
 * [Algorithm Layer 标准](docs/standards/ALGORITHM_STANDARD.md)
 * [Model Layer 标准](docs/standards/MODEL_STANDARD.md)
+* [Workflow Engine 标准](docs/standards/WORKFLOW_ENGINE_STANDARD.md)
 * [Portfolio Strategy 标准](docs/standards/PORTFOLIO_STRATEGY_STANDARD.md)
+* [Tiger OpenAPI 接入标准](docs/standards/TIGER_OPENAPI_STANDARD.md)
 * [产品需求文档 PRD v0.1](docs/product/PRD.md)
+* [个人股票研究生产力目标](docs/product/PERSONAL_PRODUCTIVITY_GOAL.md)
+* [项目计划与进度总表](docs/product/PROJECT_PLAN_PROGRESS.md)
+* [需求与实际开发差距分析](docs/product/IMPLEMENTATION_GAP_ANALYSIS.md)
 * [需求分析 v0.1](docs/product/requirements-analysis.md)
 * [系统设计框架](docs/architecture/system-design.md)
 * [AI 开发架构标准](docs/architecture/ai-development-architecture.md)
@@ -95,10 +129,16 @@ GET http://127.0.0.1:8000/stocks/AAPL/history?range=10y&interval=1d
 GET http://127.0.0.1:8000/stocks/AAPL/filings?forms=10-K,10-Q,8-K&limit=10
 GET http://127.0.0.1:8000/stocks/AAPL/sec-summary
 GET http://127.0.0.1:8000/macro/FEDFUNDS/observations?limit=10
+GET http://127.0.0.1:8000/integrations/tiger/status
+GET http://127.0.0.1:8000/stocks/AAPL/tiger/quote
+GET http://127.0.0.1:8000/stocks/AAPL/tiger/history?years=3&period=day
 POST http://127.0.0.1:8000/backtests/run
+POST http://127.0.0.1:8000/workflows/portfolio-research
 ```
 
 FRED 接口需要先在 `.env` 设置免费的 `FRED_API_KEY`（注册地址：https://fred.stlouisfed.org/docs/api/api_key.html），否则返回 503。
+
+Tiger OpenAPI 是可选只读数据源，需要先在 `.env` 设置 `TIGER_ID`、`TIGER_ACCOUNT`、`TIGER_LICENSE`、`TIGER_PRIVATE_KEY_PATH` 和 `TIGER_ENV`。当前接入边界支持单股 quote 和最多近 3 年 K 线参考数据，不读取或抓取老虎 App，不提供自动交易接口。
 
 ## 模型层基础
 
@@ -124,7 +164,15 @@ GET http://127.0.0.1:8000/stocks/AAPL/sec-summary
 
 `SECFilingAgent`（`packages/ai_agents/sec_filing_agent.py`）走完整流水线：Policy Guard → Data Context Builder（拉取 SEC EDGAR 申报）→ Workflow Executor → Model Layer（含 Output Validator）→ Audit Logger（写入 `audit_logs`）。已用真实 SEC 数据（AAPL）做过端到端联调。
 
-Agent 基类见 `packages/ai_agents/base.py`，后续 News Agent、Report Agent 复用同一流水线。
+第二个落地的 Agent：
+
+```text
+GET http://127.0.0.1:8000/stocks/AAPL/report
+```
+
+`ReportAgent`（`packages/ai_agents/report_agent.py`）走同一条流水线，Data Context Builder 复用 `/stocks/{symbol}/recommendation` 的五因子算法评分（`TrendRecommendationAlgorithm`）和近期新闻/政策信号（`NewsPolicyClient`），由模型把评分和新闻综合成一段研究结论。已用真实数据（AAPL）做过端到端联调，工作台右侧「生成研究报告」按钮已接入。
+
+Agent 基类见 `packages/ai_agents/base.py`，后续 News Agent 复用同一流水线。
 
 ## AI 选股 Workflow（M4）
 
@@ -133,6 +181,22 @@ GET http://127.0.0.1:8000/stocks/screening?limit=20
 ```
 
 `StockScreeningWorkflow`（`packages/workflow_layer/stock_screening.py`）把 Universe Layer 的候选池（Most Active Top 100）逐个用 Algorithm Layer v0.2.2 打分，并发请求（最多 8 个并发）后按总分排序返回。这是"自己选股"场景的核心入口：不指定单一股票，直接看候选池里排序靠前的标的。已用真实数据端到端联调（20 只股票全部评分成功，约 56 秒）。
+
+通用 Workflow Engine 骨架见 `packages/workflow_layer/engine.py`，标准见 `docs/standards/WORKFLOW_ENGINE_STANDARD.md`。它负责节点编排、状态机、trace_id、输入输出摘要、耗时和失败记录；不负责具体算法计算，也不直接调用模型供应商 SDK。
+
+`PortfolioResearchWorkflow`（`packages/workflow_layer/portfolio_research.py`）是第一个组合研究闭环 workflow：
+
+```text
+Universe Builder
+  -> Portfolio Builder
+  -> Strategy Selector
+  -> Constraint Config
+  -> Backtest Runner
+  -> AI Summary
+  -> Portfolio Recommendation
+```
+
+API 入口为 `POST /workflows/portfolio-research`。v0.1 的 AI Summary 是可审计的规则解释，后续可替换为 Research Agent / Report Agent 节点。
 
 每次调用都会把候选评分写入 `stock_scores` 表（`packages/db/stock_scores.py`），通过 `GET /stocks/{symbol}/score-history` 可以读出某只股票历次评分，方便对比"这只股票最近几次扫描分数是涨是跌"——这是把 AI 选股从一次性即时计算变成有历史记录的个人工具的关键一步。
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 import calendar
 from bisect import bisect_left, bisect_right
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 
@@ -24,6 +25,22 @@ from packages.backtesting.schemas import (
 from packages.data_sources.sec_financials import AnnualFinancials
 
 ALGORITHM_VERSION = "backtesting-v0.2"
+
+# Matches StockScreeningWorkflow's concurrency cap: each symbol's prefetch is
+# an independent, I/O-bound (network) lookup, but SEC EDGAR has shown
+# rate-limit sensitivity under heavier concurrent load, so we keep the same
+# conservative cap rather than raising it for this also-I/O-bound workload.
+MAX_CONCURRENT_REQUESTS = 8
+
+
+def _concurrent_fetch(fetcher: Callable[[str], object], symbols: list[str]) -> dict[str, object]:
+    unique_symbols = list(dict.fromkeys(symbols))
+    if not unique_symbols:
+        return {}
+    worker_count = min(MAX_CONCURRENT_REQUESTS, len(unique_symbols))
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        results = executor.map(fetcher, unique_symbols)
+        return dict(zip(unique_symbols, results))
 
 
 @dataclass
@@ -78,13 +95,21 @@ class PortfolioBacktestEngine:
         if config.signal_mode == "ai_score" and self.financials_fetcher is None:
             raise ValueError("signal_mode='ai_score' requires a financials_fetcher to be configured")
 
-        series_by_symbol = {
-            symbol: self._load_series(symbol)
-            for symbol in [*config.symbols, config.benchmark_symbol]
-        }
+        series_by_symbol = _concurrent_fetch(
+            self._load_series, [*config.symbols, config.benchmark_symbol]
+        )
         financials_by_symbol = (
-            {symbol: self.financials_fetcher(symbol) for symbol in config.symbols}
+            _concurrent_fetch(self.financials_fetcher, config.symbols)
             if config.signal_mode == "ai_score"
+            else {}
+        )
+        # Fetched once per symbol per run, not once per rebalance: share
+        # count is a slow-changing approximation anyway (see _market_cap),
+        # so refetching it at every rebalance only multiplies network calls
+        # without improving accuracy.
+        shares_outstanding_by_symbol = (
+            _concurrent_fetch(self.shares_outstanding_fetcher, config.symbols)
+            if config.allocation.method == "market_cap_weighted"
             else {}
         )
         benchmark_series = series_by_symbol[config.benchmark_symbol]
@@ -129,7 +154,9 @@ class PortfolioBacktestEngine:
 
             if current_date in rebalance_dates:
                 in_circuit_breaker = False
-                self._rebalance(config, series_by_symbol, financials_by_symbol, state, prices, current_date)
+                self._rebalance(
+                    config, series_by_symbol, financials_by_symbol, shares_outstanding_by_symbol, state, prices, current_date
+                )
                 portfolio_value = _mark_to_market(state, prices)
 
             benchmark_price = benchmark_series.price_on_or_before(current_date)
@@ -162,6 +189,7 @@ class PortfolioBacktestEngine:
         config: StrategyConfig,
         series_by_symbol: dict[str, _SymbolSeries],
         financials_by_symbol: dict[str, list[AnnualFinancials]],
+        shares_outstanding_by_symbol: dict[str, float | None],
         state: _RunState,
         prices: dict[str, float | None],
         current_date: str,
@@ -240,7 +268,8 @@ class PortfolioBacktestEngine:
         market_caps = None
         if config.allocation.method == "market_cap_weighted":
             market_caps = {
-                symbol: self._market_cap(symbol, prices.get(symbol)) for symbol in eligible_scores
+                symbol: self._market_cap(symbol, prices.get(symbol), shares_outstanding_by_symbol)
+                for symbol in eligible_scores
             }
 
         raw_weights = allocation.compute_target_weights(
@@ -282,8 +311,10 @@ class PortfolioBacktestEngine:
         ordered = sorted(raw, key=lambda item: item[0])
         return _SymbolSeries(dates=[d for d, _ in ordered], closes=[c for _, c in ordered])
 
-    def _market_cap(self, symbol: str, price: float | None) -> float | None:
-        shares = self.shares_outstanding_fetcher(symbol)
+    def _market_cap(
+        self, symbol: str, price: float | None, shares_outstanding_by_symbol: dict[str, float | None]
+    ) -> float | None:
+        shares = shares_outstanding_by_symbol.get(symbol)
         if shares is None or price is None:
             return None
         return shares * price

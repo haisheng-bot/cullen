@@ -20,8 +20,12 @@ GET /stocks/{symbol}/news
 GET /stocks/{symbol}/score
 GET /stocks/{symbol}/trend
 GET /macro/{series_id}/observations
+GET /integrations/tiger/status
+GET /stocks/{symbol}/tiger/quote
+GET /stocks/{symbol}/tiger/history
 POST /reports/generate
 POST /backtests/run
+POST /workflows/portfolio-research
 ```
 
 ## 2. 实时走势 API
@@ -43,17 +47,60 @@ GET /stocks/search?q=AAPL
 
 ```text
 GET /stocks/{symbol}/quote
+GET /stocks/{symbol}/tiger/quote
+GET /stocks/{symbol}/tiger/history?years=3&period=day
 ```
 
 用途：
 
 * 返回美股当前报价
 * 返回涨跌额和涨跌幅
+* 返回最多近 3 年历史 K 线参考数据
 * 支撑操作台顶部报价区
+* 可选通过 Tiger OpenAPI 读取用户授权后的官方行情数据
 
 数据来源：
 
 * Yahoo Finance chart API
+* Tiger Brokers OpenAPI（可选，只读，需用户自行配置 OpenAPI 凭证）
+
+### 2.2.1 Tiger OpenAPI 状态
+
+```text
+GET /integrations/tiger/status
+```
+
+用途：
+
+* 检查 Tiger OpenAPI 是否已配置
+* 检查官方 SDK 是否可用
+* 返回缺失配置字段名称
+* 明确 `trading_enabled=false`
+
+说明：
+
+OpenStock AI 不读取、不抓取、不逆向老虎 App。Tiger 数据只能通过官方 OpenAPI 和用户授权凭证接入。第一阶段只做只读研究数据，不提供自动下单。
+
+### 2.2.2 Tiger 近 3 年历史 K 线
+
+```text
+GET /stocks/{symbol}/tiger/history?years=3&period=day
+```
+
+用途：
+
+* 读取用户授权范围内的历史 K 线参考数据
+* 第一阶段支持 `day`、`week`、`month`
+* 第一阶段最多请求近 3 年数据
+* 返回 OHLC、成交量、成交额、数据来源、分析时间和风险提示
+* 作为算法层、回测层和研究报告的参考数据输入
+
+边界：
+
+* 不是逐笔 tick 全量数据
+* 不保证覆盖老虎 App 内所有展示字段
+* 不绕过官方 OpenAPI 权限和频率限制
+* 不用于自动交易
 
 ### 2.3 每日候选池
 
@@ -565,6 +612,47 @@ POST /backtests/run
 * `signal_mode="ai_score"` 不含新闻情绪因子（无历史新闻归档数据源），与 `/stocks/{symbol}/recommendation` 实时评分权重不完全相同。
 * 组合建议必须人工复核，不允许默认自动下单。
 * 本系统仅用于投资研究辅助，不构成任何投资建议。
+
+### 4.4 Portfolio Research Workflow
+
+```text
+POST /workflows/portfolio-research
+```
+
+用途：
+
+* 编排 Universe Builder、Portfolio Builder、Strategy Selector、Constraint Config、Backtest Runner、AI Summary 和 Portfolio Recommendation
+* 将“股票池 -> 组合 -> 策略 -> 约束 -> 回测 -> AI 解释 -> 组合建议”作为一个可观测 workflow 执行
+* 返回 workflow 状态、节点结果、trace_id、portfolio、strategy、constraints、backtest、ai_summary 和 portfolio_recommendation
+* 回测结果会写入 backtest run 存储路径，便于后续复盘
+
+请求体核心字段：
+
+```json
+{
+  "portfolio_name": "AI Workflow",
+  "universe_limit": 100,
+  "selected_symbols": ["AAPL", "MSFT", "NVDA"],
+  "backtest": {
+    "strategy_name": "AI Workflow Backtest",
+    "symbols": ["AAPL", "MSFT", "NVDA"],
+    "start_date": "2023-01-01",
+    "end_date": "2023-12-31",
+    "rebalance_frequency": "monthly",
+    "allocation": {
+      "method": "equal_weight",
+      "max_position_weight": 0.25,
+      "min_cash_weight": 0.10
+    }
+  }
+}
+```
+
+说明：
+
+* `selected_symbols` 会覆盖 `backtest.symbols`，用于页面中已经选好的组合
+* v0.1 的 `ai_summary` 是确定性的规则解释，不直接调用模型供应商 SDK
+* 本接口只生成研究辅助结论，不提供自动交易
 
 ## 5. 响应要求
 
