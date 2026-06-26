@@ -49,7 +49,7 @@
 | M15 | Tiger OpenAPI | 官方只读行情数据接入，不抓 App，不自动交易 | status、quote、history 接口骨架和标准已完成 | usable | 真实 SDK adapter 未完整接通 | 完成官方 SDK adapter 和凭证联调 | 修改 Tiger 接入时 |
 | M16 | Broker Layer | 未来可接券商 API，人工确认后交易 | `packages/brokers` 仍为空 | planned | 第一阶段不做交易 | 暂只保留接口边界，不开发自动交易 | 开始券商接口设计时 |
 | M17 | 数据可追溯 / 审计 | AI 输出写 audit_logs，结论有数据来源和时间 | Agent 基类和 ModelResponse 审计路径已建立 | partial | Workflow run 和普通算法输出审计还需增强 | 持久化 workflow run 和 report archive | 新增 AI/Workflow 输出时 |
-| M18 | Git / 发布管理 | develop 开发、main 稳定、功能拆分提交 | develop 当前有多项未提交改动，测试通过；本地未配置 GitHub remote，暂不能 push | partial | 需要拆分 commit、整理发布记录，并配置 GitHub remote | 先确认 GitHub 仓库地址，再按功能分批 stage/commit/push | 准备 PR 或发布时 |
+| M18 | Git / 发布管理 | develop 开发、main 稳定、功能拆分提交 | develop 已完成本地提交 `ea4418b`；origin 已配置为 `haisheng-bot/cullen`；GitHub push 受本机认证阻塞 | partial | 远端 main 是独立初始提交，develop 尚未推送；本机缺 HTTPS 凭证和 SSH 公钥 | 配置 GitHub 凭证后推送 `develop`，再从 develop 发起 PR 合并 main | 准备 PR 或发布时 |
 
 ## 5. 下一阶段执行顺序
 
@@ -77,7 +77,7 @@
 ```text
 日期：2026-06-27
 测试：196 tests OK
-Git 检查：develop 分支存在多项未提交改动；git remote -v 为空，暂不能直接同步到 GitHub。
+Git 检查：develop 已本地提交 ea4418b；origin 已配置为 https://github.com/haisheng-bot/cullen.git；HTTPS push 缺少 GitHub 凭证，SSH push 缺少 public key，暂不能完成远端推送。
 安全检查：未发现真实 API Key；git diff --check 通过。
 状态：新增项目计划与进度总表，并同步 GitHub 发布阻塞点，作为后续同步进度、文档和开发计划的主入口。
 ```
