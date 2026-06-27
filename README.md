@@ -20,7 +20,7 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * **M3 AI 分析**：部分完成。Model Layer 统一接口、Output Validator、Agent 基类、SEC Filing Agent 和 Report Agent 已落地并端到端联调；News Agent（独立的 LLM 情绪分析）尚未开发。
 * **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.2.2`，已接入 SEC 真实财务数据和真实技术指标：基本面（净利润率+ROC）/成长性/估值（P/E+EV/EBIT）/技术面（RSI/均线金死叉/动量）/风险五因子），并通过新增的 Workflow Layer（`stocks/screening`）实现批量选股排序；研究报告生成已由 Report Agent 落地，基于大模型的 AI Scoring Agent 尚未开发（`packages/scoring` 仍为空）。
 * **M5 前端展示**：部分完成。美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分、组合策略工作流、研究报告生成）已可用，独立的股票深度分析页和独立的研究报告页尚未开发。
-* **M6 Portfolio Strategy / Backtesting**：部分完成。`packages/backtesting` 已提供价格技术面回测（`signal_mode="technical"`）和按披露日期重建历史财报快照的 AI 评分回测（`signal_mode="ai_score"`，`backtesting-v0.2`，新闻情绪因子因无历史新闻归档暂不支持）、仓位分配、风险约束和 `/backtests/run` API；券商接口 `packages/brokers` 尚未开发。
+* **M6 Portfolio Strategy / Backtesting**：部分完成。`packages/backtesting` 已提供价格技术面回测（`signal_mode="technical"`）和按披露日期重建历史财报快照的 AI 评分回测（`signal_mode="ai_score"`，`backtesting-v0.2`，新闻情绪因子因无历史新闻归档暂不支持）、仓位分配、风险约束和 `/backtests/run` API；`packages/risk_engine` 已提供独立 Risk Engine v0.1；券商接口 `packages/brokers` 尚未开发。
 
 额外完成的扩展能力（超出原始路线图，但已落地并有测试）：
 
@@ -28,7 +28,11 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * News / Policy Layer：最近新闻、SEC 披露、政策和内部任免线索（`packages/news_layer`）
 * Algorithm Layer：独立于 Model Layer 的可解释推荐算法（`packages/algorithm_layer`）
 * Portfolio Strategy：Universe → Strategy Library → Constraints → Backtest → AI Analysis → Portfolio Recommendation（`packages/backtesting`）
-* Workflow Engine：通用状态机和 `PortfolioResearchWorkflow v0.1`，接入 `POST /workflows/portfolio-research`
+* Workflow Engine：通用状态机和 `PortfolioResearchWorkflow v0.1`，接入 `POST /workflows/portfolio-research`，并支持按 `trace_id` 查询历史 workflow run
+* Portfolio 权重管理：组合配置可保存目标权重、现金比例和策略设置
+* Risk Engine v0.1：输出 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure
+* Portfolio Optimizer v0.1：支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版
+* Portfolio Research Module v0.1：统一入口整合 Workflow、Backtesting、Risk、Optimizer、AI Summary 和 Recommendation
 
 ## 当前差距
 
@@ -41,17 +45,17 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 ```text
 已完成：架构骨架 + 核心 API + 初版页面 + 初版算法 + 初版回测 + 初版 workflow
 
-未完成：稳定数据体系 + 完整风险引擎 + 组合优化器 + 多 Agent 自动研究 + 正式报告系统 + 前端完整 workflow 化
+未完成：稳定数据体系 + 多 Agent 自动研究 + 正式报告系统 + 完整复盘页
 ```
 
 下一阶段优先收口：
 
 ```text
-1. 前端接入 Portfolio Research Workflow
-2. Portfolio 权重管理
-3. Risk Engine v0.1
-4. Portfolio Optimizer v0.1
-5. AI Report 归档
+1. AI Report 归档
+2. Workflow / Report 复盘页
+3. 数据源健康检查
+4. 多 Agent 自动研究
+5. Portfolio Optimizer 高级求解器
 ```
 
 ## 文档入口
@@ -62,7 +66,10 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * [Algorithm Layer 标准](docs/standards/ALGORITHM_STANDARD.md)
 * [Model Layer 标准](docs/standards/MODEL_STANDARD.md)
 * [Workflow Engine 标准](docs/standards/WORKFLOW_ENGINE_STANDARD.md)
+* [Portfolio Research Module 标准](docs/standards/PORTFOLIO_RESEARCH_MODULE_STANDARD.md)
 * [Portfolio Strategy 标准](docs/standards/PORTFOLIO_STRATEGY_STANDARD.md)
+* [Risk Engine 标准](docs/standards/RISK_ENGINE_STANDARD.md)
+* [Portfolio Optimizer 标准](docs/standards/PORTFOLIO_OPTIMIZER_STANDARD.md)
 * [Tiger OpenAPI 接入标准](docs/standards/TIGER_OPENAPI_STANDARD.md)
 * [产品需求文档 PRD v0.1](docs/product/PRD.md)
 * [个人股票研究生产力目标](docs/product/PERSONAL_PRODUCTIVITY_GOAL.md)
@@ -76,6 +83,8 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * [敏捷迭代与即开发即使用标准](docs/standards/agile-iteration.md)
 * [AI 开发工具协作标准](docs/standards/AI_TOOL_COLLABORATION.md)
 * [API 设计 v0.1](docs/api/api-design-v0.1.md)
+* [AI 行为总规范](.ai/AGENTS.md)
+* [项目 AI 开发规则](.ai/PROJECT_RULES.md)
 
 ## 本地检查
 
@@ -132,8 +141,14 @@ GET http://127.0.0.1:8000/macro/FEDFUNDS/observations?limit=10
 GET http://127.0.0.1:8000/integrations/tiger/status
 GET http://127.0.0.1:8000/stocks/AAPL/tiger/quote
 GET http://127.0.0.1:8000/stocks/AAPL/tiger/history?years=3&period=day
+PUT http://127.0.0.1:8000/portfolios/Core%20Watch/config
+POST http://127.0.0.1:8000/portfolio-research/run
+GET http://127.0.0.1:8000/portfolio-research/{trace_id}
+POST http://127.0.0.1:8000/risk/portfolio
+POST http://127.0.0.1:8000/optimizer/portfolio
 POST http://127.0.0.1:8000/backtests/run
 POST http://127.0.0.1:8000/workflows/portfolio-research
+GET http://127.0.0.1:8000/workflows/portfolio-research/{trace_id}
 ```
 
 FRED 接口需要先在 `.env` 设置免费的 `FRED_API_KEY`（注册地址：https://fred.stlouisfed.org/docs/api/api_key.html），否则返回 503。
@@ -196,7 +211,7 @@ Universe Builder
   -> Portfolio Recommendation
 ```
 
-API 入口为 `POST /workflows/portfolio-research`。v0.1 的 AI Summary 是可审计的规则解释，后续可替换为 Research Agent / Report Agent 节点。
+API 入口为 `POST /workflows/portfolio-research`。v0.1 的 AI Summary 是可审计的规则解释，后续可替换为 Research Agent / Report Agent 节点。每次运行都会写入 `workflow_runs` 表，并可通过 `GET /workflows/portfolio-research/{trace_id}` 复盘节点状态、回测结果、AI Summary 和 Portfolio Recommendation。
 
 每次调用都会把候选评分写入 `stock_scores` 表（`packages/db/stock_scores.py`），通过 `GET /stocks/{symbol}/score-history` 可以读出某只股票历次评分，方便对比"这只股票最近几次扫描分数是涨是跌"——这是把 AI 选股从一次性即时计算变成有历史记录的个人工具的关键一步。
 

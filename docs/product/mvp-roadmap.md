@@ -92,8 +92,22 @@
 * Workflow 节点观测（trace_id、节点输入摘要、输出摘要、耗时、失败记录）[verified]
 * Portfolio Research Workflow v0.1（Universe Builder → Portfolio Builder → Strategy Selector → Constraint Config → Backtest Runner → AI Summary → Portfolio Recommendation）[verified]
 * `POST /workflows/portfolio-research` API [verified]
-* 前端完整接入 Portfolio Research Workflow，并展示节点状态和 trace_id [planned]
-* Workflow Run 持久化与历史复盘 [planned]
+* 前端完整接入 Portfolio Research Workflow，并展示节点状态和 trace_id [verified]
+* Workflow Run 持久化与按 trace_id 查询复盘 [verified]
+* 完整 Workflow / Report 复盘页 [planned]
+* Portfolio Research Module v0.1（一个入口整合 Workflow、Backtesting、Risk、Optimizer、AI Summary、Recommendation）[verified]
+* `POST /portfolio-research/run` 和 `GET /portfolio-research/{trace_id}` [verified]
+* 前端 Portfolio Research Workbench 调用统一入口 [verified]
+
+### M8 Portfolio / Risk MVP
+
+* Portfolio 权重管理（`PUT /portfolios/{name}/config`，保存 target_weights、cash_weight、strategy_config）[verified]
+* Risk Engine v0.1（`packages/risk_engine`，输出 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure）[verified]
+* `POST /risk/portfolio` API [verified]
+* 前端组合策略面板保存权重并展示 Risk Engine 摘要 [verified]
+* Portfolio Optimizer v0.1（`packages/portfolio_optimizer`，支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版）[verified]
+* `POST /optimizer/portfolio` API [verified]
+* 前端组合策略面板展示 Optimizer 目标权重摘要 [verified]
 
 ### 额外扩展（超出原路线图）
 

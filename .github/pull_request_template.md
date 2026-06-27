@@ -20,6 +20,12 @@ Tool:
 
 Tools used if mixed:
 
+AI rules:
+
+- [ ] 已阅读并遵守 `.ai/AGENTS.md`
+- [ ] 已检查 `.ai/PROJECT_RULES.md` 的项目边界
+- [ ] 本次修改符合最小正确改动原则
+
 ## 版本与模块
 
 Version:
@@ -78,4 +84,3 @@ Result:
 ## 风险提示
 
 本系统仅用于投资研究辅助，不构成任何投资建议。
-

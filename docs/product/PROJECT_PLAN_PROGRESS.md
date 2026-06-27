@@ -23,15 +23,15 @@
 
 | 项目维度 | 目标 | 当前判断 | 差异 |
 |---|---|---|---|
-| MVP 架构骨架 | 支撑股票研究、组合、回测、AI 报告和 Workflow | 约 65%-70% | 仍缺风险引擎、优化器、报告归档和前端 workflow 化 |
-| 个人股票研究生产力工具 | 支撑 Cullen 每日选股、研究、回测、报告和复盘 | 约 50%-60% | 日常闭环还缺归档、权重管理、前端 workflow 状态和复盘页 |
+| MVP 架构骨架 | 支撑股票研究、组合、回测、AI 报告和 Workflow | 约 80%-85% | 仍缺报告归档和完整复盘页 |
+| 个人股票研究生产力工具 | 支撑 Cullen 每日选股、研究、回测、报告和复盘 | 约 65%-75% | 日常闭环还缺报告归档和复盘页 |
 | AI Portfolio Operating System | Workflow 驱动组合研究、风险、优化、报告和再平衡 | 约 25%-35% | 多 Agent、Risk Engine、Optimizer、Rebalance Engine 尚未成型 |
 
 ## 4. 计划与进度总表
 
 | ID | 模块 | 计划目标 | 当前实际进度 | 状态 | 进度差异 | 下一步 | 同步触发 |
 |---|---|---|---|---|---|---|---|
-| M0 | 项目重建与治理 | 建立标准文档、GitHub 协作、CI、测试规范 | 项目标准、需求、架构、GitHub 模板、治理测试已建立 | released | 基本无 | 保持文档随开发同步 | 新增模块或标准时 |
+| M0 | 项目重建与治理 | 建立标准文档、GitHub 协作、CI、测试规范 | 项目标准、需求、架构、GitHub 模板、治理测试和 `.ai/` AI 开发规范已建立 | released | 基本无 | 保持文档随开发同步 | 新增模块或标准时 |
 | M1 | 后端基础 | FastAPI、配置、数据库、audit_logs、Docker 本地服务 | FastAPI、配置、SQLite fallback、Postgres/Redis compose、初始化脚本已可用 | verified | 需要更多运行监控 | 补 API 响应时间和错误统计 | 新增 API 或 DB 表时 |
 | M2 | 数据源层 | Yahoo、SEC、FRED、Tiger、Alpha Vantage、Finnhub、Polygon 可替换接入 | Yahoo/SEC/FRED/Tiger 已有不同程度接入；Alpha Vantage/Finnhub/Polygon 未接 | partial | 数据源稳定性和商业源覆盖不足 | 建立数据源健康检查、重试、限流和优先级 | 新增或修改外部数据源时 |
 | M3 | Model Layer | OpenAI、Claude、Gemini、DeepSeek、Qwen、Llama、Ollama 统一调用 | LiteLLM-compatible provider、mock provider、router、validator 已完成 | partial | 真实多模型联调不足 | 补多模型配置样例、成本统计、失败 fallback 测试 | 新增模型或 Agent 时 |
@@ -39,27 +39,27 @@
 | M5 | Universe / Screener | 每日扫描美股最活跃 100 只票，支持主题和自定义股票池 | Most Active Top 100 已可用，概念板块预览已接入页面 | usable | 主题筛选和自定义股票池不完整 | 增加 AI、Semiconductor、Growth、Dividend 等主题 universe | 新增筛选维度时 |
 | M6 | Algorithm Layer | 独立推荐算法、评分因子、可解释输出 | algorithm-v0.3 已有财务、估值、技术、新闻规则情绪、风险因子 | verified | 仍偏规则化，非成熟量化模型 | 引入因子归一化、行业相对估值、历史表现校验 | 调整评分权重或因子时 |
 | M7 | Stock Research | 单股实时价格、K 线、财务、新闻、评分、报告 | 报价、趋势、历史、SEC、新闻、推荐、报告接口已存在 | usable | 独立深度分析页未完成 | 做独立 Stock Research 页面 | 前端新增研究视图时 |
-| M8 | Portfolio | 多组合创建、删除、编辑、导入、导出、权重管理、对比 | 基础组合保存、增删股票已完成 | partial | 缺权重、现金比例、导入导出、多组合对比 | 做 Portfolio 权重管理 v0.1 | 修改组合数据结构时 |
+| M8 | Portfolio | 多组合创建、删除、编辑、导入、导出、权重管理、对比 | 基础组合保存、增删股票、目标权重、现金比例和策略配置保存已完成 | usable | 缺导入导出、多组合对比 | 做导入导出和多组合对比 | 修改组合数据结构时 |
 | M9 | Strategy / Backtesting | 策略配置、约束、回测、收益风险指标 | `/backtests/run`、technical / ai_score 回测、交易明细和净值曲线已可用 | verified | 高级策略和历史新闻情绪未接 | 完善策略库和历史新闻归档输入 | 新增策略或回测指标时 |
-| M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成 | verified | 前端未完全调用 workflow，workflow run 未持久化 | 前端接入 `/workflows/portfolio-research` 并保存 run | 新增 workflow 或节点时 |
-| M11 | Risk Engine | VaR、CVaR、Beta、波动率、回撤、行业暴露、持仓集中度 | 回测中已有部分止损、最大回撤、风险提示 | partial | 独立 Risk Engine 未形成 | 建 `packages/risk_engine` v0.1 | 新增风险指标时 |
-| M12 | Portfolio Optimizer | Mean Variance、Risk Parity、HRP、Minimum Variance、Black-Litterman | 尚未独立实现 | planned | 与需求差距高 | 先做 Minimum Variance 和 Risk Parity 初版 | 新增优化器时 |
+| M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成；Portfolio Research Module v0.1 已作为前端统一入口接入 `/portfolio-research/run`；workflow run 支持按 trace_id 查询 | verified | 缺完整复盘页和 workflow run 列表页 | 做 workflow run 列表和复盘页 | 新增 workflow 或节点时 |
+| M11 | Risk Engine | VaR、CVaR、Beta、波动率、回撤、行业暴露、持仓集中度 | 独立 `packages/risk_engine` v0.1 已形成，支持 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure，接入 `POST /risk/portfolio` 和前端摘要 | verified | VaR/CVaR/Stress Test/Monte Carlo 未接 | 后续扩展 VaR、CVaR 和 Stress Test | 新增风险指标时 |
+| M12 | Portfolio Optimizer | Mean Variance、Risk Parity、HRP、Minimum Variance、Black-Litterman | 独立 `packages/portfolio_optimizer` v0.1 已完成，支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版，接入 `POST /optimizer/portfolio` 和前端摘要 | verified | HRP、Black-Litterman 和完整协方差求解器未接 | 后续做高级优化器求解器 | 新增优化器时 |
 | M13 | AI Report / Archive | PDF、Markdown、HTML、Dashboard、报告归档、每日复盘 | 单股 Report Agent 已有，正式报告系统未完成 | partial | 缺归档和正式输出格式 | 做 Report Archive + Markdown/HTML 输出 | 新增报告模板时 |
-| M14 | 前端工作台 | 操作界面可完成查询、筛选、组合、回测、报告 | 当前工作台可用，组合策略 UI 已增强 | usable | 新 Portfolio Research Workflow 未完整接入 | 接入 workflow 节点状态、trace_id、AI Summary | 修改页面 workflow 时 |
+| M14 | 前端工作台 | 操作界面可完成查询、筛选、组合、回测、报告 | 当前工作台可用，Portfolio Research Workbench 已调用统一 `/portfolio-research/run`，并展示回测、Risk、Optimizer、AI Summary、Recommendation 和 trace_id 复盘入口 | usable | 暂无历史列表和完整复盘页 | 做 workflow run 历史列表和复盘页 | 修改页面 workflow 时 |
 | M15 | Tiger OpenAPI | 官方只读行情数据接入，不抓 App，不自动交易 | status、quote、history 接口骨架和标准已完成 | usable | 真实 SDK adapter 未完整接通 | 完成官方 SDK adapter 和凭证联调 | 修改 Tiger 接入时 |
 | M16 | Broker Layer | 未来可接券商 API，人工确认后交易 | `packages/brokers` 仍为空 | planned | 第一阶段不做交易 | 暂只保留接口边界，不开发自动交易 | 开始券商接口设计时 |
-| M17 | 数据可追溯 / 审计 | AI 输出写 audit_logs，结论有数据来源和时间 | Agent 基类和 ModelResponse 审计路径已建立 | partial | Workflow run 和普通算法输出审计还需增强 | 持久化 workflow run 和 report archive | 新增 AI/Workflow 输出时 |
+| M17 | 数据可追溯 / 审计 | AI 输出写 audit_logs，结论有数据来源和时间 | Agent 基类和 ModelResponse 审计路径已建立，Portfolio Research Workflow run 已按 trace_id 持久化 | partial | 普通算法输出审计和 report archive 还需增强 | 做 report archive 和普通算法输出审计增强 | 新增 AI/Workflow 输出时 |
 | M18 | Git / 发布管理 | develop 开发、main 稳定、功能拆分提交 | develop 已完成本地提交 `ea4418b`；origin 已配置为 `haisheng-bot/cullen`；GitHub push 受本机认证阻塞 | partial | 远端 main 是独立初始提交，develop 尚未推送；本机缺 HTTPS 凭证和 SSH 公钥 | 配置 GitHub 凭证后推送 `develop`，再从 develop 发起 PR 合并 main | 准备 PR 或发布时 |
 
 ## 5. 下一阶段执行顺序
 
 | 优先级 | 任务 | 目标结果 | 验收标准 |
 |---|---|---|---|
-| P0 | 前端接入 Portfolio Research Workflow | 页面直接调用 `POST /workflows/portfolio-research` | 可看到节点状态、trace_id、AI Summary、Portfolio Recommendation |
-| P1 | Portfolio 权重管理 | 组合支持权重、现金比例、保存策略配置 | API 和页面均可查看、修改、保存权重 |
-| P2 | Risk Engine v0.1 | 独立风险计算模块 | 输出 Volatility、Beta、Max Drawdown、Correlation、Concentration、Sector Exposure |
-| P3 | Portfolio Optimizer v0.1 | 独立组合优化模块 | 支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版 |
-| P4 | AI Report 归档 | 报告和 workflow 结果可复盘 | 生成 Markdown/HTML，并保存历史记录 |
+| P0 | ~~前端接入 Portfolio Research Workflow~~ | ~~页面直接调用 `POST /workflows/portfolio-research`~~ | 已完成：可看到节点状态、AI Summary、Portfolio Recommendation 和 trace_id |
+| P1 | ~~Portfolio 权重管理~~ | ~~组合支持权重、现金比例、保存策略配置~~ | 已完成：API 和页面均可保存目标权重、现金比例和策略配置 |
+| P2 | ~~Risk Engine v0.1~~ | ~~独立风险计算模块~~ | 已完成：输出 Volatility、Beta、Max Drawdown、Correlation、Concentration、Sector Exposure |
+| P3 | ~~Portfolio Optimizer v0.1~~ | ~~独立组合优化模块~~ | 已完成：支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版 |
+| P4 | AI Report 归档 / Workflow run 持久化 | 报告和 workflow 结果可复盘 | Workflow run 已支持按 trace_id 查询；仍需生成 Markdown/HTML、报告归档和历史复盘页 |
 
 ## 6. 同步规则
 
@@ -76,6 +76,37 @@
 
 ```text
 日期：2026-06-27
+测试：210 tests OK（unittest discover，.venv311 / Python 3.11）；`py_compile` 通过；`git diff --check` 通过；本地 API smoke test 通过（`POST /portfolio-research/run` 返回 completed，且 backtest/risk/optimizer 均有结果；同一 `trace_id` 调 `GET /portfolio-research/{trace_id}` 成功读回）。
+状态：完成 Portfolio Research Module v0.1 体验整合——新增 `packages/portfolio_research`，新增 `POST /portfolio-research/run` 和 `GET /portfolio-research/{trace_id}`；前端 Portfolio Research Workbench 改为调用统一入口，不再直接拼接 Workflow/Risk/Optimizer API。下一步是完整复盘页和 Report Archive。
+```
+
+```text
+日期：2026-06-27
+测试：207 tests OK（unittest discover，.venv311 / Python 3.11）；`py_compile` 通过；`git diff --check` 通过；本地 API smoke test 通过（`POST /optimizer/portfolio` 返回 minimum_variance 目标权重、cash_weight 和 expected_risk_percent）。
+状态：完成 Portfolio Optimizer v0.1——新增 `packages/portfolio_optimizer`、`POST /optimizer/portfolio` 和前端 Optimizer 目标权重摘要；支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版。下一步是 AI Report 归档、Workflow / Report 复盘页和数据源健康检查。
+```
+
+```text
+日期：2026-06-27
+测试：202 tests OK（unittest discover，.venv311 / Python 3.11）；`py_compile` 通过；`git diff --check` 通过；`scripts/init_db.py` 已确认本地 SQLite 包含 `portfolio_configs` 和 `workflow_runs` 表；本地 API smoke test 通过（`PUT /portfolios/Core%20Watch/config` 成功保存权重，`POST /risk/portfolio` 成功返回 Volatility/Beta/Sector Exposure）。
+状态：完成 MVP 架构列表 1/2/3 收口——Workflow run 持久化已验证；Portfolio 权重管理 v0.1 完成（`portfolio_configs` + `PUT /portfolios/{name}/config` + 前端 Save Weights）；Risk Engine v0.1 完成（`packages/risk_engine` + `POST /risk/portfolio` + 前端风险摘要）。下一步是 Portfolio Optimizer v0.1、Report Archive 和完整复盘页。
+```
+
+```text
+日期：2026-06-27
+测试：198 tests OK（unittest discover，.venv311 / Python 3.11）；`py_compile` 通过；`scripts/init_db.py` 已确认本地 SQLite 包含 `workflow_runs` 表；本地 API smoke test 通过（`POST /workflows/portfolio-research` 返回 `Recommendation Ready`，再用同一 `trace_id` 调 `GET /workflows/portfolio-research/{trace_id}` 成功读回）。
+状态：完成 MVP 收口项——`.ai/` 新开发规范纳入治理入口；Portfolio Research Workflow 每次运行写入 `workflow_runs` 表，新增 `GET /workflows/portfolio-research/{trace_id}` 复盘接口；前端组合策略结果展示 trace_id。下一步是 Portfolio 权重管理、Risk Engine v0.1、Portfolio Optimizer v0.1 和 Report Archive。
+```
+
+```text
+日期：2026-06-27
+测试：196 tests OK（unittest discover，.venv311 / Python 3.11）
+Playwright 验证：成功路径（节点全 done、净值曲线/交易表/AI Summary/Recommendation 均渲染）、节点级失败路径（state=Failed，对应步骤变红，定位到失败节点）、网络层失败路径（步骤回落 pending）均通过，控制台无报错。
+状态：完成 M10/M14 的 P0 任务——组合策略面板从直调 `POST /backtests/run` 改为调用 `POST /workflows/portfolio-research`，已同步治理测试、标准文档和 CHANGELOG；下一步是 workflow run 持久化和 trace_id 复盘。
+```
+
+```text
+日期：2026-06-27（上一次）
 测试：196 tests OK
 Git 检查：develop 已本地提交 ea4418b；origin 已配置为 https://github.com/haisheng-bot/cullen.git；HTTPS push 缺少 GitHub 凭证，SSH push 缺少 public key，暂不能完成远端推送。
 安全检查：未发现真实 API Key；git diff --check 通过。

@@ -23,6 +23,12 @@ GET /macro/{series_id}/observations
 GET /integrations/tiger/status
 GET /stocks/{symbol}/tiger/quote
 GET /stocks/{symbol}/tiger/history
+GET /workflows/portfolio-research/{trace_id}
+GET /portfolio-research/{trace_id}
+PUT /portfolios/{name}/config
+POST /risk/portfolio
+POST /optimizer/portfolio
+POST /portfolio-research/run
 POST /reports/generate
 POST /backtests/run
 POST /workflows/portfolio-research
@@ -617,6 +623,7 @@ POST /backtests/run
 
 ```text
 POST /workflows/portfolio-research
+GET /workflows/portfolio-research/{trace_id}
 ```
 
 用途：
@@ -624,6 +631,7 @@ POST /workflows/portfolio-research
 * 编排 Universe Builder、Portfolio Builder、Strategy Selector、Constraint Config、Backtest Runner、AI Summary 和 Portfolio Recommendation
 * 将“股票池 -> 组合 -> 策略 -> 约束 -> 回测 -> AI 解释 -> 组合建议”作为一个可观测 workflow 执行
 * 返回 workflow 状态、节点结果、trace_id、portfolio、strategy、constraints、backtest、ai_summary 和 portfolio_recommendation
+* 将完整 workflow 响应写入 `workflow_runs` 表，支持后续按 `trace_id` 查询复盘
 * 回测结果会写入 backtest run 存储路径，便于后续复盘
 
 请求体核心字段：
@@ -652,7 +660,146 @@ POST /workflows/portfolio-research
 
 * `selected_symbols` 会覆盖 `backtest.symbols`，用于页面中已经选好的组合
 * v0.1 的 `ai_summary` 是确定性的规则解释，不直接调用模型供应商 SDK
+* `GET /workflows/portfolio-research/{trace_id}` 返回原始 workflow 响应；未找到时返回 404
 * 本接口只生成研究辅助结论，不提供自动交易
+
+## 5. 响应要求
+
+## 4.5 Portfolio 权重管理
+
+### 4.5 Portfolio Research Module
+
+```text
+POST /portfolio-research/run
+GET /portfolio-research/{trace_id}
+```
+
+用途：
+
+* 面向前端工作台的统一组合研究入口
+* 一次请求完成 Workflow、Backtesting、Risk Engine、Portfolio Optimizer、AI Summary 和 Recommendation
+* 返回一个 trace_id，并支持按 trace_id 复盘完整研究结果
+
+请求体：
+
+```json
+{
+  "portfolio_name": "Core Watch",
+  "symbols": ["AAPL", "MSFT", "NVDA"],
+  "research_goal": "balanced_growth",
+  "constraints": {
+    "max_position_weight": 0.35,
+    "min_cash_weight": 0.1,
+    "max_drawdown": 0.2,
+    "benchmark_symbol": "SPY",
+    "backtest_years": 3
+  },
+  "strategy_preferences": {
+    "scoring_mode": "algorithm_v0.3",
+    "backtest_mode": "ai_score",
+    "optimizer_method": "minimum_variance",
+    "rebalance_frequency": "monthly"
+  }
+}
+```
+
+响应包含：
+
+* score_summary
+* backtest_summary
+* risk_summary
+* optimized_weights
+* ai_explanation
+* recommendation
+* warnings
+* risk_disclaimer
+
+底层 `/workflows/portfolio-research`、`/risk/portfolio`、`/optimizer/portfolio` 仍保留用于模块调试和测试。
+
+## 4.6 Portfolio 权重管理
+
+```text
+PUT /portfolios/{name}/config
+```
+
+用途：
+
+* 保存组合目标权重
+* 保存现金比例
+* 保存策略配置
+* 为后续回测、Risk Engine 和 Portfolio Optimizer 提供稳定输入
+
+请求体：
+
+```json
+{
+  "target_weights": {"AAPL": 0.45, "MSFT": 0.45},
+  "cash_weight": 0.10,
+  "strategy_config": {
+    "allocation_method": "equal_weight",
+    "signal_mode": "technical",
+    "rebalance_frequency": "monthly",
+    "benchmark_symbol": "SPY"
+  }
+}
+```
+
+## 4.7 Risk Engine v0.1
+
+```text
+POST /risk/portfolio
+```
+
+用途：
+
+* 输出组合波动率、Beta、最大回撤、平均相关性、持仓集中度和行业暴露
+* 为组合研究和后续 Optimizer 提供独立风险输入
+
+请求体：
+
+```json
+{
+  "symbols": ["AAPL", "MSFT"],
+  "weights": {"AAPL": 0.5, "MSFT": 0.5},
+  "benchmark_symbol": "SPY",
+  "sector_map": {"AAPL": "Technology", "MSFT": "Technology"}
+}
+```
+
+说明：
+
+* 第一阶段使用历史收盘价计算风险指标
+* 不生成交易指令，不承诺收益
+
+## 4.8 Portfolio Optimizer v0.1
+
+```text
+POST /optimizer/portfolio
+```
+
+用途：
+
+* 根据股票池、历史价格、市值估算和约束生成目标权重
+* 支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版
+* 为组合策略和后续再平衡建议提供研究输入
+
+请求体：
+
+```json
+{
+  "symbols": ["AAPL", "MSFT"],
+  "method": "minimum_variance",
+  "max_position_weight": 0.5,
+  "min_cash_weight": 0.1
+}
+```
+
+说明：
+
+* `minimum_variance` 使用逆方差近似
+* `risk_parity` 使用逆波动率近似
+* `market_cap` 使用最新可得价格和股数估算市值
+* 不自动下单，不构成投资建议
 
 ## 5. 响应要求
 
