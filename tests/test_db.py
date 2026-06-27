@@ -8,7 +8,14 @@ from packages.db.audit import write_audit_log
 from packages.db.backtest_runs import write_backtest_run
 from packages.db.financial_facts_cache import get_or_fetch_annual_series
 from packages.db.models import AuditLog, Base
-from packages.db.portfolios import add_symbol, ensure_default_portfolios, list_portfolios, remove_symbol
+from packages.db.portfolios import (
+    add_symbol,
+    ensure_default_portfolios,
+    get_portfolio_config,
+    list_portfolios,
+    remove_symbol,
+    save_portfolio_config,
+)
 from packages.db.price_history_cache import get_or_fetch_closes
 from packages.db.session import build_engine
 from packages.db.stock_scores import get_score_history, write_screening_result
@@ -178,6 +185,28 @@ class PriceHistoryCachePersistenceTest(unittest.TestCase):
         self.assertEqual([("2023-01-03", 100.0), ("2023-01-04", 101.0)], first)
         self.assertEqual(first, second)
         self.assertEqual(1, client.call_count, "second call should hit the cache, not the network")
+
+
+class PortfolioConfigPersistenceTest(unittest.TestCase):
+    def test_save_portfolio_config_round_trips_weights_cash_and_strategy(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            save_portfolio_config(
+                session,
+                "Core Watch",
+                {"AAPL": 0.4, "MSFT": 0.5},
+                0.1,
+                {"allocation_method": "equal_weight"},
+            )
+            session.commit()
+
+        with Session(engine) as session:
+            config = get_portfolio_config(session, "Core Watch")
+
+        self.assertEqual({"AAPL": 0.4, "MSFT": 0.5}, config.target_weights)
+        self.assertEqual(0.1, config.cash_weight)
+        self.assertEqual({"allocation_method": "equal_weight"}, config.strategy_config)
 
 
 class _CountingFakeFinancialsClient:

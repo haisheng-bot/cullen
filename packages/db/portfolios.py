@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from packages.db.models import Portfolio
+from packages.db.models import Portfolio, PortfolioConfig
 
 DEFAULT_PORTFOLIOS: dict[str, list[str]] = {
     "Core Watch": ["AAPL", "MSFT", "NVDA"],
@@ -28,6 +28,28 @@ def ensure_default_portfolios(session: Session) -> None:
 def list_portfolios(session: Session) -> list[Portfolio]:
     statement = select(Portfolio).order_by(Portfolio.id)
     return list(session.scalars(statement))
+
+
+def get_portfolio_config(session: Session, name: str) -> PortfolioConfig | None:
+    return session.scalar(select(PortfolioConfig).where(PortfolioConfig.name == name))
+
+
+def save_portfolio_config(
+    session: Session,
+    name: str,
+    target_weights: dict[str, float],
+    cash_weight: float,
+    strategy_config: dict,
+) -> PortfolioConfig:
+    config = get_portfolio_config(session, name)
+    if config is None:
+        config = PortfolioConfig(name=name)
+        session.add(config)
+    config.target_weights = dict(target_weights)
+    config.cash_weight = cash_weight
+    config.strategy_config = dict(strategy_config)
+    session.flush()
+    return config
 
 
 def add_symbol(session: Session, name: str, symbol: str) -> Portfolio:
