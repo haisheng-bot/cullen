@@ -99,44 +99,60 @@ packages/backtesting/
 
 ## 5. API 标准
 
-组合策略回测使用：
+组合策略前端面板调用的是 Workflow Layer 入口：
+
+```text
+POST /workflows/portfolio-research
+GET /workflows/portfolio-research/{trace_id}
+POST /risk/portfolio
+POST /optimizer/portfolio
+POST /portfolio-research/run
+```
+
+请求必须包含：
+
+* portfolio_name
+* universe_limit
+* selected_symbols（可选，省略时回退到 `backtest.symbols`）
+* backtest（嵌套对象，字段同下方 `POST /backtests/run` 的请求体）：
+  * strategy_name
+  * symbols
+  * start_date
+  * end_date
+  * initial_cash
+  * benchmark_symbol
+  * signal_mode（`"technical"` 或 `"ai_score"`）
+  * allocation
+  * entry_rules
+  * exit_rules
+  * risk
+  * sector_map
+
+响应必须包含：
+
+* trace_id
+* state（`"Recommendation Ready"` 或 `"Failed"`）
+* node_results（每个节点的 name/module/state/duration_ms/error）
+* backtest（嵌套对象，等同 `POST /backtests/run` 的响应体：total_return_percent、annualized_return_percent、max_drawdown_percent、sharpe_ratio、benchmark_total_return_percent、alpha_percent、beta、contributions、trades、equity_curve、suggestions、risks、source、algorithm_version、generated_at）
+* ai_summary（conclusion、key_findings，模板生成，非实时模型推理）
+* portfolio_recommendation（action、reasons、suggestions、risks、risk_disclaimer）
+* risk_disclaimer
+
+每次 `POST /workflows/portfolio-research` 都必须把完整可序列化响应写入 `workflow_runs`，并支持通过 `GET /workflows/portfolio-research/{trace_id}` 复盘同一次 workflow 的节点状态、回测结果、AI Summary 和 Portfolio Recommendation。
+
+组合风险摘要通过 `POST /risk/portfolio` 调用独立 Risk Engine v0.1，输出 Volatility、Beta、Max Drawdown、Average Correlation、Concentration 和 Sector Exposure。
+
+目标权重建议通过 `POST /optimizer/portfolio` 调用独立 Portfolio Optimizer v0.1，支持 Equal Weight、Market Cap、Minimum Variance 和 Risk Parity 初版。
+
+前端 Portfolio Research Workbench 应优先调用 `POST /portfolio-research/run` 作为统一体验入口；上面的 Workflow、Risk、Optimizer API 保留为底层模块接口和调试入口。
+
+底层单次回测仍可直接调用：
 
 ```text
 POST /backtests/run
 ```
 
-请求必须包含：
-
-* strategy_name
-* symbols
-* start_date
-* end_date
-* initial_cash
-* benchmark_symbol
-* signal_mode（`"technical"` 或 `"ai_score"`）
-* allocation
-* entry_rules
-* exit_rules
-* risk
-* sector_map
-
-响应必须包含：
-
-* total_return_percent
-* annualized_return_percent
-* max_drawdown_percent
-* sharpe_ratio
-* benchmark_total_return_percent
-* alpha_percent
-* beta
-* contributions
-* trades
-* suggestions
-* risks
-* source
-* algorithm_version
-* generated_at
-* risk_disclaimer
+请求/响应字段与上面 `backtest` 嵌套对象一致；该端点保留供测试、脚本和未来其他调用方使用，前端组合策略面板不再直接调用它。
 
 ## 6. 版本管理
 
@@ -176,4 +192,4 @@ backtesting-v1.0  稳定组合策略工作流 [planned]
 * 风险约束测试
 * 回测指标测试
 * API 请求/响应测试
-* 前端是否调用 `POST /backtests/run` 的治理测试
+* 前端是否调用 `POST /workflows/portfolio-research` 的治理测试

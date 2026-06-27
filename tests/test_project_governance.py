@@ -22,6 +22,16 @@ class ProjectGovernanceTest(unittest.TestCase):
             ".github/ISSUE_TEMPLATE/config.yml",
             ".github/ISSUE_TEMPLATE/bug_report.md",
             ".github/ISSUE_TEMPLATE/feature_request.md",
+            ".ai/AGENTS.md",
+            ".ai/PROJECT_RULES.md",
+            ".ai/CODING_STANDARD.md",
+            ".ai/TEST_STANDARD.md",
+            ".ai/GIT_STANDARD.md",
+            ".ai/API_STANDARD.md",
+            ".ai/DB_STANDARD.md",
+            ".ai/RELEASE_STANDARD.md",
+            ".ai/ADR/0001-ai-governance-directory.md",
+            ".ai/TEMPLATES/PR_TEMPLATE.md",
             "apps/api/main.py",
             "apps/web/index.html",
             "apps/web/realtime-trend.html",
@@ -36,6 +46,13 @@ class ProjectGovernanceTest(unittest.TestCase):
             "packages/scoring",
             "packages/backtesting",
             "packages/brokers",
+            "packages/risk_engine",
+            "packages/portfolio_optimizer",
+            "packages/portfolio_research",
+            "packages/db/workflow_runs.py",
+            "packages/risk_engine/engine.py",
+            "packages/portfolio_optimizer/engine.py",
+            "packages/portfolio_research/engine.py",
             "docs/standards/project-standard-v0.1.md",
             "docs/standards/MODEL_STANDARD.md",
             "docs/standards/ALGORITHM_STANDARD.md",
@@ -43,6 +60,9 @@ class ProjectGovernanceTest(unittest.TestCase):
             "docs/standards/NEWS_POLICY_STANDARD.md",
             "docs/standards/WORKFLOW_ENGINE_STANDARD.md",
             "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md",
+            "docs/standards/RISK_ENGINE_STANDARD.md",
+            "docs/standards/PORTFOLIO_OPTIMIZER_STANDARD.md",
+            "docs/standards/PORTFOLIO_RESEARCH_MODULE_STANDARD.md",
             "docs/standards/TIGER_OPENAPI_STANDARD.md",
             "docs/standards/version-management.md",
             "docs/standards/github-collaboration.md",
@@ -70,6 +90,9 @@ class ProjectGovernanceTest(unittest.TestCase):
             "docs/standards/NEWS_POLICY_STANDARD.md",
             "docs/standards/WORKFLOW_ENGINE_STANDARD.md",
             "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md",
+            "docs/standards/RISK_ENGINE_STANDARD.md",
+            "docs/standards/PORTFOLIO_OPTIMIZER_STANDARD.md",
+            "docs/standards/PORTFOLIO_RESEARCH_MODULE_STANDARD.md",
             "docs/standards/TIGER_OPENAPI_STANDARD.md",
             "docs/standards/github-collaboration.md",
             "docs/standards/agile-iteration.md",
@@ -123,6 +146,15 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertIn("进度差异", plan_progress)
         self.assertIn("同步触发", plan_progress)
         self.assertIn("Portfolio Research Workflow", plan_progress)
+        self.assertIn("workflow_runs", plan_progress)
+        self.assertIn("GET /workflows/portfolio-research/{trace_id}", plan_progress)
+        self.assertIn("Portfolio 权重管理", plan_progress)
+        self.assertIn("Risk Engine v0.1", plan_progress)
+        self.assertIn("POST /risk/portfolio", plan_progress)
+        self.assertIn("Portfolio Optimizer v0.1", plan_progress)
+        self.assertIn("POST /optimizer/portfolio", plan_progress)
+        self.assertIn("Portfolio Research Module v0.1", plan_progress)
+        self.assertIn("POST /portfolio-research/run", plan_progress)
         self.assertIn("最近一次同步", plan_progress)
         self.assertIn("需求与实际开发差距分析", gap_analysis)
         self.assertIn("前端接入 Portfolio Research Workflow", gap_analysis)
@@ -173,6 +205,8 @@ class ProjectGovernanceTest(unittest.TestCase):
 
         required_pr_terms = [
             "AI 开发标识",
+            ".ai/AGENTS.md",
+            ".ai/PROJECT_RULES.md",
             "codex",
             "claude-code",
             "Portfolio Strategy / Backtesting",
@@ -270,7 +304,7 @@ class ProjectGovernanceTest(unittest.TestCase):
         standard = (ROOT / "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md").read_text(encoding="utf-8")
 
         required_html_terms = [
-            "Portfolio Strategy Workflow",
+            "Portfolio Research Workbench",
             "股票池 Universe",
             "策略库 Strategy Library",
             "配置约束 Constraints",
@@ -282,9 +316,19 @@ class ProjectGovernanceTest(unittest.TestCase):
             "max-drawdown",
             "max-position",
             "run-backtest-button",
-            "postJson(\"/backtests/run\"",
-            "buildBacktestPayload",
-            "renderBacktestResult",
+            "save-portfolio-config-button",
+            "Risk Engine v0.1",
+            "risk-report-card",
+            "Portfolio Optimizer v0.1",
+            "optimizer-card",
+            "postJson(\"/portfolio-research/run\"",
+            "postJson(\"/risk/portfolio\"",
+            "postJson(\"/optimizer/portfolio\"",
+            "putJson",
+            "buildWorkflowPayload",
+            "renderWorkflowResult",
+            "workflow-trace-note",
+            "GET /portfolio-research/",
         ]
         missing_html = [term for term in required_html_terms if term not in html]
         self.assertEqual([], missing_html)
@@ -297,7 +341,11 @@ class ProjectGovernanceTest(unittest.TestCase):
             "AI 自动分析结果（收益、风险、原因）",
             "生成投资组合建议（Portfolio Recommendation）",
             "backtesting-v0.1",
-            "POST /backtests/run",
+            "POST /workflows/portfolio-research",
+            "GET /workflows/portfolio-research/{trace_id}",
+            "POST /risk/portfolio",
+            "POST /optimizer/portfolio",
+            "POST /portfolio-research/run",
         ]
         missing_standard = [term for term in required_standard_terms if term not in standard]
         self.assertEqual([], missing_standard)

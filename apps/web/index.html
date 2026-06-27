@@ -320,6 +320,15 @@
         background: var(--green);
       }
 
+      .workflow-step[data-step-state="error"] {
+        border-color: var(--red);
+        background: #fcecec;
+      }
+
+      .workflow-step[data-step-state="error"] .step-index {
+        background: var(--red);
+      }
+
       .step-index {
         display: inline-flex;
         align-items: center;
@@ -1172,10 +1181,10 @@
         <section class="workflow-panel">
           <div class="project-head">
             <div>
-              <div class="project-title">组合策略选择 / Portfolio Strategy Workflow / Algorithm Test Workflow</div>
-              <div class="muted">从 Top 100 股票池选择组合，配置策略约束，运行回测并生成组合建议。</div>
+              <div class="project-title">Portfolio Research Workbench</div>
+              <div class="muted">选择组合和目标约束，一次性完成评分、回测、风险、优化和建议。</div>
             </div>
-            <span class="status-pill">Portfolio Strategy v0.1</span>
+            <span class="status-pill">Portfolio Research v0.1</span>
           </div>
 
           <div class="workflow-steps">
@@ -1308,9 +1317,10 @@
 
               <div class="workflow-actions">
                 <div class="workflow-note">算法测试仅使用历史价格和技术信号，后续可接入财报、估值和新闻情绪。</div>
+                <button class="run-backtest-button" id="save-portfolio-config-button" type="button">Save Weights</button>
                 <button class="run-backtest-button" id="run-backtest-button" type="button">
                   <span class="spinner" id="run-backtest-spinner" hidden></span>
-                  <span id="run-backtest-button-label">Run Backtest</span>
+                  <span id="run-backtest-button-label">Run Research</span>
                 </button>
               </div>
             </div>
@@ -1325,6 +1335,7 @@
               <div class="backtest-results" id="backtest-results">
                 <div class="workflow-note">等待回测结果：收益、风险、贡献、原因会在这里展示。</div>
               </div>
+              <div class="workflow-note" id="workflow-trace-note" hidden></div>
               <div class="card chart-card equity-chart-card" id="equity-chart-card" hidden>
                 <canvas id="equity-chart"></canvas>
               </div>
@@ -1343,7 +1354,30 @@
                   <tbody id="trades-table-body"></tbody>
                 </table>
               </div>
-              <div class="workflow-note" id="portfolio-recommendation">先选择组合并运行回测。本系统仅用于投资研究辅助，不构成任何投资建议。</div>
+              <div class="card chart-card" id="ai-summary-card" hidden>
+                <div class="strategy-panel-title">AI 自动分析结果（模板生成，非实时 AI 推理）</div>
+                <div class="workflow-note" id="ai-summary-conclusion"></div>
+                <ul class="workflow-list" id="ai-summary-findings"></ul>
+              </div>
+              <div class="card chart-card" id="recommendation-card" hidden>
+                <div class="strategy-panel-title">Portfolio Recommendation</div>
+                <div class="result-grid" id="recommendation-action-grid"></div>
+                <ul class="workflow-list" id="recommendation-reasons"></ul>
+                <ul class="workflow-list" id="recommendation-suggestions"></ul>
+                <ul class="workflow-list" id="recommendation-risks"></ul>
+                <div class="workflow-note" id="recommendation-disclaimer"></div>
+              </div>
+              <div class="card chart-card" id="risk-report-card" hidden>
+                <div class="strategy-panel-title">Risk Engine v0.1</div>
+                <div class="result-grid" id="risk-report-grid"></div>
+                <div class="workflow-note" id="risk-report-note"></div>
+              </div>
+              <div class="card chart-card" id="optimizer-card" hidden>
+                <div class="strategy-panel-title">Portfolio Optimizer v0.1</div>
+                <div class="result-grid" id="optimizer-grid"></div>
+                <ul class="workflow-list" id="optimizer-notes"></ul>
+              </div>
+              <div class="workflow-note">本系统仅用于投资研究辅助，不构成任何投资建议。</div>
             </div>
           </div>
         </section>
@@ -1456,6 +1490,7 @@
         chartHoverIndex: null,
         chartSizeKey: "",
         portfolios: {},
+        portfolioConfigs: {},
         uxStrategyTouched: false,
         uxConstraintsTouched: false,
       };
@@ -1480,15 +1515,31 @@
       const stopLossPercentInput = document.getElementById("stop-loss-percent");
       const advancedSettings = document.getElementById("advanced-settings");
       const fieldErrorsEl = document.getElementById("field-errors");
+      const savePortfolioConfigButton = document.getElementById("save-portfolio-config-button");
       const runBacktestButton = document.getElementById("run-backtest-button");
       const runBacktestSpinner = document.getElementById("run-backtest-spinner");
       const runBacktestButtonLabel = document.getElementById("run-backtest-button-label");
       const backtestResults = document.getElementById("backtest-results");
+      const workflowTraceNote = document.getElementById("workflow-trace-note");
       const equityChartCard = document.getElementById("equity-chart-card");
       const equityChartCanvas = document.getElementById("equity-chart");
       const tradesTableWrap = document.getElementById("trades-table-wrap");
       const tradesTableBody = document.getElementById("trades-table-body");
-      const portfolioRecommendation = document.getElementById("portfolio-recommendation");
+      const aiSummaryCard = document.getElementById("ai-summary-card");
+      const aiSummaryConclusion = document.getElementById("ai-summary-conclusion");
+      const aiSummaryFindings = document.getElementById("ai-summary-findings");
+      const recommendationCard = document.getElementById("recommendation-card");
+      const recommendationActionGrid = document.getElementById("recommendation-action-grid");
+      const recommendationReasons = document.getElementById("recommendation-reasons");
+      const recommendationSuggestions = document.getElementById("recommendation-suggestions");
+      const recommendationRisks = document.getElementById("recommendation-risks");
+      const recommendationDisclaimer = document.getElementById("recommendation-disclaimer");
+      const riskReportCard = document.getElementById("risk-report-card");
+      const riskReportGrid = document.getElementById("risk-report-grid");
+      const riskReportNote = document.getElementById("risk-report-note");
+      const optimizerCard = document.getElementById("optimizer-card");
+      const optimizerGrid = document.getElementById("optimizer-grid");
+      const optimizerNotes = document.getElementById("optimizer-notes");
       const backtestSelectionSummary = document.getElementById("backtest-selection-summary");
       const workflowUniverseSummary = document.getElementById("workflow-universe-summary");
       const universeMeta = document.getElementById("universe-meta");
@@ -1567,6 +1618,19 @@
         return response.json();
       }
 
+      async function putJson(path, payload) {
+        const response = await fetch(`${API}${path}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}));
+          throw new Error(err.detail || `HTTP ${response.status}`);
+        }
+        return response.json();
+      }
+
       async function deleteJson(path) {
         const response = await fetch(`${API}${path}`, { method: "DELETE" });
         if (!response.ok) {
@@ -1623,8 +1687,10 @@
       async function loadPortfolios() {
         const data = await request("/portfolios");
         state.portfolios = {};
+        state.portfolioConfigs = {};
         data.items.forEach((portfolio) => {
           state.portfolios[portfolio.name] = portfolio.symbols;
+          state.portfolioConfigs[portfolio.name] = portfolio.config || {};
         });
         renderPortfolioList();
         renderBacktestSelectionSummary();
@@ -1637,6 +1703,7 @@
             symbol: state.symbol,
           });
           state.portfolios[strategy] = portfolio.symbols;
+          state.portfolioConfigs[strategy] = portfolio.config || {};
         } catch (error) {
           alert(`加入组合失败：${error.message}`);
           return;
@@ -1651,6 +1718,7 @@
             `/portfolios/${encodeURIComponent(strategy)}/symbols/${encodeURIComponent(symbol)}`
           );
           state.portfolios[strategy] = portfolio.symbols;
+          state.portfolioConfigs[strategy] = portfolio.config || {};
         } catch (error) {
           alert(`移除股票失败：${error.message}`);
           return;
@@ -1687,6 +1755,11 @@
         Object.entries(state.portfolios).forEach(([strategy, symbols]) => {
           const group = document.createElement("div");
           group.className = "portfolio-group";
+          const config = state.portfolioConfigs[strategy] || {};
+          const savedWeights = config.target_weights || {};
+          const savedWeightText = Object.keys(savedWeights).length
+            ? Object.entries(savedWeights).map(([symbol, weight]) => `${symbol} ${(weight * 100).toFixed(0)}%`).join(" · ")
+            : "未保存目标权重";
           const chips = symbols.length
             ? symbols.map((symbol) => `
                 <span class="portfolio-chip">
@@ -1701,6 +1774,7 @@
               <span class="muted">${symbols.length} stocks</span>
             </div>
             <div class="portfolio-symbols">${chips}</div>
+            <div class="muted">Cash ${formatPercent((config.cash_weight || 0) * 100)} · ${escapeHtml(savedWeightText)}</div>
           `;
           portfolioList.appendChild(group);
         });
@@ -1718,6 +1792,41 @@
 
       function activePortfolioSymbols() {
         return [...new Set((state.portfolios[activePortfolioName()] || []).map((symbol) => symbol.toUpperCase()))];
+      }
+
+      function currentPortfolioConfigPayload() {
+        const symbols = activePortfolioSymbols();
+        const cashWeight = percentInputToRatio(minCashInput);
+        const investableWeight = Math.max(0, 1 - cashWeight);
+        const equalWeight = symbols.length ? investableWeight / symbols.length : 0;
+        return {
+          target_weights: Object.fromEntries(symbols.map((symbol) => [symbol, equalWeight])),
+          cash_weight: cashWeight,
+          strategy_config: {
+            allocation_method: workflowStrategy.value,
+            signal_mode: signalModeSelect.value,
+            rebalance_frequency: rebalanceFrequencySelect.value,
+            benchmark_symbol: benchmarkSymbolInput.value.trim().toUpperCase() || "SPY",
+          },
+        };
+      }
+
+      async function saveActivePortfolioConfig() {
+        if (!activePortfolioSymbols().length) {
+          alert("当前组合没有股票，无法保存权重。");
+          return;
+        }
+        try {
+          const portfolio = await putJson(
+            `/portfolios/${encodeURIComponent(activePortfolioName())}/config`,
+            currentPortfolioConfigPayload()
+          );
+          state.portfolioConfigs[portfolio.name] = portfolio.config || {};
+          renderPortfolioList();
+          renderBacktestSelectionSummary();
+        } catch (error) {
+          alert(`保存组合配置失败：${error.message}`);
+        }
       }
 
       const WORKFLOW_STEP_IDS = [
@@ -1744,20 +1853,38 @@
           setWorkflowStepStates(3, 3);
           return;
         }
-        if (stage === "done") {
-          setWorkflowStepStates(6, -1);
-          return;
-        }
-        if (stage === "error") {
-          setWorkflowStepStates(3, -1);
-          return;
-        }
         const portfolioReady = activePortfolioSymbols().length >= 2;
         let doneCount = 0;
         if (portfolioReady) doneCount = 1;
         if (portfolioReady && state.uxStrategyTouched) doneCount = 2;
         if (portfolioReady && state.uxStrategyTouched && state.uxConstraintsTouched) doneCount = 3;
         setWorkflowStepStates(doneCount, portfolioReady ? -1 : 0);
+      }
+
+      const NODE_TO_STEP = {
+        "Universe Builder": "step-universe",
+        "Portfolio Builder": "step-universe",
+        "Strategy Selector": "step-strategy",
+        "Constraint Config": "step-constraints",
+        "Backtest Runner": "step-backtest",
+        "AI Summary": "step-ai-analysis",
+        "Portfolio Recommendation": "step-recommendation",
+      };
+
+      function renderWorkflowNodeSteps(nodeResults) {
+        const completed = new Set();
+        let failedStep = null;
+        (nodeResults || []).forEach((node) => {
+          const stepId = NODE_TO_STEP[node.name];
+          if (!stepId) return;
+          if (node.state === "Failed") failedStep = stepId;
+          else completed.add(stepId);
+        });
+        WORKFLOW_STEP_IDS.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el) return;
+          el.dataset.stepState = id === failedStep ? "error" : completed.has(id) ? "done" : "pending";
+        });
       }
 
       function renderBacktestSelectionSummary() {
@@ -1780,42 +1907,67 @@
         return Math.max(0, Number(input.value || 0)) / 100;
       }
 
-      function buildBacktestPayload() {
+      function buildWorkflowPayload() {
         const symbols = activePortfolioSymbols();
         const years = Number(backtestYearsInput.value || 3);
         return {
-          strategy_name: `${activePortfolioName()} · ${workflowStrategy.options[workflowStrategy.selectedIndex].text}`,
-          symbols,
-          start_date: yearsAgoDate(years),
-          end_date: todayDate(),
-          initial_cash: Number(initialCashInput.value || 10000),
-          rebalance_frequency: rebalanceFrequencySelect.value,
-          benchmark_symbol: benchmarkSymbolInput.value.trim().toUpperCase() || "SPY",
-          signal_mode: signalModeSelect.value,
-          allocation: {
-            method: workflowStrategy.value,
+          portfolio_name: activePortfolioName(),
+          universe_limit: 100,
+          backtest: {
+            strategy_name: `${activePortfolioName()} · ${workflowStrategy.options[workflowStrategy.selectedIndex].text}`,
+            symbols,
+            start_date: yearsAgoDate(years),
+            end_date: todayDate(),
+            initial_cash: Number(initialCashInput.value || 10000),
+            rebalance_frequency: rebalanceFrequencySelect.value,
+            benchmark_symbol: benchmarkSymbolInput.value.trim().toUpperCase() || "SPY",
+            signal_mode: signalModeSelect.value,
+            allocation: {
+              method: workflowStrategy.value,
+              max_position_weight: percentInputToRatio(maxPositionInput),
+              min_cash_weight: percentInputToRatio(minCashInput),
+            },
+            entry_rules: {
+              min_technical_score: workflowStrategy.value === "equal_weight" ? 50 : 60,
+              min_momentum_percent: workflowStrategy.value === "technical_score_weighted" ? 0 : null,
+              require_ma_cross: null,
+            },
+            exit_rules: {
+              max_technical_score: 40,
+              stop_loss_percent: percentInputToRatio(stopLossPercentInput),
+              require_ma_cross: null,
+            },
+            risk: {
+              max_portfolio_drawdown: percentInputToRatio(maxDrawdownInput),
+              max_sector_exposure: null,
+            },
+            sector_map: Object.fromEntries(
+              state.stocks
+                .filter((stock) => symbols.includes(stock.symbol))
+                .map((stock) => [stock.symbol, stock.sector || "Unknown"])
+            ),
+          },
+        };
+      }
+
+      function buildPortfolioResearchPayload() {
+        return {
+          portfolio_name: activePortfolioName(),
+          symbols: activePortfolioSymbols(),
+          research_goal: "balanced_growth",
+          constraints: {
             max_position_weight: percentInputToRatio(maxPositionInput),
             min_cash_weight: percentInputToRatio(minCashInput),
+            max_drawdown: percentInputToRatio(maxDrawdownInput),
+            benchmark_symbol: benchmarkSymbolInput.value.trim().toUpperCase() || "SPY",
+            backtest_years: Number(backtestYearsInput.value || 3),
           },
-          entry_rules: {
-            min_technical_score: workflowStrategy.value === "equal_weight" ? 50 : 60,
-            min_momentum_percent: workflowStrategy.value === "technical_score_weighted" ? 0 : null,
-            require_ma_cross: null,
+          strategy_preferences: {
+            scoring_mode: "algorithm_v0.3",
+            backtest_mode: signalModeSelect.value === "ai_score" ? "ai_score" : "technical",
+            optimizer_method: optimizerMethod(),
+            rebalance_frequency: rebalanceFrequencySelect.value,
           },
-          exit_rules: {
-            max_technical_score: 40,
-            stop_loss_percent: percentInputToRatio(stopLossPercentInput),
-            require_ma_cross: null,
-          },
-          risk: {
-            max_portfolio_drawdown: percentInputToRatio(maxDrawdownInput),
-            max_sector_exposure: null,
-          },
-          sector_map: Object.fromEntries(
-            state.stocks
-              .filter((stock) => symbols.includes(stock.symbol))
-              .map((stock) => [stock.symbol, stock.sector || "Unknown"])
-          ),
         };
       }
 
@@ -1884,6 +2036,23 @@
           return `服务端处理回测时出错，可能是外部数据源暂时不可用，请稍后重试。（${message}）`;
         }
         return `回测失败：${message}`;
+      }
+
+      const NODE_LABELS_ZH = {
+        "Universe Builder": "股票池构建",
+        "Portfolio Builder": "组合构建",
+        "Strategy Selector": "策略选择",
+        "Constraint Config": "约束配置",
+        "Backtest Runner": "回测执行",
+        "AI Summary": "AI 分析",
+        "Portfolio Recommendation": "组合建议生成",
+      };
+
+      function friendlyWorkflowError(result) {
+        const failedNode = (result.node_results || []).find((node) => node.state === "Failed");
+        if (!failedNode) return "工作流执行失败，请稍后重试。";
+        const label = NODE_LABELS_ZH[failedNode.name] || failedNode.name;
+        return `在「${label}」阶段失败：${failedNode.error || "未知错误"}`;
       }
 
       function drawEquityCurve(equityCurve, canvasEl) {
@@ -2021,11 +2190,159 @@
         equityChartCard.hidden = false;
         drawEquityCurve(result.equity_curve, equityChartCanvas);
         renderTradesTable(result.trades);
-        portfolioRecommendation.textContent = `${result.strategy_name}：基于历史回测，建议继续人工复核 ${result.symbols.join(", ")} 的仓位、行业集中度和回撤承受能力。${result.risk_disclaimer}`;
-        updateWorkflowSteps("done");
       }
 
-      async function runPortfolioBacktest() {
+      function renderAiSummary(summary) {
+        if (!summary) {
+          aiSummaryCard.hidden = true;
+          return;
+        }
+        aiSummaryCard.hidden = false;
+        aiSummaryConclusion.textContent = summary.conclusion;
+        aiSummaryFindings.innerHTML = (summary.key_findings || [])
+          .map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+      }
+
+      const RECOMMENDATION_ACTION_LABELS = {
+        research_candidate: "可继续研究",
+        reduce_risk_and_retest: "需降低风险并重新测试",
+        revise_portfolio: "建议调整组合",
+      };
+
+      function renderPortfolioRecommendation(rec) {
+        if (!rec) {
+          recommendationCard.hidden = true;
+          return;
+        }
+        recommendationCard.hidden = false;
+        recommendationActionGrid.innerHTML = `
+          <div class="result-card">
+            <div class="result-label">建议动作</div>
+            <div class="result-value">${escapeHtml(RECOMMENDATION_ACTION_LABELS[rec.action] || rec.action)}</div>
+          </div>`;
+        recommendationReasons.innerHTML = (rec.reasons || []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+        recommendationSuggestions.innerHTML = (rec.suggestions || []).map((s) => `<li>${escapeHtml(s)}</li>`).join("");
+        recommendationRisks.innerHTML = (rec.risks || []).map((r) => `<li>${escapeHtml(r)}</li>`).join("");
+        recommendationDisclaimer.textContent = rec.risk_disclaimer || "";
+      }
+
+      function renderRiskReport(report) {
+        if (!report) {
+          riskReportCard.hidden = true;
+          return;
+        }
+        riskReportCard.hidden = false;
+        riskReportGrid.innerHTML = `
+          <div class="result-card"><div class="result-label">Volatility</div><div class="result-value">${escapeHtml(formatPercent(report.volatility_percent))}</div></div>
+          <div class="result-card"><div class="result-label">Beta</div><div class="result-value">${escapeHtml(report.beta === null || report.beta === undefined ? "--" : Number(report.beta).toFixed(2))}</div></div>
+          <div class="result-card"><div class="result-label">Max Drawdown</div><div class="result-value">${escapeHtml(formatPercent(report.max_drawdown_percent))}</div></div>
+          <div class="result-card"><div class="result-label">Concentration</div><div class="result-value">${escapeHtml(formatPercent(report.concentration_percent))}</div></div>
+        `;
+        const sectors = Object.entries(report.sector_exposure || {})
+          .map(([sector, weight]) => `${sector} ${formatPercent(weight)}`).join(" · ");
+        riskReportNote.textContent = `Average correlation ${report.average_correlation ?? "--"} · ${sectors || "No sector map"} · ${report.risk_disclaimer}`;
+      }
+
+      function optimizerMethod() {
+        if (workflowStrategy.value === "market_cap_weighted") return "market_cap";
+        if (workflowStrategy.value === "volatility_weighted") return "risk_parity";
+        if (workflowStrategy.value === "equal_weight") return "equal_weight";
+        return "minimum_variance";
+      }
+
+      function renderOptimizerResult(result) {
+        if (!result) {
+          optimizerCard.hidden = true;
+          return;
+        }
+        optimizerCard.hidden = false;
+        const weights = Object.entries(result.target_weights || {})
+          .map(([symbol, weight]) => `${symbol} ${formatPercent(weight * 100)}`)
+          .join(" · ");
+        optimizerGrid.innerHTML = `
+          <div class="result-card"><div class="result-label">Method</div><div class="result-value">${escapeHtml(result.method)}</div></div>
+          <div class="result-card"><div class="result-label">Cash</div><div class="result-value">${escapeHtml(formatPercent(result.cash_weight * 100))}</div></div>
+          <div class="result-card"><div class="result-label">Expected Risk</div><div class="result-value">${escapeHtml(formatPercent(result.expected_risk_percent))}</div></div>
+          <div class="result-card"><div class="result-label">Weights</div><div class="result-value">${escapeHtml(weights || "--")}</div></div>
+        `;
+        optimizerNotes.innerHTML = (result.notes || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+      }
+
+      async function loadOptimizerResult() {
+        const symbols = activePortfolioSymbols();
+        if (symbols.length < 2) {
+          renderOptimizerResult(null);
+          return;
+        }
+        const result = await postJson("/optimizer/portfolio", {
+          symbols,
+          method: optimizerMethod(),
+          max_position_weight: percentInputToRatio(maxPositionInput),
+          min_cash_weight: percentInputToRatio(minCashInput),
+        });
+        renderOptimizerResult(result);
+      }
+
+      async function loadRiskReport() {
+        const symbols = activePortfolioSymbols();
+        if (symbols.length < 2) {
+          renderRiskReport(null);
+          return;
+        }
+        const sectorMap = Object.fromEntries(
+          state.stocks
+            .filter((stock) => symbols.includes(stock.symbol))
+            .map((stock) => [stock.symbol, stock.sector || "Unknown"])
+        );
+        const report = await postJson("/risk/portfolio", {
+          symbols,
+          weights: currentPortfolioConfigPayload().target_weights,
+          benchmark_symbol: benchmarkSymbolInput.value.trim().toUpperCase() || "SPY",
+          sector_map: sectorMap,
+        });
+        renderRiskReport(report);
+      }
+
+      function renderWorkflowResult(result) {
+        renderWorkflowNodeSteps(result.node_results);
+        workflowTraceNote.hidden = false;
+        workflowTraceNote.textContent = `Trace ID: ${result.trace_id} · 可通过 GET /workflows/portfolio-research/${result.trace_id} 复盘本次 workflow。`;
+        if (result.state === "Failed") {
+          backtestResults.innerHTML = `<div class="workflow-note">${escapeHtml(friendlyWorkflowError(result))}</div>`;
+          equityChartCard.hidden = true;
+          tradesTableWrap.hidden = true;
+          renderAiSummary(null);
+          renderPortfolioRecommendation(null);
+          return;
+        }
+        renderBacktestResult(result.backtest);
+        renderAiSummary(result.ai_summary);
+        renderPortfolioRecommendation(result.portfolio_recommendation);
+      }
+
+      function renderPortfolioResearchResult(result) {
+        const workflowResponse = result.workflow?.response || {};
+        renderWorkflowNodeSteps(result.workflow?.node_results || []);
+        workflowTraceNote.hidden = false;
+        workflowTraceNote.textContent = `Trace ID: ${result.trace_id} · 可通过 GET /portfolio-research/${result.trace_id} 复盘本次完整研究。`;
+        if (result.state === "failed") {
+          backtestResults.innerHTML = `<div class="workflow-note">Portfolio Research 执行失败，请检查数据源或约束后重试。</div>`;
+          equityChartCard.hidden = true;
+          tradesTableWrap.hidden = true;
+          renderAiSummary(null);
+          renderPortfolioRecommendation(null);
+          renderRiskReport(null);
+          renderOptimizerResult(null);
+          return;
+        }
+        renderBacktestResult(workflowResponse.backtest || result.backtest_summary || {});
+        renderAiSummary(result.ai_explanation);
+        renderPortfolioRecommendation(result.recommendation);
+        renderRiskReport(result.risk_summary);
+        renderOptimizerResult(result.optimized_weights);
+      }
+
+      async function runPortfolioWorkflow() {
         const symbols = activePortfolioSymbols();
         if (symbols.length < 2) {
           backtestResults.innerHTML = `<div class="workflow-note">请先在当前组合中至少加入 2 只股票，再运行回测。</div>`;
@@ -2039,13 +2356,19 @@
         updateWorkflowSteps("running");
         equityChartCard.hidden = true;
         tradesTableWrap.hidden = true;
-        backtestResults.innerHTML = `<div class="workflow-note">正在运行回测：Universe → Strategy → Constraints → Backtest → AI Analysis...</div>`;
+        aiSummaryCard.hidden = true;
+        recommendationCard.hidden = true;
+        riskReportCard.hidden = true;
+        optimizerCard.hidden = true;
+        workflowTraceNote.hidden = true;
+        workflowTraceNote.textContent = "";
+        backtestResults.innerHTML = `<div class="workflow-note">正在运行 Portfolio Research：评分 → 回测 → 风险 → 优化 → 解释 → 建议...</div>`;
         try {
-          const result = await postJson("/backtests/run", buildBacktestPayload());
-          renderBacktestResult(result);
+          const result = await postJson("/portfolio-research/run", buildPortfolioResearchPayload());
+          renderPortfolioResearchResult(result);
         } catch (error) {
           backtestResults.innerHTML = `<div class="workflow-note">${escapeHtml(friendlyBacktestError(error))}</div>`;
-          updateWorkflowSteps("error");
+          renderWorkflowNodeSteps([]);
         } finally {
           setBacktestLoading(false);
         }
@@ -2639,6 +2962,7 @@
       refreshButton.addEventListener("click", loadMarket);
       scanUniverseButton.addEventListener("click", () => loadMostActiveUniverse(100));
       addPortfolioButton.addEventListener("click", addCurrentSymbolToPortfolio);
+      savePortfolioConfigButton.addEventListener("click", saveActivePortfolioConfig);
       portfolioStrategy.addEventListener("change", renderBacktestSelectionSummary);
       workflowStrategy.addEventListener("change", () => {
         state.uxStrategyTouched = true;
@@ -2650,7 +2974,7 @@
           updateWorkflowSteps();
         });
       });
-      runBacktestButton.addEventListener("click", runPortfolioBacktest);
+      runBacktestButton.addEventListener("click", runPortfolioWorkflow);
       rangeInput.addEventListener("change", loadMarket);
       intervalInput.addEventListener("change", loadMarket);
       window.addEventListener("resize", () => state.lastTrend && drawChart(state.lastTrend.points || []));
