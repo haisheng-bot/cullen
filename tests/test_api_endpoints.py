@@ -313,9 +313,16 @@ class ApiEndpointsTest(unittest.TestCase):
         self.original_backtest_engine = main.backtest_engine
         self.original_portfolio_research_workflow = main.portfolio_research_workflow
         self.original_persist_backtest_run = main._persist_backtest_run
+        self.original_persist_workflow_run = main._persist_workflow_run
+        self.original_fetch_workflow_run = main._fetch_workflow_run
         self.original_list_portfolios = main._list_portfolios
         self.original_add_portfolio_symbol = main._add_portfolio_symbol
         self.original_remove_portfolio_symbol = main._remove_portfolio_symbol
+        self.original_save_portfolio_config = main._save_portfolio_config
+        self.original_portfolio_risk_response = main._portfolio_risk_response
+        self.original_portfolio_optimizer_response = main._portfolio_optimizer_response
+        self.original_run_portfolio_research_module = main._run_portfolio_research_module
+        self.original_fetch_portfolio_research_run = main._fetch_portfolio_research_run
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
         main.sec_filing_client = FakeSECFilingClient()
@@ -340,6 +347,13 @@ class ApiEndpointsTest(unittest.TestCase):
         main._persist_backtest_run = lambda config, result: self.persisted_backtest_runs.append(
             (config, result)
         )
+        self.persisted_workflow_runs: dict[str, dict] = {}
+
+        def fake_persist_workflow_run(request, response: dict) -> None:
+            self.persisted_workflow_runs[response["trace_id"]] = response
+
+        main._persist_workflow_run = fake_persist_workflow_run
+        main._fetch_workflow_run = self.persisted_workflow_runs.get
         self.fake_portfolios: dict[str, list[str]] = {"Core Watch": ["AAPL"]}
         main._list_portfolios = lambda: [
             {"name": name, "symbols": symbols, "updated_at": "2026-06-25T13:32:00+00:00"}
@@ -360,6 +374,63 @@ class ApiEndpointsTest(unittest.TestCase):
 
         main._add_portfolio_symbol = fake_add_portfolio_symbol
         main._remove_portfolio_symbol = fake_remove_portfolio_symbol
+        main._save_portfolio_config = lambda name, request: {
+            "name": name,
+            "symbols": self.fake_portfolios.get(name, sorted(request.target_weights)),
+            "config": {
+                "target_weights": request.target_weights,
+                "cash_weight": request.cash_weight,
+                "strategy_config": request.strategy_config,
+                "updated_at": "2026-06-27T00:00:00+00:00",
+            },
+            "updated_at": "2026-06-25T13:32:00+00:00",
+        }
+        main._portfolio_risk_response = lambda request: {
+            "symbols": [symbol.upper() for symbol in request.symbols],
+            "weights": request.weights,
+            "volatility_percent": 18.5,
+            "beta": 1.1,
+            "max_drawdown_percent": 12.0,
+            "average_correlation": 0.45,
+            "concentration_percent": 60.0,
+            "sector_exposure": {"Technology": 100.0},
+            "source": "OpenStock AI Risk Engine v0.1",
+            "generated_at": "2026-06-27T00:00:00+00:00",
+            "risk_disclaimer": RISK_DISCLAIMER,
+        }
+        main._portfolio_optimizer_response = lambda request: {
+            "method": request.method,
+            "symbols": [symbol.upper() for symbol in request.symbols],
+            "target_weights": {"AAPL": 0.45, "MSFT": 0.45},
+            "cash_weight": 0.1,
+            "max_position_weight": request.max_position_weight,
+            "expected_risk_percent": 16.2,
+            "notes": ["test"],
+            "source": "OpenStock AI Portfolio Optimizer v0.1",
+            "generated_at": "2026-06-27T00:00:00+00:00",
+            "risk_disclaimer": RISK_DISCLAIMER,
+        }
+        self.persisted_portfolio_research_runs: dict[str, dict] = {}
+        main._run_portfolio_research_module = lambda request: {
+            "workflow_name": "portfolio_research_module",
+            "workflow_version": "portfolio-research-module-v0.1",
+            "trace_id": "portfolio-trace-1",
+            "state": "completed",
+            "portfolio": {"name": request.portfolio_name, "symbols": [symbol.upper() for symbol in request.symbols]},
+            "score_summary": {"scoring_mode": request.strategy_preferences.scoring_mode},
+            "backtest_summary": {"total_return_percent": 10.0},
+            "risk_summary": {"volatility_percent": 18.5},
+            "optimized_weights": {"target_weights": {"AAPL": 0.45, "MSFT": 0.45}},
+            "ai_explanation": {"conclusion": "test"},
+            "recommendation": {"action": "research_candidate"},
+            "warnings": [],
+            "workflow": {"node_results": []},
+            "source": "OpenStock AI Portfolio Research Module v0.1",
+            "started_at": "2026-06-27T00:00:00+00:00",
+            "completed_at": "2026-06-27T00:00:01+00:00",
+            "risk_disclaimer": RISK_DISCLAIMER,
+        }
+        main._fetch_portfolio_research_run = self.persisted_portfolio_research_runs.get
         main._fetch_score_history = lambda symbol, limit: [
             {
                 "screened_at": "2026-06-25T13:32:00+00:00",
@@ -390,9 +461,16 @@ class ApiEndpointsTest(unittest.TestCase):
         main.backtest_engine = self.original_backtest_engine
         main.portfolio_research_workflow = self.original_portfolio_research_workflow
         main._persist_backtest_run = self.original_persist_backtest_run
+        main._persist_workflow_run = self.original_persist_workflow_run
+        main._fetch_workflow_run = self.original_fetch_workflow_run
         main._list_portfolios = self.original_list_portfolios
         main._add_portfolio_symbol = self.original_add_portfolio_symbol
         main._remove_portfolio_symbol = self.original_remove_portfolio_symbol
+        main._save_portfolio_config = self.original_save_portfolio_config
+        main._portfolio_risk_response = self.original_portfolio_risk_response
+        main._portfolio_optimizer_response = self.original_portfolio_optimizer_response
+        main._run_portfolio_research_module = self.original_run_portfolio_research_module
+        main._fetch_portfolio_research_run = self.original_fetch_portfolio_research_run
 
     def test_popular_stocks_endpoint(self) -> None:
         payload = main.get_popular_us_stocks()
@@ -618,6 +696,57 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertIn("回测总收益 10.0%", payload["ai_summary"]["key_findings"][0])
         self.assertEqual(7, len(payload["node_results"]))
         self.assertEqual(1, len(self.persisted_backtest_runs))
+        self.assertIn(payload["trace_id"], self.persisted_workflow_runs)
+
+    def test_portfolio_research_module_endpoint(self) -> None:
+        payload = main.run_portfolio_research(
+            main.PortfolioResearchRunRequest(
+                portfolio_name="Core Watch",
+                symbols=["aapl", "msft"],
+            )
+        )
+
+        self.assertEqual("portfolio_research_module", payload["workflow_name"])
+        self.assertEqual("completed", payload["state"])
+        self.assertEqual(["AAPL", "MSFT"], payload["portfolio"]["symbols"])
+        self.assertEqual({"volatility_percent": 18.5}, payload["risk_summary"])
+        self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
+
+    def test_get_portfolio_research_module_endpoint(self) -> None:
+        self.persisted_portfolio_research_runs["portfolio-trace-1"] = {
+            "workflow_name": "portfolio_research_module",
+            "trace_id": "portfolio-trace-1",
+            "state": "completed",
+            "risk_disclaimer": RISK_DISCLAIMER,
+        }
+
+        payload = main.get_portfolio_research("portfolio-trace-1")
+
+        self.assertEqual("portfolio-trace-1", payload["trace_id"])
+        self.assertEqual("completed", payload["state"])
+
+    def test_get_portfolio_research_workflow_run_endpoint(self) -> None:
+        self.persisted_workflow_runs["trace-123"] = {
+            "workflow_name": "portfolio_research_workflow",
+            "workflow_version": "portfolio-research-workflow-v0.1",
+            "trace_id": "trace-123",
+            "state": "Recommendation Ready",
+            "started_at": "2026-06-27T00:00:00+00:00",
+            "completed_at": "2026-06-27T00:00:01+00:00",
+            "node_results": [],
+            "risk_disclaimer": RISK_DISCLAIMER,
+        }
+
+        payload = main.get_portfolio_research_workflow_run("trace-123")
+
+        self.assertEqual("trace-123", payload["trace_id"])
+        self.assertEqual("Recommendation Ready", payload["state"])
+
+    def test_get_portfolio_research_workflow_run_endpoint_404(self) -> None:
+        with self.assertRaises(main.HTTPException) as context:
+            main.get_portfolio_research_workflow_run("missing-trace")
+
+        self.assertEqual(404, context.exception.status_code)
 
     def test_get_portfolios_endpoint(self) -> None:
         payload = main.get_portfolios()
@@ -644,6 +773,48 @@ class ApiEndpointsTest(unittest.TestCase):
             main.remove_portfolio_symbol("Nonexistent", "AAPL")
 
         self.assertEqual(404, context.exception.status_code)
+
+    def test_update_portfolio_config_endpoint(self) -> None:
+        payload = main.update_portfolio_config(
+            "Core Watch",
+            main.PortfolioConfigRequest(
+                target_weights={"AAPL": 0.5, "MSFT": 0.4},
+                cash_weight=0.1,
+                strategy_config={"allocation_method": "equal_weight"},
+            ),
+        )
+
+        self.assertEqual("Core Watch", payload["name"])
+        self.assertEqual({"AAPL": 0.5, "MSFT": 0.4}, payload["config"]["target_weights"])
+        self.assertEqual(0.1, payload["config"]["cash_weight"])
+
+    def test_analyze_portfolio_risk_endpoint(self) -> None:
+        payload = main.analyze_portfolio_risk_endpoint(
+            main.PortfolioRiskRequest(
+                symbols=["aapl", "msft"],
+                weights={"AAPL": 0.6, "MSFT": 0.4},
+                sector_map={"AAPL": "Technology", "MSFT": "Technology"},
+            )
+        )
+
+        self.assertEqual(["AAPL", "MSFT"], payload["symbols"])
+        self.assertEqual(18.5, payload["volatility_percent"])
+        self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
+
+    def test_optimize_portfolio_endpoint(self) -> None:
+        payload = main.optimize_portfolio_endpoint(
+            main.PortfolioOptimizerRequest(
+                symbols=["aapl", "msft"],
+                method="minimum_variance",
+                max_position_weight=0.5,
+                min_cash_weight=0.1,
+            )
+        )
+
+        self.assertEqual("minimum_variance", payload["method"])
+        self.assertEqual(["AAPL", "MSFT"], payload["symbols"])
+        self.assertEqual({"AAPL": 0.45, "MSFT": 0.45}, payload["target_weights"])
+        self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
 
 
 if __name__ == "__main__":

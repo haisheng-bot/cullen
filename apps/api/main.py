@@ -5,7 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
+from datetime import date
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from packages.ai_agents.report_agent import ReportAgent
 from packages.ai_agents.sec_filing_agent import SECFilingAgent
@@ -37,13 +39,31 @@ from packages.data_sources.sec_financials import SECFinancialsClient, SECFinanci
 from packages.data_sources.tiger_openapi import TigerOpenAPIClient, TigerOpenAPIError
 from packages.db.backtest_runs import write_backtest_run
 from packages.db.financial_facts_cache import get_or_fetch_annual_series
-from packages.db.portfolios import add_symbol, ensure_default_portfolios, list_portfolios, remove_symbol
+from packages.db.models import Portfolio
+from packages.db.portfolios import (
+    add_symbol,
+    ensure_default_portfolios,
+    get_portfolio_config,
+    list_portfolios,
+    remove_symbol,
+    save_portfolio_config,
+)
 from packages.db.price_history_cache import get_or_fetch_closes
 from packages.db.session import check_database_connection, session_scope
 from packages.db.stock_scores import get_score_history, write_screening_result
+from packages.db.workflow_runs import get_workflow_run_by_trace_id, write_workflow_run
 from packages.model_layer.factory import build_default_router
 from packages.model_layer.validator import OutputValidationError
 from packages.news_layer.news_policy import NewsPolicyClient, NewsPolicyError
+from packages.portfolio_optimizer.engine import optimize_portfolio
+from packages.portfolio_research.archive import get_portfolio_research_run, write_portfolio_research_run
+from packages.portfolio_research.engine import PortfolioResearchEngine
+from packages.portfolio_research.schemas import (
+    PortfolioResearchRunRequest as PortfolioResearchModuleRequest,
+    ResearchConstraints,
+    StrategyPreferences,
+)
+from packages.risk_engine.engine import analyze_portfolio_risk
 from packages.universe_layer.most_active import MostActiveUniverseScanner
 from packages.workflow_layer.portfolio_research import (
     PortfolioResearchRequest,
@@ -380,10 +400,28 @@ class PortfolioSymbolRequest(BaseModel):
     symbol: str
 
 
-def _portfolio_to_dict(portfolio) -> dict:
+class PortfolioConfigRequest(BaseModel):
+    target_weights: dict[str, float] = Field(default_factory=dict)
+    cash_weight: float = Field(default=0.0, ge=0.0, le=1.0)
+    strategy_config: dict = Field(default_factory=dict)
+
+
+def _portfolio_config_to_dict(config) -> dict:
+    if config is None:
+        return {"target_weights": {}, "cash_weight": 0.0, "strategy_config": {}, "updated_at": None}
+    return {
+        "target_weights": config.target_weights,
+        "cash_weight": config.cash_weight,
+        "strategy_config": config.strategy_config,
+        "updated_at": config.updated_at.isoformat() if config.updated_at else None,
+    }
+
+
+def _portfolio_to_dict(portfolio, config=None) -> dict:
     return {
         "name": portfolio.name,
         "symbols": portfolio.symbols,
+        "config": _portfolio_config_to_dict(config),
         "updated_at": portfolio.updated_at.isoformat() if portfolio.updated_at else None,
     }
 
@@ -391,19 +429,47 @@ def _portfolio_to_dict(portfolio) -> dict:
 def _list_portfolios() -> list[dict]:
     with session_scope() as session:
         ensure_default_portfolios(session)
-        return [_portfolio_to_dict(portfolio) for portfolio in list_portfolios(session)]
+        return [
+            _portfolio_to_dict(portfolio, get_portfolio_config(session, portfolio.name))
+            for portfolio in list_portfolios(session)
+        ]
 
 
 def _add_portfolio_symbol(name: str, symbol: str) -> dict:
     with session_scope() as session:
         portfolio = add_symbol(session, name, symbol)
-        return _portfolio_to_dict(portfolio)
+        return _portfolio_to_dict(portfolio, get_portfolio_config(session, name))
 
 
 def _remove_portfolio_symbol(name: str, symbol: str) -> dict | None:
     with session_scope() as session:
         portfolio = remove_symbol(session, name, symbol)
-        return _portfolio_to_dict(portfolio) if portfolio else None
+        return _portfolio_to_dict(portfolio, get_portfolio_config(session, name)) if portfolio else None
+
+
+def _save_portfolio_config(name: str, request: PortfolioConfigRequest) -> dict:
+    normalized_weights: dict[str, float] = {}
+    for symbol, weight in request.target_weights.items():
+        normalized_symbol = normalize_symbol(symbol)
+        if weight < 0 or weight > 1:
+            raise ValueError(f"target weight must be between 0 and 1: {normalized_symbol}")
+        normalized_weights[normalized_symbol] = weight
+    if sum(normalized_weights.values()) + request.cash_weight > 1.0001:
+        raise ValueError("target weights plus cash_weight must be <= 1")
+
+    with session_scope() as session:
+        portfolio = session.scalar(select(Portfolio).where(Portfolio.name == name))
+        if portfolio is None:
+            portfolio = Portfolio(name=name, symbols=sorted(normalized_weights))
+            session.add(portfolio)
+        config = save_portfolio_config(
+            session,
+            name,
+            normalized_weights,
+            request.cash_weight,
+            request.strategy_config,
+        )
+        return _portfolio_to_dict(portfolio, config)
 
 
 @app.get("/portfolios")
@@ -434,6 +500,14 @@ def remove_portfolio_symbol(name: str, symbol: str) -> dict:
     if result is None:
         raise HTTPException(status_code=404, detail=f"portfolio not found: {name}")
     return result
+
+
+@app.put("/portfolios/{name}/config")
+def update_portfolio_config(name: str, request: PortfolioConfigRequest) -> dict:
+    try:
+        return _save_portfolio_config(name, request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/stocks/{symbol}/trend")
@@ -563,6 +637,20 @@ class RiskControlsRequest(BaseModel):
     max_sector_exposure: float | None = None
 
 
+class PortfolioRiskRequest(BaseModel):
+    symbols: list[str]
+    weights: dict[str, float] = Field(default_factory=dict)
+    benchmark_symbol: str = "SPY"
+    sector_map: dict[str, str] = Field(default_factory=dict)
+
+
+class PortfolioOptimizerRequest(BaseModel):
+    symbols: list[str]
+    method: str = "minimum_variance"
+    max_position_weight: float = Field(default=0.25, ge=0.0, le=1.0)
+    min_cash_weight: float = Field(default=0.10, ge=0.0, le=1.0)
+
+
 class BacktestRunRequest(BaseModel):
     """Request body for POST /backtests/run. Mirrors
     packages.backtesting.schemas.StrategyConfig field-for-field; the engine
@@ -591,6 +679,31 @@ class PortfolioResearchWorkflowRequest(BaseModel):
     backtest: BacktestRunRequest
 
 
+class PortfolioResearchConstraintsRequest(BaseModel):
+    max_position_weight: float = Field(default=0.35, ge=0.0, le=1.0)
+    min_cash_weight: float = Field(default=0.10, ge=0.0, le=1.0)
+    max_drawdown: float = Field(default=0.20, ge=0.0, le=1.0)
+    benchmark_symbol: str = "SPY"
+    backtest_years: int = Field(default=3, ge=1, le=10)
+
+
+class PortfolioResearchStrategyPreferencesRequest(BaseModel):
+    scoring_mode: str = "algorithm_v0.3"
+    backtest_mode: str = "ai_score"
+    optimizer_method: str = "minimum_variance"
+    rebalance_frequency: str = "monthly"
+
+
+class PortfolioResearchRunRequest(BaseModel):
+    portfolio_name: str = "Portfolio Research"
+    symbols: list[str]
+    research_goal: str = "balanced_growth"
+    constraints: PortfolioResearchConstraintsRequest = Field(default_factory=PortfolioResearchConstraintsRequest)
+    strategy_preferences: PortfolioResearchStrategyPreferencesRequest = Field(
+        default_factory=PortfolioResearchStrategyPreferencesRequest
+    )
+
+
 def _to_strategy_config(request: BacktestRunRequest) -> StrategyConfig:
     return StrategyConfig(
         strategy_name=request.strategy_name,
@@ -609,9 +722,155 @@ def _to_strategy_config(request: BacktestRunRequest) -> StrategyConfig:
     )
 
 
+def _to_module_request(request: PortfolioResearchRunRequest) -> PortfolioResearchModuleRequest:
+    return PortfolioResearchModuleRequest(
+        portfolio_name=request.portfolio_name,
+        symbols=[normalize_symbol(symbol) for symbol in request.symbols],
+        research_goal=request.research_goal,
+        constraints=ResearchConstraints(**request.constraints.model_dump()),
+        strategy_preferences=StrategyPreferences(**request.strategy_preferences.model_dump()),
+    )
+
+
+def _years_ago_date(years: int) -> str:
+    today = date.today()
+    try:
+        return today.replace(year=today.year - years).isoformat()
+    except ValueError:
+        return today.replace(year=today.year - years, day=28).isoformat()
+
+
 def _persist_backtest_run(config: StrategyConfig, result) -> None:
     with session_scope() as session:
         write_backtest_run(session, config, result)
+
+
+def _persist_workflow_run(request: PortfolioResearchWorkflowRequest, response: dict) -> None:
+    with session_scope() as session:
+        write_workflow_run(session, request.model_dump(), response)
+
+
+def _fetch_workflow_run(trace_id: str) -> dict | None:
+    with session_scope() as session:
+        record = get_workflow_run_by_trace_id(session, trace_id)
+        return record.response if record else None
+
+
+def _archive_portfolio_research_run(request: PortfolioResearchModuleRequest, response: dict) -> None:
+    with session_scope() as session:
+        write_portfolio_research_run(session, request, response)
+
+
+def _fetch_portfolio_research_run(trace_id: str) -> dict | None:
+    with session_scope() as session:
+        return get_portfolio_research_run(session, trace_id)
+
+
+def _portfolio_risk_response(request: PortfolioRiskRequest) -> dict:
+    symbols = [normalize_symbol(symbol) for symbol in request.symbols]
+    weights = {normalize_symbol(symbol): weight for symbol, weight in request.weights.items()}
+    benchmark_symbol = normalize_symbol(request.benchmark_symbol)
+    closes_by_symbol = {symbol: _fetch_cached_closes(symbol) for symbol in symbols}
+    benchmark_closes = _fetch_cached_closes(benchmark_symbol)
+    report = analyze_portfolio_risk(
+        closes_by_symbol,
+        weights=weights,
+        benchmark_closes=benchmark_closes,
+        sector_map={normalize_symbol(symbol): sector for symbol, sector in request.sector_map.items()},
+    )
+    return report.to_dict()
+
+
+def _portfolio_optimizer_response(request: PortfolioOptimizerRequest) -> dict:
+    symbols = [normalize_symbol(symbol) for symbol in request.symbols]
+    closes_by_symbol = {symbol: _fetch_cached_closes(symbol) for symbol in symbols}
+    market_caps = {
+        symbol: (closes[-1][1] * shares if (shares := _fetch_shares_outstanding(symbol)) else None)
+        for symbol, closes in closes_by_symbol.items()
+        if closes
+    }
+    result = optimize_portfolio(
+        method=request.method,
+        closes_by_symbol=closes_by_symbol,
+        market_caps=market_caps,
+        max_position_weight=request.max_position_weight,
+        min_cash_weight=request.min_cash_weight,
+    )
+    return result.to_dict()
+
+
+def _module_workflow_response(request: PortfolioResearchModuleRequest) -> dict:
+    constraints = request.constraints
+    preferences = request.strategy_preferences
+    backtest_request = BacktestRunRequest(
+        strategy_name=f"{request.portfolio_name} · Portfolio Research",
+        symbols=request.symbols,
+        start_date=_years_ago_date(constraints.backtest_years),
+        end_date=date.today().isoformat(),
+        rebalance_frequency=preferences.rebalance_frequency,
+        benchmark_symbol=constraints.benchmark_symbol,
+        signal_mode="ai_score" if preferences.backtest_mode == "ai_score" else "technical",
+        allocation=AllocationConfigRequest(
+            method="equal_weight",
+            max_position_weight=constraints.max_position_weight,
+            min_cash_weight=constraints.min_cash_weight,
+        ),
+        entry_rules=EntryRulesRequest(min_technical_score=50, min_ai_score=55),
+        exit_rules=ExitRulesRequest(max_technical_score=40, max_ai_score=35),
+        risk=RiskControlsRequest(max_portfolio_drawdown=constraints.max_drawdown),
+    )
+    workflow_request = PortfolioResearchWorkflowRequest(
+        portfolio_name=request.portfolio_name,
+        universe_limit=100,
+        selected_symbols=request.symbols,
+        backtest=backtest_request,
+    )
+    config = _to_strategy_config(workflow_request.backtest)
+    run_request = PortfolioResearchRequest(
+        strategy_config=config,
+        universe_limit=workflow_request.universe_limit,
+        portfolio_name=workflow_request.portfolio_name,
+        selected_symbols=workflow_request.selected_symbols,
+    )
+    result = portfolio_research_workflow.run(run_request)
+    final_config = result.payload.get("final_strategy_config")
+    backtest_result = result.payload.get("backtest_result")
+    if final_config is not None and backtest_result is not None:
+        _persist_backtest_run(final_config, backtest_result)
+    return _portfolio_research_response(result)
+
+
+def _module_risk_response(request: PortfolioResearchModuleRequest) -> dict:
+    equal_weight = 1 / len(request.symbols) if request.symbols else 0
+    return _portfolio_risk_response(
+        PortfolioRiskRequest(
+            symbols=request.symbols,
+            weights={symbol: equal_weight for symbol in request.symbols},
+            benchmark_symbol=request.constraints.benchmark_symbol,
+        )
+    )
+
+
+def _module_optimizer_response(request: PortfolioResearchModuleRequest) -> dict:
+    return _portfolio_optimizer_response(
+        PortfolioOptimizerRequest(
+            symbols=request.symbols,
+            method=request.strategy_preferences.optimizer_method,
+            max_position_weight=request.constraints.max_position_weight,
+            min_cash_weight=request.constraints.min_cash_weight,
+        )
+    )
+
+
+def _run_portfolio_research_module(request: PortfolioResearchRunRequest) -> dict:
+    module_request = _to_module_request(request)
+    engine = PortfolioResearchEngine(
+        workflow_runner=_module_workflow_response,
+        risk_runner=_module_risk_response,
+        optimizer_runner=_module_optimizer_response,
+        archive_writer=_archive_portfolio_research_run,
+    )
+    return engine.run(module_request)
 
 
 def _portfolio_research_response(run_result) -> dict:
@@ -651,6 +910,50 @@ def run_backtest(request: BacktestRunRequest) -> dict:
     return result.to_dict()
 
 
+@app.post("/risk/portfolio")
+def analyze_portfolio_risk_endpoint(request: PortfolioRiskRequest) -> dict:
+    if not request.symbols:
+        raise HTTPException(status_code=400, detail="symbols are required")
+    try:
+        return _portfolio_risk_response(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PriceHistoryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/optimizer/portfolio")
+def optimize_portfolio_endpoint(request: PortfolioOptimizerRequest) -> dict:
+    if not request.symbols:
+        raise HTTPException(status_code=400, detail="symbols are required")
+    try:
+        return _portfolio_optimizer_response(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PriceHistoryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.post("/portfolio-research/run")
+def run_portfolio_research(request: PortfolioResearchRunRequest) -> dict:
+    if not request.symbols:
+        raise HTTPException(status_code=400, detail="symbols are required")
+    try:
+        return _run_portfolio_research_module(request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PriceHistoryError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@app.get("/portfolio-research/{trace_id}")
+def get_portfolio_research(trace_id: str) -> dict:
+    response = _fetch_portfolio_research_run(trace_id)
+    if response is None:
+        raise HTTPException(status_code=404, detail="portfolio research run not found")
+    return response
+
+
 @app.post("/workflows/portfolio-research")
 def run_portfolio_research_workflow(request: PortfolioResearchWorkflowRequest) -> dict:
     config = _to_strategy_config(request.backtest)
@@ -671,4 +974,14 @@ def run_portfolio_research_workflow(request: PortfolioResearchWorkflowRequest) -
     backtest_result = result.payload.get("backtest_result")
     if final_config is not None and backtest_result is not None:
         _persist_backtest_run(final_config, backtest_result)
-    return _portfolio_research_response(result)
+    response = _portfolio_research_response(result)
+    _persist_workflow_run(request, response)
+    return response
+
+
+@app.get("/workflows/portfolio-research/{trace_id}")
+def get_portfolio_research_workflow_run(trace_id: str) -> dict:
+    response = _fetch_workflow_run(trace_id)
+    if response is None:
+        raise HTTPException(status_code=404, detail="workflow run not found")
+    return response
