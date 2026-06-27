@@ -215,3 +215,7 @@ volatility_risk    10%
 * 使用正向/负向关键词和治理、政策、任免类披露进行打分。
 * 没有新闻信号时按 50 分中性处理，并在风险提示中说明。
 * 后续可替换为 FinBERT、LLM 或专业新闻情绪数据源，算法输入接口保持不变。
+
+### 9.5 权重外部化为 Scoring Profiles（scoring-profiles-v0.1）
+
+上面 9.1/9.4 列出的权重曾经硬编码在 `recommendation.py`（`TrendRecommendationAlgorithm`）和 `packages/backtesting/signals.py`（各自维护一套），违反 Project Constitution 第12条 Configuration First。已抽成独立的 `packages/scoring_profiles`，提供 Balanced（= 本节列出的默认值）、Growth、Value、Defensive、Momentum 5 个内置权重组，详见 `docs/standards/SCORING_PROFILES_STANDARD.md`。`algorithm_version` 仍为 `algorithm-v0.3`（因子计算逻辑未变，只是权重来源改变），新增的 `scoring_profile` 字段独立标识当前用的是哪组权重。

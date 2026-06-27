@@ -39,7 +39,6 @@ def save_portfolio_config(
     name: str,
     target_weights: dict[str, float],
     cash_weight: float,
-    strategy_config: dict,
 ) -> PortfolioConfig:
     config = get_portfolio_config(session, name)
     if config is None:
@@ -47,7 +46,6 @@ def save_portfolio_config(
         session.add(config)
     config.target_weights = dict(target_weights)
     config.cash_weight = cash_weight
-    config.strategy_config = dict(strategy_config)
     session.flush()
     return config
 

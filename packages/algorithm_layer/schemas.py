@@ -95,6 +95,7 @@ class RecommendationResult:
     source: str
     algorithm_version: str
     analysis_time: str
+    scoring_profile: str = "balanced"
     risk_disclaimer: str = RISK_DISCLAIMER
 
     def to_dict(self) -> dict[str, Any]:
@@ -108,5 +109,6 @@ class RecommendationResult:
             "source": self.source,
             "algorithm_version": self.algorithm_version,
             "analysis_time": self.analysis_time,
+            "scoring_profile": self.scoring_profile,
             "risk_disclaimer": self.risk_disclaimer,
         }

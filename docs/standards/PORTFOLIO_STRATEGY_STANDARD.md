@@ -154,6 +154,25 @@ POST /backtests/run
 
 请求/响应字段与上面 `backtest` 嵌套对象一致；该端点保留供测试、脚本和未来其他调用方使用，前端组合策略面板不再直接调用它。
 
+### 5.1 策略库（Strategy Library）
+
+策略与组合（Portfolio，即一组股票）完全解耦：组合只管"有哪些股票"，策略只管"用什么参数测试"，任意已保存的策略可以套用在任意组合上。
+
+```text
+GET /strategies
+PUT /strategies/{name}
+DELETE /strategies/{name}
+```
+
+* `GET /strategies` 返回全部已保存策略：`items: [{name, preferences, constraints, updated_at}]`。
+* `PUT /strategies/{name}` 新增或更新（按名字 upsert）：
+  * `preferences`：`scoring_mode`、`backtest_mode`（`"technical"` 或 `"ai_score"`）、`optimizer_method`（`equal_weight`/`market_cap`/`minimum_variance`/`risk_parity`）、`rebalance_frequency`（`weekly`/`monthly`/`quarterly`）。
+  * `constraints`：`max_position_weight`、`min_cash_weight`、`max_drawdown`、`benchmark_symbol`、`backtest_years`。
+  * 这组字段直接对应 Portfolio Research Workbench 表单当前值（`packages/portfolio_research/schemas.py` 的 `StrategyPreferences`/`ResearchConstraints`），不是另一套独立定义。
+* `DELETE /strategies/{name}` 删除一个已保存策略，不存在时返回 404。
+
+前端「策略库 Strategy Library」面板（左边栏）提供新增/应用/更新/删除：应用会把已保存策略的参数写回表单（不自动运行），调整后可以「更新」覆盖保存，或用新名字「新增策略」存成一个克隆变体；运行回测时仍然是表单当前值通过 `POST /portfolio-research/run` 提交，策略库只负责参数的保存与复用，不参与运行时编排。
+
 ## 6. 版本管理
 
 代码中的实际版本号是 `BacktestResult.algorithm_version`（`packages/backtesting/engine.py` 的 `ALGORITHM_VERSION` 常量），与下表一一对应：
@@ -193,3 +212,4 @@ backtesting-v1.0  稳定组合策略工作流 [planned]
 * 回测指标测试
 * API 请求/响应测试
 * 前端是否调用 `POST /workflows/portfolio-research` 的治理测试
+* 策略库 CRUD（`GET/PUT/DELETE /strategies`）的数据层和 API 测试

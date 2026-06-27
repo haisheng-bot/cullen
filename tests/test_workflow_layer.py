@@ -67,6 +67,7 @@ class FakeBacktestEngine:
             start_date=config.start_date,
             end_date=config.end_date,
             signal_mode=config.signal_mode,
+            scoring_profile=config.scoring_profile,
             initial_cash=config.initial_cash,
             final_value=11_000.0,
             total_return_percent=10.0,

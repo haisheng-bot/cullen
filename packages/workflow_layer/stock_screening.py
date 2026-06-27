@@ -21,6 +21,8 @@ from packages.algorithm_layer.schemas import (
     TechnicalSeriesInput,
 )
 from packages.data_sources.market_trend import MarketTrendError
+from packages.scoring_profiles.profiles import BALANCED
+from packages.scoring_profiles.schemas import ScoringProfile
 from packages.workflow_layer.schemas import ScreeningCandidate, ScreeningResult, SkippedCandidate
 
 MAX_CONCURRENT_REQUESTS = 8
@@ -43,7 +45,8 @@ class StockScreeningWorkflow:
         self.technical_series_fetcher = technical_series_fetcher or (lambda symbol: None)
         self.news_signals_fetcher = news_signals_fetcher or (lambda symbol: [])
 
-    def screen(self, limit: int = 20) -> ScreeningResult:
+    def screen(self, limit: int = 20, profile: ScoringProfile | None = None) -> ScreeningResult:
+        profile = profile or BALANCED
         universe = self.universe_scanner.scan(limit=limit)
 
         candidates: list[ScreeningCandidate] = []
@@ -54,7 +57,7 @@ class StockScreeningWorkflow:
         worker_count = min(MAX_CONCURRENT_REQUESTS, len(universe.items)) or 1
         with ThreadPoolExecutor(max_workers=worker_count) as executor:
             future_to_item = {
-                executor.submit(self._score_candidate, item): item for item in universe.items
+                executor.submit(self._score_candidate, item, profile): item for item in universe.items
             }
             for future in as_completed(future_to_item):
                 item = future_to_item[future]
@@ -76,9 +79,10 @@ class StockScreeningWorkflow:
             skipped=skipped,
             source=f"{universe.source} + Algorithm Layer",
             generated_at=datetime.now(timezone.utc).isoformat(),
+            scoring_profile=profile.name,
         )
 
-    def _score_candidate(self, item) -> ScreeningCandidate:
+    def _score_candidate(self, item, profile: ScoringProfile) -> ScreeningCandidate:
         trend = self.trend_client.fetch_trend(item.symbol, range_="1d", interval="1m")
         algorithm_input = RecommendationInput(
             symbol=trend.symbol,
@@ -94,7 +98,7 @@ class StockScreeningWorkflow:
             technical_series=self.technical_series_fetcher(item.symbol),
             news_signals=self.news_signals_fetcher(item.symbol),
         )
-        result = self.algorithm.recommend(algorithm_input)
+        result = self.algorithm.recommend(algorithm_input, profile=profile)
 
         return ScreeningCandidate(
             rank=0,

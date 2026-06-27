@@ -102,6 +102,7 @@ class StrategyConfig:
     rebalance_frequency: str = "monthly"
     benchmark_symbol: str = "SPY"
     signal_mode: str = "technical"
+    scoring_profile: str = "balanced"
     allocation: AllocationConfig = field(default_factory=AllocationConfig)
     entry_rules: EntryRules = field(default_factory=EntryRules)
     exit_rules: ExitRules = field(default_factory=ExitRules)
@@ -118,6 +119,7 @@ class StrategyConfig:
             "rebalance_frequency": self.rebalance_frequency,
             "benchmark_symbol": self.benchmark_symbol,
             "signal_mode": self.signal_mode,
+            "scoring_profile": self.scoring_profile,
             "allocation": self.allocation.to_dict(),
             "entry_rules": self.entry_rules.to_dict(),
             "exit_rules": self.exit_rules.to_dict(),
@@ -181,6 +183,7 @@ class BacktestResult:
     start_date: str
     end_date: str
     signal_mode: str
+    scoring_profile: str
     initial_cash: float
     final_value: float
     total_return_percent: float
@@ -211,6 +214,7 @@ class BacktestResult:
             "start_date": self.start_date,
             "end_date": self.end_date,
             "signal_mode": self.signal_mode,
+            "scoring_profile": self.scoring_profile,
             "initial_cash": self.initial_cash,
             "final_value": self.final_value,
             "total_return_percent": self.total_return_percent,

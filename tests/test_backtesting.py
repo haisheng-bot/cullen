@@ -148,6 +148,8 @@ class AiScoreTest(unittest.TestCase):
         from packages.algorithm_layer.financial_factors import fundamentals_score, growth_score, valuation_score
         from packages.algorithm_layer.schemas import FinancialFactorsInput
         from packages.algorithm_layer.technical_indicators import volatility_risk_score
+        from packages.scoring_profiles.backtest_weights import renormalize_excluding
+        from packages.scoring_profiles.profiles import get_profile
 
         factors = FinancialFactorsInput(revenue=1000.0, previous_revenue=800.0, net_income=200.0, eps_diluted=10.0)
         fundamentals, _ = fundamentals_score(factors)
@@ -155,17 +157,32 @@ class AiScoreTest(unittest.TestCase):
         valuation, _ = valuation_score(factors, 110.0)
         technical, _ = signals.technical_score(closes)
         volatility, _ = volatility_risk_score(closes)
+        weights = renormalize_excluding(get_profile("balanced"), signals.AI_SCORE_EXCLUDED_FACTORS)
         expected = round(
-            fundamentals * signals.AI_SCORE_WEIGHTS["fundamentals"]
-            + growth * signals.AI_SCORE_WEIGHTS["growth"]
-            + valuation * signals.AI_SCORE_WEIGHTS["valuation"]
-            + technical * signals.AI_SCORE_WEIGHTS["technical"]
-            + volatility * signals.AI_SCORE_WEIGHTS["volatility_risk"]
+            fundamentals * weights["fundamentals"]
+            + growth * weights["growth"]
+            + valuation * weights["valuation"]
+            + technical * weights["technical"]
+            + volatility * weights["volatility_risk"]
         )
         self.assertEqual(max(0, min(100, expected)), score)
 
     def test_weights_sum_to_one(self) -> None:
-        self.assertAlmostEqual(1.0, sum(signals.AI_SCORE_WEIGHTS.values()))
+        from packages.scoring_profiles.backtest_weights import renormalize_excluding
+        from packages.scoring_profiles.profiles import get_profile
+
+        weights = renormalize_excluding(get_profile("balanced"), signals.AI_SCORE_EXCLUDED_FACTORS)
+        self.assertAlmostEqual(1.0, sum(weights.values()))
+
+    def test_defensive_profile_weighs_volatility_risk_more_than_balanced(self) -> None:
+        closes = [c for _, c in _trending_closes(100.0, 0.0, 30)]
+        latest = _annual_financials("2024-12-31", "2025-02-15", revenue=1000.0, net_income=200.0)
+        previous = _annual_financials("2023-12-31", "2024-02-15", revenue=800.0)
+
+        balanced_score, _ = signals.ai_score(latest, previous, closes, profile_name="balanced")
+        defensive_score, _ = signals.ai_score(latest, previous, closes, profile_name="defensive")
+
+        self.assertNotEqual(balanced_score, defensive_score)
 
 
 class AllocationTest(unittest.TestCase):

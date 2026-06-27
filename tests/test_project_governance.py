@@ -10,6 +10,8 @@ class ProjectGovernanceTest(unittest.TestCase):
     def test_required_paths_exist(self) -> None:
         required_paths = [
             "README.md",
+            "PROJECT_CONSTITUTION.md",
+            "AI_DEVELOPMENT_CHARTER.md",
             "open-app.command",
             "LICENSE",
             "CONTRIBUTING.md",
@@ -23,6 +25,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             ".github/ISSUE_TEMPLATE/bug_report.md",
             ".github/ISSUE_TEMPLATE/feature_request.md",
             ".ai/AGENTS.md",
+            ".ai/AI_STARTUP_PROTOCOL.md",
             ".ai/PROJECT_RULES.md",
             ".ai/CODING_STANDARD.md",
             ".ai/TEST_STANDARD.md",
@@ -83,6 +86,9 @@ class ProjectGovernanceTest(unittest.TestCase):
     def test_required_docs_include_disclaimer(self) -> None:
         docs = [
             "README.md",
+            "PROJECT_CONSTITUTION.md",
+            "AI_DEVELOPMENT_CHARTER.md",
+            ".ai/AI_STARTUP_PROTOCOL.md",
             "docs/standards/project-standard-v0.1.md",
             "docs/standards/MODEL_STANDARD.md",
             "docs/standards/ALGORITHM_STANDARD.md",
@@ -160,6 +166,62 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertIn("前端接入 Portfolio Research Workflow", gap_analysis)
         self.assertIn("Risk Engine v0.1", gap_analysis)
         self.assertIn("Portfolio Optimizer v0.1", gap_analysis)
+
+    def test_highest_priority_ai_governance_rules_are_declared(self) -> None:
+        constitution = (ROOT / "PROJECT_CONSTITUTION.md").read_text(encoding="utf-8")
+        charter = (ROOT / "AI_DEVELOPMENT_CHARTER.md").read_text(encoding="utf-8")
+        project_rules = (ROOT / ".ai/PROJECT_RULES.md").read_text(encoding="utf-8")
+        agents = (ROOT / ".ai/AGENTS.md").read_text(encoding="utf-8")
+        startup_protocol = (ROOT / ".ai/AI_STARTUP_PROTOCOL.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        required_constitution_terms = [
+            "Priority:** Highest",
+            "Portfolio 才是系统真正的核心对象",
+            "Workflow 是唯一业务入口",
+            "Model Center",
+            "Strategy Object",
+            "Explainability",
+            "Version Control",
+            DISCLAIMER,
+        ]
+        missing_constitution = [term for term in required_constitution_terms if term not in constitution]
+        self.assertEqual([], missing_constitution)
+
+        required_charter_terms = [
+            "Priority:** Highest",
+            "Code Last",
+            "Mandatory Reading Order",
+            "PROJECT_CONSTITUTION.md",
+            "AI_DEVELOPMENT_CHARTER.md",
+            "No Silent Refactor",
+            "AI Self Review",
+            DISCLAIMER,
+        ]
+        missing_charter = [term for term in required_charter_terms if term not in charter]
+        self.assertEqual([], missing_charter)
+
+        required_startup_terms = [
+            "Priority:** Highest",
+            "你现在是 OpenStock AI 项目的开发 Agent",
+            "阅读 `PROJECT_CONSTITUTION.md`",
+            "阅读 `AI_DEVELOPMENT_CHARTER.md`",
+            "阅读当前模块 PRD",
+            "阅读 Architecture",
+            "阅读 Coding Standard",
+            "输出你的理解",
+            "输出开发计划",
+            "等待确认",
+            "完成后生成测试、更新文档、输出变更说明",
+            DISCLAIMER,
+        ]
+        missing_startup = [term for term in required_startup_terms if term not in startup_protocol]
+        self.assertEqual([], missing_startup)
+
+        for document in [project_rules, agents, readme]:
+            self.assertIn("PROJECT_CONSTITUTION.md", document)
+            self.assertIn("AI_DEVELOPMENT_CHARTER.md", document)
+            self.assertIn("AI_STARTUP_PROTOCOL.md", document)
 
     def test_workflow_engine_standard_defines_orchestration_boundary(self) -> None:
         standard = (ROOT / "docs/standards/WORKFLOW_ENGINE_STANDARD.md").read_text(encoding="utf-8")
@@ -285,7 +347,7 @@ class ProjectGovernanceTest(unittest.TestCase):
             "overflow-y: auto",
             "height: 1086px",
             "height: 48px",
-            "组合策略选择",
+            "我的组合 Portfolios",
             "portfolio-strategy",
             "portfolio-list",
             "addCurrentSymbolToPortfolio",
@@ -320,6 +382,10 @@ class ProjectGovernanceTest(unittest.TestCase):
             "Risk Engine v0.1",
             "risk-report-card",
             "Portfolio Optimizer v0.1",
+            "Recommended Research Portfolio",
+            "result-priority-grid",
+            "optimizer-weight-grid",
+            "weight-chip",
             "optimizer-card",
             "postJson(\"/portfolio-research/run\"",
             "postJson(\"/risk/portfolio\"",
@@ -346,6 +412,46 @@ class ProjectGovernanceTest(unittest.TestCase):
             "POST /risk/portfolio",
             "POST /optimizer/portfolio",
             "POST /portfolio-research/run",
+        ]
+        missing_standard = [term for term in required_standard_terms if term not in standard]
+        self.assertEqual([], missing_standard)
+
+    def test_project_interface_includes_strategy_library(self) -> None:
+        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        standard = (ROOT / "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md").read_text(encoding="utf-8")
+
+        required_html_terms = [
+            "strategy-list",
+            "add-strategy-button",
+            "loadStrategies",
+            "renderStrategyList",
+            "applyStrategy",
+            "saveCurrentFormAsStrategy",
+            "strategy-modal-form",
+            "strategy-modal-name",
+            '<select id="strategy-modal-name">',
+            "STRATEGY_LIBRARY_OPTIONS",
+            "generateStrategyResearchPortfolio",
+            "推荐组合",
+            "当前策略组合",
+            "待保存",
+            "已保存",
+            "当前选择",
+            "Risk Parity",
+            "Black-Litterman",
+            "submitStrategyModal",
+            "deleteStrategyByName",
+            "/strategies",
+        ]
+        missing_html = [term for term in required_html_terms if term not in html]
+        self.assertEqual([], missing_html)
+        self.assertNotIn('prompt("策略名称")', html)
+        self.assertNotIn('placeholder="输入策略名称"', html)
+
+        required_standard_terms = [
+            "GET /strategies",
+            "PUT /strategies/{name}",
+            "DELETE /strategies/{name}",
         ]
         missing_standard = [term for term in required_standard_terms if term not in standard]
         self.assertEqual([], missing_standard)

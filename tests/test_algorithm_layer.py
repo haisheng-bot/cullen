@@ -9,6 +9,7 @@ from packages.algorithm_layer.schemas import (
     RecommendationInput,
     TechnicalSeriesInput,
 )
+from packages.scoring_profiles.profiles import get_profile
 
 
 class AlgorithmLayerTest(unittest.TestCase):
@@ -56,6 +57,40 @@ class AlgorithmLayerTest(unittest.TestCase):
         )
         self.assertIn("未提供财务数据", " ".join(result.risks))
         self.assertIn("未提供新闻/披露信号", " ".join(result.risks))
+
+    def test_recommend_defaults_to_balanced_profile(self) -> None:
+        data = _basic_recommendation_input()
+
+        result = TrendRecommendationAlgorithm().recommend(data)
+
+        self.assertEqual("balanced", result.scoring_profile)
+        weights_by_factor = {factor.name: factor.weight for factor in result.factors}
+        self.assertEqual(get_profile("balanced").weights, weights_by_factor)
+
+    def test_recommend_applies_requested_profile_weights(self) -> None:
+        data = _basic_recommendation_input()
+        momentum = get_profile("momentum")
+
+        result = TrendRecommendationAlgorithm().recommend(data, profile=momentum)
+
+        self.assertEqual("momentum", result.scoring_profile)
+        weights_by_factor = {factor.name: factor.weight for factor in result.factors}
+        self.assertEqual(momentum.weights, weights_by_factor)
+
+
+def _basic_recommendation_input() -> RecommendationInput:
+    return RecommendationInput(
+        symbol="AAPL",
+        latest_price=104.0,
+        previous_close=100.0,
+        points=[
+            AlgorithmPoint(timestamp="2026-06-25T13:30:00+00:00", close=100.0, volume=1000),
+            AlgorithmPoint(timestamp="2026-06-25T13:31:00+00:00", close=102.0, volume=1200),
+            AlgorithmPoint(timestamp="2026-06-25T13:32:00+00:00", close=104.0, volume=1800),
+        ],
+        source="test-source",
+        analysis_time="2026-06-25T13:33:00+00:00",
+    )
 
     def test_recommendation_uses_real_fundamentals_when_provided(self) -> None:
         data = RecommendationInput(

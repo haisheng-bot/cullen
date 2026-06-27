@@ -26,6 +26,7 @@ class PortfolioResearchEngineTest(unittest.TestCase):
                     "strategy_name": "Core Watch",
                     "symbols": ["AAPL", "MSFT"],
                     "signal_mode": "ai_score",
+                    "scoring_profile": "growth",
                     "total_return_percent": 10.0,
                     "annualized_return_percent": 9.0,
                     "max_drawdown_percent": 8.0,
@@ -48,6 +49,7 @@ class PortfolioResearchEngineTest(unittest.TestCase):
         self.assertEqual({"volatility_percent": 18.0}, payload["risk_summary"])
         self.assertEqual({"target_weights": {"AAPL": 0.5, "MSFT": 0.4}, "cash_weight": 0.1}, payload["optimized_weights"])
         self.assertEqual(["test risk"], payload["warnings"])
+        self.assertEqual("growth", payload["score_summary"]["scoring_profile"])
         self.assertEqual(1, len(archived))
 
 

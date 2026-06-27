@@ -54,6 +54,7 @@ class ScreeningResult:
     skipped: list[SkippedCandidate]
     source: str
     generated_at: str
+    scoring_profile: str = "balanced"
     risk_disclaimer: str = RISK_DISCLAIMER
 
     def to_dict(self) -> dict[str, Any]:
@@ -65,5 +66,6 @@ class ScreeningResult:
             "skipped": [skipped.to_dict() for skipped in self.skipped],
             "source": self.source,
             "generated_at": self.generated_at,
+            "scoring_profile": self.scoring_profile,
             "risk_disclaimer": self.risk_disclaimer,
         }

@@ -18,7 +18,13 @@ from packages.db.portfolios import (
 )
 from packages.db.price_history_cache import get_or_fetch_closes
 from packages.db.session import build_engine
+from packages.db.strategies import delete_strategy, get_strategy, save_strategy
 from packages.db.stock_scores import get_score_history, write_screening_result
+from packages.db.workflow_runs import (
+    get_workflow_run_by_trace_id,
+    list_workflow_runs,
+    write_workflow_run,
+)
 from packages.model_layer.mock_provider import MockModelProvider
 from packages.model_layer.schemas import RISK_DISCLAIMER, ModelRequest
 from packages.workflow_layer.schemas import ScreeningCandidate, ScreeningResult
@@ -188,17 +194,11 @@ class PriceHistoryCachePersistenceTest(unittest.TestCase):
 
 
 class PortfolioConfigPersistenceTest(unittest.TestCase):
-    def test_save_portfolio_config_round_trips_weights_cash_and_strategy(self) -> None:
+    def test_save_portfolio_config_round_trips_weights_and_cash(self) -> None:
         engine = make_sqlite_engine()
 
         with Session(engine) as session:
-            save_portfolio_config(
-                session,
-                "Core Watch",
-                {"AAPL": 0.4, "MSFT": 0.5},
-                0.1,
-                {"allocation_method": "equal_weight"},
-            )
+            save_portfolio_config(session, "Core Watch", {"AAPL": 0.4, "MSFT": 0.5}, 0.1)
             session.commit()
 
         with Session(engine) as session:
@@ -206,7 +206,56 @@ class PortfolioConfigPersistenceTest(unittest.TestCase):
 
         self.assertEqual({"AAPL": 0.4, "MSFT": 0.5}, config.target_weights)
         self.assertEqual(0.1, config.cash_weight)
-        self.assertEqual({"allocation_method": "equal_weight"}, config.strategy_config)
+
+
+class StrategyPersistenceTest(unittest.TestCase):
+    def test_save_strategy_round_trips_preferences_and_constraints(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            save_strategy(
+                session,
+                "Momentum Aggressive",
+                {"optimizer_method": "minimum_variance", "backtest_mode": "ai_score"},
+                {"max_position_weight": 0.3, "max_drawdown": 0.15},
+            )
+            session.commit()
+
+        with Session(engine) as session:
+            strategy = get_strategy(session, "Momentum Aggressive")
+
+        self.assertEqual(
+            {"optimizer_method": "minimum_variance", "backtest_mode": "ai_score"}, strategy.preferences
+        )
+        self.assertEqual({"max_position_weight": 0.3, "max_drawdown": 0.15}, strategy.constraints)
+
+    def test_save_strategy_is_an_upsert_by_name(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            save_strategy(session, "Defensive", {"optimizer_method": "equal_weight"}, {})
+            save_strategy(session, "Defensive", {"optimizer_method": "risk_parity"}, {})
+            session.commit()
+
+        with Session(engine) as session:
+            strategy = get_strategy(session, "Defensive")
+
+        self.assertEqual("risk_parity", strategy.preferences["optimizer_method"])
+
+    def test_delete_strategy_removes_it(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            save_strategy(session, "Temp", {}, {})
+            session.commit()
+
+        with Session(engine) as session:
+            deleted = delete_strategy(session, "Temp")
+            session.commit()
+
+        with Session(engine) as session:
+            self.assertTrue(deleted)
+            self.assertIsNone(get_strategy(session, "Temp"))
 
 
 class _CountingFakeFinancialsClient:
@@ -267,6 +316,7 @@ class BacktestRunPersistenceTest(unittest.TestCase):
             start_date="2023-01-01",
             end_date="2023-12-31",
             signal_mode="technical",
+            scoring_profile="balanced",
             initial_cash=10_000.0,
             final_value=11_000.0,
             total_return_percent=10.0,
@@ -355,6 +405,75 @@ class PortfolioPersistenceTest(unittest.TestCase):
             result = remove_symbol(session, "Nonexistent", "AAPL")
 
         self.assertIsNone(result)
+
+
+def _workflow_run_response(trace_id: str, workflow_name: str, state: str) -> dict:
+    return {
+        "trace_id": trace_id,
+        "workflow_name": workflow_name,
+        "workflow_version": "v0.1",
+        "state": state,
+        "started_at": "2026-06-27T00:00:00+00:00",
+        "completed_at": "2026-06-27T00:00:01+00:00",
+        "risk_disclaimer": RISK_DISCLAIMER,
+    }
+
+
+class WorkflowRunPersistenceTest(unittest.TestCase):
+    def test_write_and_fetch_by_trace_id_round_trips(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            write_workflow_run(
+                session,
+                {"portfolio_name": "Core Watch"},
+                _workflow_run_response("trace-1", "portfolio_research_module", "completed"),
+            )
+            session.commit()
+
+        with Session(engine) as session:
+            record = get_workflow_run_by_trace_id(session, "trace-1")
+
+        self.assertEqual("portfolio_research_module", record.workflow_name)
+        self.assertEqual("completed", record.state)
+
+    def test_list_workflow_runs_orders_newest_first(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            write_workflow_run(
+                session, {}, _workflow_run_response("trace-old", "portfolio_research_module", "completed")
+            )
+            write_workflow_run(
+                session, {}, _workflow_run_response("trace-new", "portfolio_research_module", "completed")
+            )
+            session.commit()
+
+        with Session(engine) as session:
+            records = list_workflow_runs(session)
+
+        self.assertEqual(["trace-new", "trace-old"], [r.trace_id for r in records])
+
+    def test_list_workflow_runs_filters_by_workflow_name_and_state(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            write_workflow_run(
+                session, {}, _workflow_run_response("trace-module", "portfolio_research_module", "completed")
+            )
+            write_workflow_run(
+                session,
+                {},
+                _workflow_run_response("trace-workflow", "portfolio_research_workflow", "Failed"),
+            )
+            session.commit()
+
+        with Session(engine) as session:
+            module_only = list_workflow_runs(session, workflow_name="portfolio_research_module")
+            failed_only = list_workflow_runs(session, state="Failed")
+
+        self.assertEqual(["trace-module"], [r.trace_id for r in module_only])
+        self.assertEqual(["trace-workflow"], [r.trace_id for r in failed_only])
 
 
 if __name__ == "__main__":

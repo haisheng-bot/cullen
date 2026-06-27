@@ -24,7 +24,9 @@ from packages.backtesting.schemas import (
     AllocationConfig,
     EntryRules,
     ExitRules,
+    REBALANCE_FREQUENCIES,
     RiskControls,
+    SIGNAL_MODES,
     StrategyConfig,
 )
 from packages.data_sources.market_trend import (
@@ -51,11 +53,13 @@ from packages.db.portfolios import (
 from packages.db.price_history_cache import get_or_fetch_closes
 from packages.db.session import check_database_connection, session_scope
 from packages.db.stock_scores import get_score_history, write_screening_result
-from packages.db.workflow_runs import get_workflow_run_by_trace_id, write_workflow_run
+from packages.db.strategies import delete_strategy, get_strategy, list_strategies, save_strategy
+from packages.db.workflow_runs import get_workflow_run_by_trace_id, list_workflow_runs, write_workflow_run
 from packages.model_layer.factory import build_default_router
 from packages.model_layer.validator import OutputValidationError
 from packages.news_layer.news_policy import NewsPolicyClient, NewsPolicyError
 from packages.portfolio_optimizer.engine import optimize_portfolio
+from packages.portfolio_optimizer.schemas import OPTIMIZER_METHODS
 from packages.portfolio_research.archive import get_portfolio_research_run, write_portfolio_research_run
 from packages.portfolio_research.engine import PortfolioResearchEngine
 from packages.portfolio_research.schemas import (
@@ -63,7 +67,10 @@ from packages.portfolio_research.schemas import (
     ResearchConstraints,
     StrategyPreferences,
 )
+from packages.research_history.schemas import RunHistoryResult
+from packages.research_history.view_model import summarize_run
 from packages.risk_engine.engine import analyze_portfolio_risk
+from packages.scoring_profiles.profiles import get_profile
 from packages.universe_layer.most_active import MostActiveUniverseScanner
 from packages.workflow_layer.portfolio_research import (
     PortfolioResearchRequest,
@@ -327,9 +334,10 @@ def get_tiger_stock_history(
 
 
 @app.get("/stocks/{symbol}/recommendation")
-def get_stock_recommendation(symbol: str) -> dict:
+def get_stock_recommendation(symbol: str, scoring_profile: str = "balanced") -> dict:
     try:
         normalized_symbol = normalize_symbol(symbol)
+        profile = get_profile(scoring_profile)
         trend = trend_client.fetch_trend(normalized_symbol, range_="1d", interval="1m")
         algorithm_input = RecommendationInput(
             symbol=trend.symbol,
@@ -345,7 +353,7 @@ def get_stock_recommendation(symbol: str) -> dict:
             technical_series=_fetch_technical_series(normalized_symbol),
             news_signals=_fetch_news_signals(normalized_symbol),
         )
-        return recommendation_algorithm.recommend(algorithm_input).to_dict()
+        return recommendation_algorithm.recommend(algorithm_input, profile=profile).to_dict()
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except MarketTrendError as exc:
@@ -358,8 +366,14 @@ def _persist_screening_result(result) -> None:
 
 
 @app.get("/stocks/screening")
-def get_stock_screening(limit: int = Query(20, ge=1, le=50)) -> dict:
-    result = screening_workflow.screen(limit=limit)
+def get_stock_screening(
+    limit: int = Query(20, ge=1, le=50), scoring_profile: str = "balanced"
+) -> dict:
+    try:
+        profile = get_profile(scoring_profile)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    result = screening_workflow.screen(limit=limit, profile=profile)
     _persist_screening_result(result)
     return result.to_dict()
 
@@ -403,16 +417,14 @@ class PortfolioSymbolRequest(BaseModel):
 class PortfolioConfigRequest(BaseModel):
     target_weights: dict[str, float] = Field(default_factory=dict)
     cash_weight: float = Field(default=0.0, ge=0.0, le=1.0)
-    strategy_config: dict = Field(default_factory=dict)
 
 
 def _portfolio_config_to_dict(config) -> dict:
     if config is None:
-        return {"target_weights": {}, "cash_weight": 0.0, "strategy_config": {}, "updated_at": None}
+        return {"target_weights": {}, "cash_weight": 0.0, "updated_at": None}
     return {
         "target_weights": config.target_weights,
         "cash_weight": config.cash_weight,
-        "strategy_config": config.strategy_config,
         "updated_at": config.updated_at.isoformat() if config.updated_at else None,
     }
 
@@ -467,7 +479,6 @@ def _save_portfolio_config(name: str, request: PortfolioConfigRequest) -> dict:
             name,
             normalized_weights,
             request.cash_weight,
-            request.strategy_config,
         )
         return _portfolio_to_dict(portfolio, config)
 
@@ -508,6 +519,70 @@ def update_portfolio_config(name: str, request: PortfolioConfigRequest) -> dict:
         return _save_portfolio_config(name, request)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+class StrategyRequest(BaseModel):
+    preferences: dict = Field(default_factory=dict)
+    constraints: dict = Field(default_factory=dict)
+
+
+def _strategy_to_dict(strategy) -> dict:
+    return {
+        "name": strategy.name,
+        "preferences": strategy.preferences,
+        "constraints": strategy.constraints,
+        "updated_at": strategy.updated_at.isoformat() if strategy.updated_at else None,
+    }
+
+
+def _list_strategies() -> list[dict]:
+    with session_scope() as session:
+        return [_strategy_to_dict(strategy) for strategy in list_strategies(session)]
+
+
+def _save_strategy(name: str, request: StrategyRequest) -> dict:
+    optimizer_method = request.preferences.get("optimizer_method")
+    if optimizer_method is not None and optimizer_method not in OPTIMIZER_METHODS:
+        raise ValueError(f"unknown optimizer_method: {optimizer_method}")
+    backtest_mode = request.preferences.get("backtest_mode")
+    if backtest_mode is not None and backtest_mode not in SIGNAL_MODES:
+        raise ValueError(f"unknown backtest_mode: {backtest_mode}")
+    rebalance_frequency = request.preferences.get("rebalance_frequency")
+    if rebalance_frequency is not None and rebalance_frequency not in REBALANCE_FREQUENCIES:
+        raise ValueError(f"unknown rebalance_frequency: {rebalance_frequency}")
+
+    with session_scope() as session:
+        strategy = save_strategy(session, name, request.preferences, request.constraints)
+        return _strategy_to_dict(strategy)
+
+
+def _delete_strategy(name: str) -> bool:
+    with session_scope() as session:
+        return delete_strategy(session, name)
+
+
+@app.get("/strategies")
+def get_strategies() -> dict:
+    """Named, reusable strategy presets for the Portfolio Research
+    Workbench's Strategy Library panel. Decoupled from Portfolio: any saved
+    strategy can be applied to any portfolio's symbols at run time.
+    """
+    return {"items": _list_strategies()}
+
+
+@app.put("/strategies/{name}")
+def update_strategy(name: str, request: StrategyRequest) -> dict:
+    try:
+        return _save_strategy(name, request)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.delete("/strategies/{name}")
+def remove_strategy(name: str) -> dict:
+    if not _delete_strategy(name):
+        raise HTTPException(status_code=404, detail=f"strategy not found: {name}")
+    return {"deleted": name}
 
 
 @app.get("/stocks/{symbol}/trend")
@@ -665,6 +740,7 @@ class BacktestRunRequest(BaseModel):
     rebalance_frequency: str = "monthly"
     benchmark_symbol: str = "SPY"
     signal_mode: str = "technical"
+    scoring_profile: str = "balanced"
     allocation: AllocationConfigRequest = Field(default_factory=AllocationConfigRequest)
     entry_rules: EntryRulesRequest = Field(default_factory=EntryRulesRequest)
     exit_rules: ExitRulesRequest = Field(default_factory=ExitRulesRequest)
@@ -674,6 +750,7 @@ class BacktestRunRequest(BaseModel):
 
 class PortfolioResearchWorkflowRequest(BaseModel):
     portfolio_name: str = "Workflow Portfolio"
+    strategy_library_name: str | None = None
     universe_limit: int = Field(default=100, ge=1, le=100)
     selected_symbols: list[str] | None = None
     backtest: BacktestRunRequest
@@ -689,6 +766,7 @@ class PortfolioResearchConstraintsRequest(BaseModel):
 
 class PortfolioResearchStrategyPreferencesRequest(BaseModel):
     scoring_mode: str = "algorithm_v0.3"
+    scoring_profile: str = "balanced"
     backtest_mode: str = "ai_score"
     optimizer_method: str = "minimum_variance"
     rebalance_frequency: str = "monthly"
@@ -698,6 +776,7 @@ class PortfolioResearchRunRequest(BaseModel):
     portfolio_name: str = "Portfolio Research"
     symbols: list[str]
     research_goal: str = "balanced_growth"
+    strategy_library_name: str | None = None
     constraints: PortfolioResearchConstraintsRequest = Field(default_factory=PortfolioResearchConstraintsRequest)
     strategy_preferences: PortfolioResearchStrategyPreferencesRequest = Field(
         default_factory=PortfolioResearchStrategyPreferencesRequest
@@ -714,6 +793,7 @@ def _to_strategy_config(request: BacktestRunRequest) -> StrategyConfig:
         rebalance_frequency=request.rebalance_frequency,
         benchmark_symbol=request.benchmark_symbol.upper(),
         signal_mode=request.signal_mode,
+        scoring_profile=request.scoring_profile,
         allocation=AllocationConfig(**request.allocation.model_dump()),
         entry_rules=EntryRules(**request.entry_rules.model_dump()),
         exit_rules=ExitRules(**request.exit_rules.model_dump()),
@@ -727,6 +807,7 @@ def _to_module_request(request: PortfolioResearchRunRequest) -> PortfolioResearc
         portfolio_name=request.portfolio_name,
         symbols=[normalize_symbol(symbol) for symbol in request.symbols],
         research_goal=request.research_goal,
+        strategy_library_name=request.strategy_library_name,
         constraints=ResearchConstraints(**request.constraints.model_dump()),
         strategy_preferences=StrategyPreferences(**request.strategy_preferences.model_dump()),
     )
@@ -810,6 +891,7 @@ def _module_workflow_response(request: PortfolioResearchModuleRequest) -> dict:
         rebalance_frequency=preferences.rebalance_frequency,
         benchmark_symbol=constraints.benchmark_symbol,
         signal_mode="ai_score" if preferences.backtest_mode == "ai_score" else "technical",
+        scoring_profile=preferences.scoring_profile,
         allocation=AllocationConfigRequest(
             method="equal_weight",
             max_position_weight=constraints.max_position_weight,
@@ -821,6 +903,7 @@ def _module_workflow_response(request: PortfolioResearchModuleRequest) -> dict:
     )
     workflow_request = PortfolioResearchWorkflowRequest(
         portfolio_name=request.portfolio_name,
+        strategy_library_name=request.strategy_library_name,
         universe_limit=100,
         selected_symbols=request.symbols,
         backtest=backtest_request,
@@ -944,6 +1027,67 @@ def run_portfolio_research(request: PortfolioResearchRunRequest) -> dict:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except PriceHistoryError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+def _list_research_runs(
+    *,
+    limit: int,
+    offset: int,
+    workflow_name: str | None,
+    state: str | None,
+    portfolio_name: str | None,
+    strategy_library_name: str | None,
+    start_date: str | None,
+    end_date: str | None,
+) -> dict:
+    with session_scope() as session:
+        summaries = [
+            summarize_run(
+                trace_id=record.trace_id,
+                workflow_name=record.workflow_name,
+                workflow_version=record.workflow_version,
+                state=record.state,
+                request=record.request,
+                response=record.response,
+                started_at=record.started_at,
+                completed_at=record.completed_at,
+            )
+            for record in list_workflow_runs(session, workflow_name=workflow_name, state=state)
+        ]
+    if portfolio_name is not None:
+        summaries = [item for item in summaries if item.portfolio_name == portfolio_name]
+    if strategy_library_name is not None:
+        summaries = [item for item in summaries if item.strategy_library_name == strategy_library_name]
+    if start_date is not None:
+        summaries = [item for item in summaries if item.started_at[:10] >= start_date]
+    if end_date is not None:
+        summaries = [item for item in summaries if item.started_at[:10] <= end_date]
+    total_count = len(summaries)
+    page = summaries[offset : offset + limit]
+    return RunHistoryResult(items=page, total_count=total_count, limit=limit, offset=offset).to_dict()
+
+
+@app.get("/research-runs")
+def get_research_run_history(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    workflow_name: str | None = None,
+    state: str | None = None,
+    portfolio_name: str | None = None,
+    strategy_library_name: str | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
+) -> dict:
+    return _list_research_runs(
+        limit=limit,
+        offset=offset,
+        workflow_name=workflow_name,
+        state=state,
+        portfolio_name=portfolio_name,
+        strategy_library_name=strategy_library_name,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
 
 @app.get("/portfolio-research/{trace_id}")

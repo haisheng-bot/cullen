@@ -313,7 +313,11 @@ GET /stocks/{symbol}/recommendation
 * 返回股票评分和推荐等级
 * 展示因子分、推荐理由和风险
 
-当前算法：`algorithm-v0.3`，六个因子：
+查询参数：
+
+* `scoring_profile`（可选，默认 `balanced`）：`balanced`/`growth`/`value`/`defensive`/`momentum` 五个内置权重组之一，详见 `docs/standards/SCORING_PROFILES_STANDARD.md`。未知名返回 400。
+
+当前算法：`algorithm-v0.3`，六个因子（以下权重为 `balanced` 默认值，其余 profile 权重不同）：
 
 * `fundamentals` 基本面（净利润率 50% + ROC 资本回报率 50%，合计 30%）—— 来自 SEC XBRL company facts
 * `growth` 成长性（营收同比，20%）—— 来自 SEC XBRL company facts
@@ -346,6 +350,7 @@ ROC、EV/EBIT 是 Joel Greenblatt「Magic Formula」用的两个经典指标，�
   "source": "Yahoo Finance chart API",
   "algorithm_version": "algorithm-v0.3",
   "analysis_time": "2026-06-25T14:30:46.957647+00:00",
+  "scoring_profile": "balanced",
   "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
 }
 ```
@@ -454,7 +459,8 @@ GET /stocks/screening?limit=20
 请求参数：
 
 ```text
-limit  候选池大小，同时也是评分数量上限，默认 20，最大 50
+limit            候选池大小，同时也是评分数量上限，默认 20，最大 50
+scoring_profile  可选，默认 balanced；balanced/growth/value/defensive/momentum 之一，未知名返回 400
 ```
 
 性能说明：每只股票需要额外请求 SEC 财务数据和近 1 年日线，受 Yahoo/SEC 服务端响应速度影响，`limit=20` 时实测约 56 秒完成；这是个人使用工具，未做更激进的并发或缓存优化。
@@ -490,6 +496,7 @@ limit  候选池大小，同时也是评分数量上限，默认 20，最大 50
   "skipped": [],
   "source": "Yahoo Finance predefined most_actives + Algorithm Layer",
   "generated_at": "2026-06-25T10:04:57.520340+00:00",
+  "scoring_profile": "balanced",
   "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
 }
 ```
@@ -563,6 +570,7 @@ POST /backtests/run
   "rebalance_frequency": "monthly",
   "benchmark_symbol": "SPY",
   "signal_mode": "ai_score",
+  "scoring_profile": "balanced",
   "allocation": {
     "method": "technical_score_weighted",
     "max_position_weight": 0.25,
@@ -607,10 +615,13 @@ POST /backtests/run
 * risks
 * source
 * algorithm_version
+* scoring_profile
 * generated_at
 * risk_disclaimer
 
 `signal_mode` 取值 `"technical"`（默认，仅价格/技术信号）或 `"ai_score"`（`backtesting-v0.2`：基本面/成长/估值/技术/波动风险五因子综合评分，按披露日期重建历史财报快照、不含新闻情绪因子）。`min_technical_score`/`max_technical_score` 两种模式下都生效；`min_ai_score`/`max_ai_score` 只在 `signal_mode="ai_score"` 时生效。
+
+`scoring_profile`（可选，默认 `balanced`）只在 `signal_mode="ai_score"` 时生效，取值 `balanced`/`growth`/`value`/`defensive`/`momentum`，决定基本面/成长/估值/技术/波动风险五因子的相对权重（排除新闻情绪后重新归一化），详见 `docs/standards/SCORING_PROFILES_STANDARD.md`，未知名返回 400。
 
 合规说明：
 
@@ -639,6 +650,7 @@ GET /workflows/portfolio-research/{trace_id}
 ```json
 {
   "portfolio_name": "AI Workflow",
+  "strategy_library_name": null,
   "universe_limit": 100,
   "selected_symbols": ["AAPL", "MSFT", "NVDA"],
   "backtest": {
@@ -663,10 +675,6 @@ GET /workflows/portfolio-research/{trace_id}
 * `GET /workflows/portfolio-research/{trace_id}` 返回原始 workflow 响应；未找到时返回 404
 * 本接口只生成研究辅助结论，不提供自动交易
 
-## 5. 响应要求
-
-## 4.5 Portfolio 权重管理
-
 ### 4.5 Portfolio Research Module
 
 ```text
@@ -687,6 +695,7 @@ GET /portfolio-research/{trace_id}
   "portfolio_name": "Core Watch",
   "symbols": ["AAPL", "MSFT", "NVDA"],
   "research_goal": "balanced_growth",
+  "strategy_library_name": null,
   "constraints": {
     "max_position_weight": 0.35,
     "min_cash_weight": 0.1,
@@ -696,12 +705,15 @@ GET /portfolio-research/{trace_id}
   },
   "strategy_preferences": {
     "scoring_mode": "algorithm_v0.3",
+    "scoring_profile": "balanced",
     "backtest_mode": "ai_score",
     "optimizer_method": "minimum_variance",
     "rebalance_frequency": "monthly"
   }
 }
 ```
+
+`strategy_preferences.scoring_profile` 可选，默认 `balanced`；`balanced`/`growth`/`value`/`defensive`/`momentum` 之一（详见 `docs/standards/SCORING_PROFILES_STANDARD.md`），决定 `backtest_mode="ai_score"` 时使用的因子权重，未知名返回 400。
 
 响应包含：
 
@@ -716,7 +728,7 @@ GET /portfolio-research/{trace_id}
 
 底层 `/workflows/portfolio-research`、`/risk/portfolio`、`/optimizer/portfolio` 仍保留用于模块调试和测试。
 
-## 4.6 Portfolio 权重管理
+### 4.6 Portfolio 权重管理
 
 ```text
 PUT /portfolios/{name}/config
@@ -726,7 +738,6 @@ PUT /portfolios/{name}/config
 
 * 保存组合目标权重
 * 保存现金比例
-* 保存策略配置
 * 为后续回测、Risk Engine 和 Portfolio Optimizer 提供稳定输入
 
 请求体：
@@ -734,17 +745,13 @@ PUT /portfolios/{name}/config
 ```json
 {
   "target_weights": {"AAPL": 0.45, "MSFT": 0.45},
-  "cash_weight": 0.10,
-  "strategy_config": {
-    "allocation_method": "equal_weight",
-    "signal_mode": "technical",
-    "rebalance_frequency": "monthly",
-    "benchmark_symbol": "SPY"
-  }
+  "cash_weight": 0.10
 }
 ```
 
-## 4.7 Risk Engine v0.1
+策略参数（仓位分配方法、信号模式、再平衡频率、约束）不在这里保存，由解耦的策略库管理，见 4.9。
+
+### 4.7 Risk Engine v0.1
 
 ```text
 POST /risk/portfolio
@@ -771,7 +778,7 @@ POST /risk/portfolio
 * 第一阶段使用历史收盘价计算风险指标
 * 不生成交易指令，不承诺收益
 
-## 4.8 Portfolio Optimizer v0.1
+### 4.8 Portfolio Optimizer v0.1
 
 ```text
 POST /optimizer/portfolio
@@ -800,6 +807,102 @@ POST /optimizer/portfolio
 * `risk_parity` 使用逆波动率近似
 * `market_cap` 使用最新可得价格和股数估算市值
 * 不自动下单，不构成投资建议
+
+### 4.9 策略库 Strategy Library
+
+```text
+GET /strategies
+PUT /strategies/{name}
+DELETE /strategies/{name}
+```
+
+用途：
+
+* 策略（仓位分配方法、信号模式、再平衡频率、约束）与 Portfolio（股票桶）完全解耦，任意已保存策略可套用在任意组合上
+* 前端「策略库」面板用它实现新增/应用/更新/删除已保存策略
+
+请求体（`PUT /strategies/{name}`）：
+
+```json
+{
+  "preferences": {
+    "scoring_mode": "algorithm_v0.3",
+    "backtest_mode": "ai_score",
+    "optimizer_method": "minimum_variance",
+    "rebalance_frequency": "monthly"
+  },
+  "constraints": {
+    "max_position_weight": 0.3,
+    "min_cash_weight": 0.1,
+    "max_drawdown": 0.15,
+    "benchmark_symbol": "SPY",
+    "backtest_years": 3
+  }
+}
+```
+
+说明：
+
+* 按 `name` upsert：已存在则更新，不存在则新增
+* `optimizer_method`/`backtest_mode`/`rebalance_frequency` 校验落在已知枚举内，否则返回 400
+* `DELETE /strategies/{name}` 不存在时返回 404
+* 不参与运行时编排——运行回测仍由前端把当前表单值（可能是刚应用的某个策略）通过 `POST /portfolio-research/run` 提交
+
+### 4.10 Research Run History
+
+```text
+GET /research-runs?limit=20&offset=0&workflow_name=&state=&portfolio_name=&strategy_library_name=&start_date=&end_date=
+```
+
+用途：
+
+* 复用既有的 `workflow_runs` 表（`/workflows/portfolio-research` 和 `/portfolio-research/run` 两条路径都已写入这张表），不新建表
+* 按时间、组合、策略库存档名查询历史研究运行列表，每行带 trace_id、组合、策略、状态、摘要和时间
+* 前端历史复盘页（P3，未做）会消费这个列表
+
+请求参数：
+
+```text
+limit                  默认 20，最大 100
+offset                 默认 0
+workflow_name          可选，"portfolio_research_workflow" 或 "portfolio_research_module"，按 SQL 索引列过滤
+state                  可选，按 SQL 索引列过滤；两种 workflow_name 的状态取值词表不同（旧路径是 WorkflowState 枚举值如 "Recommendation Ready"，新路径是 "completed"/"failed"）
+portfolio_name         可选，精确匹配
+strategy_library_name  可选，精确匹配；只有提交时已应用过 Strategy Library 存档的运行才有值，否则为 null
+start_date / end_date  可选，按 started_at 的日期前缀过滤（YYYY-MM-DD）
+```
+
+`portfolio_name`/`strategy_library_name`/日期过滤在内存里做（这两个字段存在 `request`/`response` JSON 里，个人工具量级不值得做 SQLite JSON 查询下推），`limit`/`offset` 分页也是在过滤后的内存列表上切片。
+
+响应示例：
+
+```json
+{
+  "items": [
+    {
+      "trace_id": "9cfecaf7-2e30-4058-b98d-07f4d001ca4a",
+      "workflow_name": "portfolio_research_module",
+      "workflow_version": "portfolio-research-module-v0.1",
+      "state": "completed",
+      "portfolio_name": "Core Watch",
+      "symbols": ["AAPL"],
+      "strategy_library_name": "市值加权防守型",
+      "summary_text": "建议：research_candidate；回测总收益 12.18%",
+      "started_at": "2026-06-27T09:53:09.849343+00:00",
+      "completed_at": "2026-06-27T09:53:11.624227+00:00"
+    }
+  ],
+  "total_count": 1,
+  "limit": 20,
+  "offset": 0,
+  "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
+}
+```
+
+说明：
+
+* `strategy_library_name` 字段同时新增在 `POST /portfolio-research/run`（4.5 节）和 `POST /workflows/portfolio-research`（4.4 节）的请求体里，可选；前端在「应用」或「新增/更新」某个 Strategy Library 存档后自动带上，不强制和当前表单实际值一致（用户应用后又手动调整表单，这个字段仍是最后应用/保存的存档名，作为标签，不是强校验）
+* `GET /research-runs` 只读，不修改任何数据
 
 ## 5. 响应要求
 

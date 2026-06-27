@@ -77,6 +77,7 @@ def _score_summary(workflow_response: dict) -> dict | None:
     backtest = workflow_response.get("backtest") or {}
     return {
         "scoring_mode": "algorithm_v0.3",
+        "scoring_profile": backtest.get("scoring_profile"),
         "signal_mode": backtest.get("signal_mode"),
         "symbols": backtest.get("symbols") or [],
         "note": "v0.1 uses workflow/backtest outputs as the unified scoring summary.",

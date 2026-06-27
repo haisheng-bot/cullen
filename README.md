@@ -33,6 +33,9 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * Risk Engine v0.1：输出 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure
 * Portfolio Optimizer v0.1：支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版
 * Portfolio Research Module v0.1：统一入口整合 Workflow、Backtesting、Risk、Optimizer、AI Summary 和 Recommendation
+* 策略库（Strategy Library）：策略与 Portfolio（股票桶）解耦的独立可复用实体（`packages/db/strategies.py`、`GET/PUT/DELETE /strategies`），前端「策略库」面板支持新增/应用/更新/删除已保存策略
+* Scoring Profiles 模型权重模块：把 Algorithm Layer 评分权重从硬编码抽成独立模块（`packages/scoring_profiles`），内置 Balanced/Growth/Value/Defensive/Momentum 5 个只读权重组，接入推荐、选股、回测、Portfolio Research 四个入口的 `scoring_profile` 参数
+* Research Run History API：`GET /research-runs`（`packages/research_history`），复用既有 `workflow_runs` 表按时间/组合/策略库存档名查询历史研究运行列表；前端「应用策略」会带上 `strategy_library_name` 一并提交
 
 ## 当前差距
 
@@ -51,14 +54,22 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 下一阶段优先收口：
 
 ```text
-1. AI Report 归档
-2. Workflow / Report 复盘页
+1. trace_id 完整复盘页
+2. Report Archive v0.1
 3. 数据源健康检查
-4. 多 Agent 自动研究
-5. Portfolio Optimizer 高级求解器
+4. Strategy Library v0.2
+5. Portfolio Manager v0.2
 ```
 
+已完成：PRD v0.3 / Roadmap 对齐、Scoring Profiles / 模型权重模块 v0.1、Research Run History API。
+
 ## 文档入口
+
+最高优先级规则：
+
+* [Project Constitution](PROJECT_CONSTITUTION.md)
+* [AI Development Charter](AI_DEVELOPMENT_CHARTER.md)
+* [AI Startup Protocol](.ai/AI_STARTUP_PROTOCOL.md)
 
 * [项目标准文档 v0.1](docs/standards/project-standard-v0.1.md)
 * [Universe Layer 标准](docs/standards/UNIVERSE_STANDARD.md)
@@ -71,7 +82,7 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * [Risk Engine 标准](docs/standards/RISK_ENGINE_STANDARD.md)
 * [Portfolio Optimizer 标准](docs/standards/PORTFOLIO_OPTIMIZER_STANDARD.md)
 * [Tiger OpenAPI 接入标准](docs/standards/TIGER_OPENAPI_STANDARD.md)
-* [产品需求文档 PRD v0.1](docs/product/PRD.md)
+* [产品需求文档 PRD v0.3](docs/product/PRD.md)
 * [个人股票研究生产力目标](docs/product/PERSONAL_PRODUCTIVITY_GOAL.md)
 * [项目计划与进度总表](docs/product/PROJECT_PLAN_PROGRESS.md)
 * [需求与实际开发差距分析](docs/product/IMPLEMENTATION_GAP_ANALYSIS.md)
@@ -142,6 +153,9 @@ GET http://127.0.0.1:8000/integrations/tiger/status
 GET http://127.0.0.1:8000/stocks/AAPL/tiger/quote
 GET http://127.0.0.1:8000/stocks/AAPL/tiger/history?years=3&period=day
 PUT http://127.0.0.1:8000/portfolios/Core%20Watch/config
+GET http://127.0.0.1:8000/strategies
+PUT http://127.0.0.1:8000/strategies/Momentum%20Aggressive
+DELETE http://127.0.0.1:8000/strategies/Momentum%20Aggressive
 POST http://127.0.0.1:8000/portfolio-research/run
 GET http://127.0.0.1:8000/portfolio-research/{trace_id}
 POST http://127.0.0.1:8000/risk/portfolio

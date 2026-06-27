@@ -1,9 +1,9 @@
 # OpenStock AI 产品需求文档（PRD）
 
-**Document Version：** v0.1  
-**Project Name：** OpenStock AI  
-**Author：** Cullen  
-**Status：** Draft
+**Document Version：** v0.3
+**Project Name：** OpenStock AI
+**Author：** Cullen
+**Status：** Official
 
 ---
 
@@ -418,23 +418,40 @@ Application Layer
 
 ### Phase 1
 
-完成 MVP。
+完成基础 MVP：
+
+* Dashboard
+* Chart
+* Universe
+* Strategy Library v0.1
+* Portfolio 基础管理
+* AI Score
+* Workflow Engine v0.1
+* Backtesting v0.2
+* Risk Engine v0.1
+* Portfolio Optimizer v0.1
+* Portfolio Research Module v0.1
+* Scoring Profiles / 模型权重模块 v0.1
+* Research Run History API v0.1
 
 ### Phase 2
 
-增加：
+当前优先收口：
 
-* 前端完整接入 Portfolio Research Workflow
-* Portfolio 权重管理
-* Portfolio Optimizer
-* Risk Engine
-* Advanced Strategy
-* AI Report 归档
+* trace_id 完整复盘页
+* Report Archive v0.1
+* 数据源健康检查
+* Strategy Library v0.2
+* Portfolio Manager v0.2
 
 ### Phase 3
 
 增加：
 
+* Strategy Library v0.2
+* Portfolio Manager v0.2
+* Risk Engine v0.2
+* Portfolio Optimizer v0.2
 * Monte Carlo
 * Stress Test
 * Factor Analysis
@@ -443,6 +460,8 @@ Application Layer
 
 增加：
 
+* Model Center 基础版
+* Agent Center 基础版
 * AI Agent Workflow
 * 自动生成每日投资报告
 

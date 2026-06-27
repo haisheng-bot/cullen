@@ -408,6 +408,10 @@ Each workflow run must record:
 
 AI outputs must also be written to `audit_logs` through the Agent or Model auditing path.
 
+### 8.1 Research Run History
+
+`packages/db/workflow_runs.py::list_workflow_runs()` queries the same `workflow_runs` table both `/workflows/portfolio-research` and `/portfolio-research/run` already write to — no second history table. `packages/research_history` is the read-model layer on top: `view_model.py::summarize_run()` normalizes the two different persisted response shapes (`portfolio_research_workflow` vs `portfolio_research_module`) into one `RunSummary` (trace_id/portfolio/symbols/strategy_library_name/summary_text/state/timestamps). Exposed via `GET /research-runs`, filterable by `workflow_name`/`state` (SQL, indexed columns) and `portfolio_name`/`strategy_library_name`/date range (in-memory, since those live inside the JSON `request`/`response` columns).
+
 ## 9. Phase Roadmap
 
 ### Phase 1 MVP

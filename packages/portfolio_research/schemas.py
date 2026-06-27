@@ -18,6 +18,7 @@ class ResearchConstraints:
 @dataclass(frozen=True)
 class StrategyPreferences:
     scoring_mode: str = "algorithm_v0.3"
+    scoring_profile: str = "balanced"
     backtest_mode: str = "ai_score"
     optimizer_method: str = "minimum_variance"
     rebalance_frequency: str = "monthly"
@@ -28,6 +29,7 @@ class PortfolioResearchRunRequest:
     portfolio_name: str
     symbols: list[str]
     research_goal: str = "balanced_growth"
+    strategy_library_name: str | None = None
     constraints: ResearchConstraints = field(default_factory=ResearchConstraints)
     strategy_preferences: StrategyPreferences = field(default_factory=StrategyPreferences)
 
@@ -36,6 +38,7 @@ class PortfolioResearchRunRequest:
             "portfolio_name": self.portfolio_name,
             "symbols": self.symbols,
             "research_goal": self.research_goal,
+            "strategy_library_name": self.strategy_library_name,
             "constraints": self.constraints.__dict__,
             "strategy_preferences": self.strategy_preferences.__dict__,
         }

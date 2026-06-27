@@ -17,6 +17,8 @@ from packages.algorithm_layer.technical_indicators import (
     trend_score,
     volatility_risk_score,
 )
+from packages.scoring_profiles.profiles import BALANCED
+from packages.scoring_profiles.schemas import ScoringProfile
 
 NO_DATA_SCORE = 50
 
@@ -31,10 +33,14 @@ class TrendRecommendationAlgorithm(RecommendationAlgorithm):
 
     algorithm_version = "algorithm-v0.3"
 
-    def recommend(self, data: RecommendationInput) -> RecommendationResult:
+    def recommend(
+        self, data: RecommendationInput, profile: ScoringProfile | None = None
+    ) -> RecommendationResult:
         if not data.points:
             raise ValueError("points are required for recommendation")
 
+        profile = profile or BALANCED
+        weights = profile.weights
         closes = [point.close for point in data.points]
         first_close = closes[0]
         latest_price = data.latest_price
@@ -57,37 +63,37 @@ class TrendRecommendationAlgorithm(RecommendationAlgorithm):
             FactorScore(
                 name="fundamentals",
                 score=fundamentals_score,
-                weight=0.30,
+                weight=weights["fundamentals"],
                 explanation=fundamentals_explanation,
             ),
             FactorScore(
                 name="growth",
                 score=growth_score,
-                weight=0.20,
+                weight=weights["growth"],
                 explanation=growth_explanation,
             ),
             FactorScore(
                 name="valuation",
                 score=valuation_score,
-                weight=0.20,
+                weight=weights["valuation"],
                 explanation=valuation_explanation,
             ),
             FactorScore(
                 name="technical",
                 score=technical_score,
-                weight=0.10,
+                weight=weights["technical"],
                 explanation=technical_explanation,
             ),
             FactorScore(
                 name="news_sentiment",
                 score=news_score,
-                weight=0.10,
+                weight=weights["news_sentiment"],
                 explanation=news_explanation,
             ),
             FactorScore(
                 name="volatility_risk",
                 score=risk_score,
-                weight=0.10,
+                weight=weights["volatility_risk"],
                 explanation=f"区间波动估算 {volatility_percent:.2f}%",
             ),
         ]
@@ -107,6 +113,7 @@ class TrendRecommendationAlgorithm(RecommendationAlgorithm):
             source=data.source,
             algorithm_version=self.algorithm_version,
             analysis_time=data.analysis_time,
+            scoring_profile=profile.name,
         )
 
 

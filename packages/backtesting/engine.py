@@ -23,6 +23,7 @@ from packages.backtesting.schemas import (
     Trade,
 )
 from packages.data_sources.sec_financials import AnnualFinancials
+from packages.scoring_profiles.profiles import PROFILE_NAMES
 
 ALGORITHM_VERSION = "backtesting-v0.2"
 
@@ -378,7 +379,7 @@ def _composite_score(
     if config.signal_mode != "ai_score":
         return technical
     latest, previous = signals.select_financials_as_of(annual_series, as_of_date)
-    score, _ = signals.ai_score(latest, previous, closes)
+    score, _ = signals.ai_score(latest, previous, closes, profile_name=config.scoring_profile)
     return score
 
 
@@ -391,6 +392,8 @@ def _validate_config(config: StrategyConfig) -> None:
         raise ValueError(f"unsupported rebalance frequency: {config.rebalance_frequency}")
     if config.signal_mode not in SIGNAL_MODES:
         raise ValueError(f"unsupported signal mode: {config.signal_mode}")
+    if config.scoring_profile not in PROFILE_NAMES:
+        raise ValueError(f"unsupported scoring profile: {config.scoring_profile}")
     if not 0 <= config.allocation.min_cash_weight < 1:
         raise ValueError("min_cash_weight must be in [0, 1)")
     if not 0 < config.allocation.max_position_weight <= 1:
@@ -473,6 +476,7 @@ def _build_result(config: StrategyConfig, equity_curve: list[EquityPoint], state
         start_date=config.start_date,
         end_date=config.end_date,
         signal_mode=config.signal_mode,
+        scoring_profile=config.scoring_profile,
         initial_cash=config.initial_cash,
         final_value=final_value,
         total_return_percent=round(total_return, 2),

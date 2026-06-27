@@ -1,5 +1,6 @@
 import importlib.util
 import unittest
+import uuid
 from datetime import date
 
 if importlib.util.find_spec("fastapi") is None:
@@ -179,7 +180,7 @@ class FakeReportAgent:
 
 
 class FakeScreeningWorkflow:
-    def screen(self, limit: int = 20) -> ScreeningResult:
+    def screen(self, limit: int = 20, profile=None) -> ScreeningResult:
         return ScreeningResult(
             market="US",
             requested_limit=limit,
@@ -213,6 +214,7 @@ class FakeBacktestEngine:
             start_date=config.start_date,
             end_date=config.end_date,
             signal_mode=config.signal_mode,
+            scoring_profile=config.scoring_profile,
             initial_cash=config.initial_cash,
             final_value=11_000.0,
             total_return_percent=10.0,
@@ -380,7 +382,6 @@ class ApiEndpointsTest(unittest.TestCase):
             "config": {
                 "target_weights": request.target_weights,
                 "cash_weight": request.cash_weight,
-                "strategy_config": request.strategy_config,
                 "updated_at": "2026-06-27T00:00:00+00:00",
             },
             "updated_at": "2026-06-25T13:32:00+00:00",
@@ -417,7 +418,10 @@ class ApiEndpointsTest(unittest.TestCase):
             "trace_id": "portfolio-trace-1",
             "state": "completed",
             "portfolio": {"name": request.portfolio_name, "symbols": [symbol.upper() for symbol in request.symbols]},
-            "score_summary": {"scoring_mode": request.strategy_preferences.scoring_mode},
+            "score_summary": {
+                "scoring_mode": request.strategy_preferences.scoring_mode,
+                "scoring_profile": request.strategy_preferences.scoring_profile,
+            },
             "backtest_summary": {"total_return_percent": 10.0},
             "risk_summary": {"volatility_percent": 18.5},
             "optimized_weights": {"target_weights": {"AAPL": 0.45, "MSFT": 0.45}},
@@ -613,6 +617,11 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual(1, payload["candidates"][0]["rank"])
         self.assertEqual(1, len(self.persisted_screening_results))
 
+    def test_stock_screening_endpoint_rejects_unknown_scoring_profile(self) -> None:
+        with self.assertRaises(main.HTTPException) as ctx:
+            main.get_stock_screening(limit=5, scoring_profile="not-a-profile")
+        self.assertEqual(400, ctx.exception.status_code)
+
     def test_score_history_endpoint(self) -> None:
         payload = main.get_stock_score_history("AAPL", limit=10)
 
@@ -628,6 +637,17 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertIn(payload["recommendation"], {"强关注", "观察", "中性", "回避"})
         self.assertEqual("algorithm-v0.3", payload["algorithm_version"])
         self.assertTrue(payload["factors"])
+        self.assertEqual("balanced", payload["scoring_profile"])
+
+    def test_recommendation_endpoint_accepts_scoring_profile(self) -> None:
+        payload = main.get_stock_recommendation("AAPL", scoring_profile="momentum")
+
+        self.assertEqual("momentum", payload["scoring_profile"])
+
+    def test_recommendation_endpoint_rejects_unknown_scoring_profile(self) -> None:
+        with self.assertRaises(main.HTTPException) as ctx:
+            main.get_stock_recommendation("AAPL", scoring_profile="not-a-profile")
+        self.assertEqual(400, ctx.exception.status_code)
 
     def test_most_active_universe_endpoint(self) -> None:
         payload = main.get_most_active_universe(limit=2)
@@ -711,6 +731,20 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual(["AAPL", "MSFT"], payload["portfolio"]["symbols"])
         self.assertEqual({"volatility_percent": 18.5}, payload["risk_summary"])
         self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
+        self.assertEqual("balanced", payload["score_summary"]["scoring_profile"])
+
+    def test_portfolio_research_module_endpoint_threads_scoring_profile(self) -> None:
+        payload = main.run_portfolio_research(
+            main.PortfolioResearchRunRequest(
+                portfolio_name="Core Watch",
+                symbols=["aapl", "msft"],
+                strategy_preferences=main.PortfolioResearchStrategyPreferencesRequest(
+                    scoring_profile="growth"
+                ),
+            )
+        )
+
+        self.assertEqual("growth", payload["score_summary"]["scoring_profile"])
 
     def test_get_portfolio_research_module_endpoint(self) -> None:
         self.persisted_portfolio_research_runs["portfolio-trace-1"] = {
@@ -777,16 +811,140 @@ class ApiEndpointsTest(unittest.TestCase):
     def test_update_portfolio_config_endpoint(self) -> None:
         payload = main.update_portfolio_config(
             "Core Watch",
-            main.PortfolioConfigRequest(
-                target_weights={"AAPL": 0.5, "MSFT": 0.4},
-                cash_weight=0.1,
-                strategy_config={"allocation_method": "equal_weight"},
-            ),
+            main.PortfolioConfigRequest(target_weights={"AAPL": 0.5, "MSFT": 0.4}, cash_weight=0.1),
         )
 
         self.assertEqual("Core Watch", payload["name"])
         self.assertEqual({"AAPL": 0.5, "MSFT": 0.4}, payload["config"]["target_weights"])
         self.assertEqual(0.1, payload["config"]["cash_weight"])
+
+    def test_update_strategy_endpoint(self) -> None:
+        payload = main.update_strategy(
+            "Momentum Aggressive",
+            main.StrategyRequest(
+                preferences={"optimizer_method": "minimum_variance", "backtest_mode": "ai_score"},
+                constraints={"max_position_weight": 0.3},
+            ),
+        )
+
+        self.assertEqual("Momentum Aggressive", payload["name"])
+        self.assertEqual("minimum_variance", payload["preferences"]["optimizer_method"])
+        self.assertEqual(0.3, payload["constraints"]["max_position_weight"])
+
+    def test_update_strategy_endpoint_rejects_unknown_optimizer_method(self) -> None:
+        with self.assertRaises(main.HTTPException) as context:
+            main.update_strategy(
+                "Broken", main.StrategyRequest(preferences={"optimizer_method": "not_a_method"})
+            )
+
+        self.assertEqual(400, context.exception.status_code)
+
+    def test_get_strategies_endpoint_includes_saved_strategy(self) -> None:
+        main.update_strategy("List Me", main.StrategyRequest(preferences={"optimizer_method": "equal_weight"}))
+
+        payload = main.get_strategies()
+
+        names = [item["name"] for item in payload["items"]]
+        self.assertIn("List Me", names)
+
+    def test_remove_strategy_endpoint(self) -> None:
+        main.update_strategy("Disposable", main.StrategyRequest())
+
+        result = main.remove_strategy("Disposable")
+
+        self.assertEqual("Disposable", result["deleted"])
+        names = [item["name"] for item in main.get_strategies()["items"]]
+        self.assertNotIn("Disposable", names)
+
+    def test_remove_strategy_endpoint_404_for_missing_strategy(self) -> None:
+        with self.assertRaises(main.HTTPException) as context:
+            main.remove_strategy("Nonexistent Strategy")
+
+        self.assertEqual(404, context.exception.status_code)
+
+    def _seed_workflow_run(self, label: str, portfolio_name: str, strategy_library_name: str | None) -> str:
+        # workflow_runs.trace_id is unique and this suite runs against the
+        # persistent local sqlite file, so a fixed literal would collide on rerun.
+        trace_id = f"{label}-{uuid.uuid4()}"
+        with main.session_scope() as session:
+            main.write_workflow_run(
+                session,
+                {"portfolio_name": portfolio_name, "strategy_library_name": strategy_library_name},
+                {
+                    "trace_id": trace_id,
+                    "workflow_name": "portfolio_research_module",
+                    "workflow_version": "portfolio-research-module-v0.1",
+                    "state": "completed",
+                    "started_at": "2026-06-27T00:00:00+00:00",
+                    "completed_at": "2026-06-27T00:00:01+00:00",
+                    "risk_disclaimer": RISK_DISCLAIMER,
+                    "portfolio": {"name": portfolio_name, "symbols": ["AAPL"]},
+                    "recommendation": {"action": "research_candidate"},
+                    "backtest_summary": {"total_return_percent": 5.0},
+                },
+            )
+            session.commit()
+        return trace_id
+
+    def test_research_run_history_endpoint_lists_with_summary(self) -> None:
+        trace_id = self._seed_workflow_run("history-trace-1", "History Test Portfolio", "History Test Strategy")
+
+        payload = main.get_research_run_history(
+            limit=20,
+            offset=0,
+            workflow_name=None,
+            state=None,
+            portfolio_name="History Test Portfolio",
+            strategy_library_name=None,
+            start_date=None,
+            end_date=None,
+        )
+
+        item = next(i for i in payload["items"] if i["trace_id"] == trace_id)
+        self.assertEqual("History Test Strategy", item["strategy_library_name"])
+        self.assertIn("research_candidate", item["summary_text"])
+        self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
+
+    def test_research_run_history_endpoint_filters_by_strategy_library_name(self) -> None:
+        trace_a = self._seed_workflow_run("history-trace-2", "Filter Portfolio", "Strategy A")
+        trace_b = self._seed_workflow_run("history-trace-3", "Filter Portfolio", "Strategy B")
+
+        payload = main.get_research_run_history(
+            limit=20,
+            offset=0,
+            workflow_name=None,
+            state=None,
+            portfolio_name=None,
+            strategy_library_name="Strategy A",
+            start_date=None,
+            end_date=None,
+        )
+
+        trace_ids = [item["trace_id"] for item in payload["items"]]
+        self.assertIn(trace_a, trace_ids)
+        self.assertNotIn(trace_b, trace_ids)
+
+    def test_research_run_history_endpoint_paginates(self) -> None:
+        # Unique portfolio_name per run: this suite hits the persistent local
+        # sqlite file, so a fixed name would accumulate rows across test runs
+        # and make an exact total_count assertion flaky.
+        portfolio_name = f"Page Portfolio {uuid.uuid4()}"
+        self._seed_workflow_run("history-trace-4", portfolio_name, None)
+        self._seed_workflow_run("history-trace-5", portfolio_name, None)
+
+        first_page = main.get_research_run_history(
+            limit=1,
+            offset=0,
+            workflow_name=None,
+            state=None,
+            portfolio_name=portfolio_name,
+            strategy_library_name=None,
+            start_date=None,
+            end_date=None,
+        )
+
+        self.assertEqual(1, len(first_page["items"]))
+        self.assertEqual(2, first_page["total_count"])
 
     def test_analyze_portfolio_risk_endpoint(self) -> None:
         payload = main.analyze_portfolio_risk_endpoint(

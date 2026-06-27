@@ -4,6 +4,10 @@
 
 ### Added
 
+* Research Run History API v0.1（`packages/research_history`，`GET /research-runs`），复用既有 `workflow_runs` 表，按 `workflow_name`/`state`/`portfolio_name`/`strategy_library_name`/日期查询历史研究运行列表，返回 trace_id、组合、策略库存档名、状态、摘要和时间；新增 `strategy_library_name` 字段（`PortfolioResearchRunRequest`/`PortfolioResearchWorkflowRequest`），前端「策略库」应用/新增/更新会记住当前应用的存档名并随 `/portfolio-research/run` 提交
+* Scoring Profiles 模型权重模块 v0.1（`packages/scoring_profiles`），把 Algorithm Layer 评分权重从硬编码抽成 5 个内置只读权重组（Balanced/Growth/Value/Defensive/Momentum），接入 `/stocks/{symbol}/recommendation`、`/stocks/screening`、`/backtests/run`、`/portfolio-research/run` 的 `scoring_profile` 参数；`packages/backtesting/signals.py` 的 `AI_SCORE_WEIGHTS` 硬编码常量同步移除，改为按 profile 动态排除 `news_sentiment` 后重新归一化
+* Project Constitution v1.0 and AI Development Charter v1.0 as highest-priority project governance rules; README, `.ai/AGENTS.md`, `.ai/PROJECT_RULES.md`, and governance tests now reference them as mandatory development inputs
+* AI Startup Protocol v1.0 (`.ai/AI_STARTUP_PROTOCOL.md`) defining the mandatory read-plan-confirm-develop-test-document sequence for every development Agent
 * 重建 project5 为 OpenStock AI
 * 项目标准文档 v0.1
 * 需求分析 v0.1
@@ -60,9 +64,16 @@
 * Risk Engine v0.1：新增 `packages/risk_engine` 和 `POST /risk/portfolio`，输出 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure；前端 workflow 完成后展示风险摘要
 * Portfolio Optimizer v0.1：新增 `packages/portfolio_optimizer` 和 `POST /optimizer/portfolio`，支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版；前端 workflow 完成后展示 Optimizer 目标权重摘要
 * Portfolio Research Module v0.1：新增 `packages/portfolio_research`，用 `POST /portfolio-research/run` 和 `GET /portfolio-research/{trace_id}` 统一整合 Workflow、Backtesting、Risk Engine、Portfolio Optimizer、AI Summary 和 Recommendation；前端 Portfolio Research Workbench 改为调用统一入口，减少模块拼装感
+* 策略库（Strategy Library）：新增 `strategies` 表和 `packages/db/strategies.py`，新增 `GET/PUT/DELETE /strategies`，把"策略"（仓位分配方法、信号模式、再平衡频率、约束）做成独立于 Portfolio（股票桶）的可复用实体，而不是像 `PortfolioConfig.strategy_config` 那样绑死在某个组合名下；左边栏「组合策略选择」改造为「策略库 Strategy Library」面板，提供新增/应用/更新/删除已保存策略（应用只写回表单不自动运行，便于调整后再运行或另存为新策略）；选股加入组合的动作从左边栏挪到右边栏「研究操作」，跟"当前正在看的股票"绑定，不再需要为每个组合桶单独重复选股票
+* 删除 `PortfolioConfig.strategy_config` 重叠字段：组合（Portfolio）现在只管股票和目标权重/现金比例，策略参数全部收敛到上面新增的策略库，不再有两套地方各存一份同样含义的 `allocation_method`/`signal_mode`/`rebalance_frequency`/`benchmark_symbol`；`PUT /portfolios/{name}/config` 请求体不再接受 `strategy_config`，「Save Weights」按钮现在名副其实——只保存权重，不再悄悄带一份过时的策略快照
 
 ### Fixed
 
+* 修复策略库「新增策略」使用浏览器原生 `prompt()` 导致弹窗提交体验不稳定、没有内联错误和加载反馈的问题；改为工作台内置策略名称弹层，提交走原有 `PUT /strategies/{name}` API，保存成功后自动关闭弹层并刷新策略列表
+* 策略库「新增策略」弹层不再要求手动输入策略名称，改为从 PRD 策略库清单中选择固定策略项（Equal Weight、Momentum、Risk Parity、Black-Litterman 等），降低命名不一致和提交失败感
+* 策略库左侧面板改为持续展示“可选策略组合”：固定策略清单和历史保存的自定义策略都可见，并标出“当前选择 / 已保存 / 待保存”，避免策略组合只藏在新增弹窗里
+* 策略卡片新增「推荐组合」动作：选择某个策略组合后直接运行 Portfolio Research，输出该策略下的 Recommended Research Portfolio、回测、风险、优化权重和 Portfolio Recommendation；结果明确标注仅用于投资研究辅助，不构成投资建议
+* 优化 Portfolio Research Workbench 结果页布局：把 Recommended Research Portfolio、Portfolio Recommendation 和 Risk Engine 提前为主结果区，目标权重改为可扫读的权重卡片，回测图表和交易明细后置并降低高度，减少长报表感
 * 组合策略回测（`POST /backtests/run`）使用「市值加权」（`market_cap_weighted`）分配方式时运行缓慢：`shares_outstanding_fetcher` 此前在每个调仓日对每只候选股都重新发起一次未缓存的 SEC EDGAR companyfacts 请求（最长 20 秒超时），多调仓日 × 多股票的回测会触发数百次重复网络请求；现改为 `PortfolioBacktestEngine.run()` 每只股票每次回测只预取一次（`packages/backtesting/engine.py`），且 `apps/api/main.py::_fetch_shares_outstanding` 改为复用已有 24 小时缓存的年度财报序列（`get_or_fetch_annual_series`）取股数，不再发起额外请求；新增回归测试验证调用次数不随调仓日数量增长
 * `PortfolioBacktestEngine.run()` 的历史价格 / 财报 / 股数三处按股票预取改为线程池并发（`MAX_CONCURRENT_REQUESTS = 8`，与 `StockScreeningWorkflow` 一致），冷缓存多股票回测不再逐个串行等待网络请求
 * `SECFilingClient.get_cik()`（`packages/data_sources/sec_filings.py`）此前每遇到一个未缓存过的股票代码都会重新下载一次完整的 SEC ticker→CIK 映射表（几千条记录的大文件），现改为整张表只下载一次解析进内存缓存（加锁防止并发请求重复下载），后续任意股票代码的解析不再产生网络请求

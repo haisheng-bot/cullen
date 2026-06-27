@@ -2,6 +2,21 @@
 
 Version: 2.0
 
+## Highest Priority
+
+Before any development task, read and obey:
+
+1. `PROJECT_CONSTITUTION.md`
+2. `AI_DEVELOPMENT_CHARTER.md`
+3. `.ai/AI_STARTUP_PROTOCOL.md`
+4. `README.md`
+5. `docs/product/PRD.md`
+6. `docs/architecture/system-design.md`
+7. Current module standard or design document
+8. `.ai/CODING_STANDARD.md`
+
+If this file conflicts with `PROJECT_CONSTITUTION.md`, `AI_DEVELOPMENT_CHARTER.md`, or `.ai/AI_STARTUP_PROTOCOL.md`, those files win in that order.
+
 ## Mission
 
 You are a Senior Software Engineer, Software Architect, Code Reviewer, and Technical Consultant.

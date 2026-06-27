@@ -32,8 +32,8 @@
       .app {
         min-height: 100vh;
         display: grid;
-        grid-template-columns: 292px minmax(0, 1fr) 344px;
-        grid-template-rows: 64px minmax(0, 1fr);
+        grid-template-columns: 292px minmax(0, 1fr);
+        grid-template-rows: 64px auto auto;
       }
 
       .topbar {
@@ -97,6 +97,8 @@
 
       aside, main, .rightbar { min-width: 0; }
       aside {
+        grid-column: 1;
+        grid-row: 2 / 4;
         background: #f8faf8;
         border-right: 1px solid var(--line);
         padding: 14px;
@@ -104,13 +106,17 @@
       }
 
       main {
+        grid-column: 2;
+        grid-row: 2;
         padding: 16px;
         overflow: auto;
       }
 
       .rightbar {
+        grid-column: 2;
+        grid-row: 3;
         background: #f8faf8;
-        border-left: 1px solid var(--line);
+        border-top: 1px solid var(--line);
         padding: 14px;
         overflow: auto;
       }
@@ -273,13 +279,160 @@
         line-height: 1;
       }
 
+      .strategy-list {
+        display: grid;
+        gap: 8px;
+        max-height: 260px;
+        overflow-y: auto;
+        padding-right: 3px;
+      }
+
+      .strategy-item {
+        border: 1px solid #dfe8e4;
+        border-radius: 8px;
+        background: #fbfdfc;
+        padding: 8px;
+      }
+
+      .strategy-item.selected {
+        border-color: var(--indigo);
+        background: #f3f6ff;
+      }
+
+      .strategy-item-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 6px;
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .strategy-item-badges {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 4px;
+      }
+
+      .strategy-badge {
+        border: 1px solid #d5dfda;
+        border-radius: 999px;
+        background: #ffffff;
+        color: var(--muted);
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .strategy-badge.selected {
+        border-color: var(--indigo);
+        background: var(--indigo);
+        color: white;
+      }
+
+      .strategy-item-summary {
+        font-size: 11px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .strategy-item-actions {
+        display: flex;
+        gap: 6px;
+      }
+
+      .strategy-item-actions button {
+        height: 26px;
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        background: white;
+        padding: 0 8px;
+        font-size: 11px;
+        font-weight: 750;
+        cursor: pointer;
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 50;
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        background: rgba(16, 26, 23, 0.46);
+      }
+
+      .modal-backdrop[hidden] {
+        display: none;
+      }
+
+      .strategy-modal {
+        width: min(420px, 100%);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: 0 24px 64px rgba(16, 26, 23, 0.24);
+        padding: 16px;
+      }
+
+      .strategy-modal-title {
+        margin-bottom: 6px;
+        color: var(--text);
+        font-size: 16px;
+        font-weight: 850;
+      }
+
+      .strategy-modal input,
+      .strategy-modal select {
+        width: 100%;
+        height: 38px;
+        margin-top: 10px;
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        background: white;
+        color: var(--text);
+        padding: 0 10px;
+      }
+
+      .strategy-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .strategy-modal-actions button {
+        height: 34px;
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        background: white;
+        color: var(--text);
+        padding: 0 12px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .strategy-modal-actions button[type="submit"] {
+        border-color: var(--indigo);
+        background: var(--indigo);
+        color: white;
+      }
+
+      .strategy-modal-actions button:disabled {
+        cursor: not-allowed;
+        opacity: 0.64;
+      }
+
       .workflow-panel {
         margin-bottom: 12px;
         border: 1px solid var(--line);
         border-top: 3px solid var(--indigo);
         border-radius: 8px;
         background: var(--panel);
-        padding: 12px;
+        padding: 14px;
         box-shadow: var(--shadow);
       }
 
@@ -298,7 +451,8 @@
         border: 1px solid #dfe5f2;
         border-radius: 8px;
         background: #fbfcff;
-        padding: 8px;
+        min-height: 78px;
+        padding: 9px;
         transition: border-color 0.2s, background 0.2s;
       }
 
@@ -357,8 +511,8 @@
 
       .strategy-workbench-grid {
         display: grid;
-        grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-        gap: 12px;
+        grid-template-columns: minmax(340px, 410px) minmax(0, 1fr);
+        gap: 14px;
         align-items: start;
       }
 
@@ -367,7 +521,12 @@
         border: 1px solid var(--line);
         border-radius: 8px;
         background: #fbfcff;
-        padding: 12px;
+        padding: 14px;
+      }
+
+      .strategy-config-panel {
+        position: sticky;
+        top: 74px;
       }
 
       .strategy-panel-head {
@@ -490,6 +649,59 @@
         line-height: 1.45;
       }
 
+      .result-priority-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .result-priority-grid > .chart-card {
+        margin-top: 0;
+      }
+
+      .result-priority-grid .result-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      #recommendation-action-grid {
+        grid-template-columns: 1fr;
+      }
+
+      #optimizer-card {
+        grid-column: 1 / -1;
+      }
+
+      #optimizer-card .result-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .weight-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .weight-chip {
+        border: 1px solid #dfe5f2;
+        border-radius: 8px;
+        background: #f8fbff;
+        padding: 7px 8px;
+      }
+
+      .weight-chip-symbol {
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .weight-chip-value {
+        margin-top: 2px;
+        color: var(--indigo);
+        font-size: 14px;
+        font-weight: 900;
+      }
+
       .workflow-actions {
         display: flex;
         align-items: center;
@@ -564,12 +776,12 @@
       }
 
       .equity-chart-card canvas {
-        height: 220px;
+        height: 190px;
       }
 
       .trades-table-wrap {
         margin-top: 10px;
-        max-height: 220px;
+        max-height: 180px;
         overflow-y: auto;
         border: 1px solid var(--line);
         border-radius: 8px;
@@ -924,6 +1136,7 @@
         color: var(--muted);
       }
 
+      .rightbar .constraint-field { margin-bottom: 10px; }
       .action-stack { display: grid; gap: 8px; margin-bottom: 12px; }
       .action-stack button {
         height: 38px;
@@ -1071,14 +1284,16 @@
           grid-template-rows: auto auto auto auto;
         }
         .topbar, aside, main, .rightbar { grid-column: 1; }
+        .strategy-config-panel { position: static; }
         canvas { height: 330px; }
-        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .result-grid, .weight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .result-priority-grid { grid-template-columns: 1fr; }
         .strategy-workbench-grid { grid-template-columns: 1fr; }
         .constraint-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
       @media (max-width: 560px) {
-        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .constraint-grid, .result-grid { grid-template-columns: 1fr; }
+        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .constraint-grid, .result-grid, .weight-grid { grid-template-columns: 1fr; }
         .workflow-actions { display: grid; }
         .run-backtest-button { width: 100%; }
       }
@@ -1103,17 +1318,16 @@
         <div class="muted" id="universe-meta">Most Active · US</div>
         <div class="stock-list" id="stock-list"></div>
         <div class="portfolio-panel">
-          <div class="section-title">组合策略选择</div>
-          <div class="portfolio-controls">
-            <select id="portfolio-strategy">
-              <option value="Core Watch">核心观察</option>
-              <option value="Momentum">动量组合</option>
-              <option value="AI Theme">AI 概念</option>
-              <option value="Semiconductor">半导体</option>
-              <option value="Risk Hedge">风险对冲</option>
-            </select>
-            <button id="add-portfolio-button" type="button">加入</button>
+          <div class="section-title">策略库 Strategy Library</div>
+          <div class="side-actions">
+            <button id="add-strategy-button" type="button">新增策略</button>
           </div>
+          <div class="muted" id="strategy-list-meta">保存当前面板的策略参数，可在任意组合上复用。</div>
+          <div class="strategy-list" id="strategy-list"></div>
+        </div>
+
+        <div class="portfolio-panel">
+          <div class="section-title">我的组合 Portfolios</div>
           <div class="portfolio-list" id="portfolio-list"></div>
         </div>
 
@@ -1328,8 +1542,30 @@
             <div class="strategy-result-panel">
               <div class="strategy-panel-head">
                 <div>
-                  <div class="strategy-panel-title">回测结果与组合建议</div>
-                  <div class="strategy-panel-subtitle">收益、回撤、Sharpe、Alpha、贡献股票和风险提示会集中展示。</div>
+                  <div class="strategy-panel-title">策略推荐组合与验证</div>
+                  <div class="strategy-panel-subtitle">先看推荐权重和组合建议，再核对回测、风险、交易和 AI 解释。</div>
+                </div>
+              </div>
+              <div class="result-priority-grid">
+                <div class="card chart-card" id="optimizer-card" hidden>
+                  <div class="strategy-panel-title">Recommended Research Portfolio</div>
+                  <div class="strategy-panel-subtitle">Portfolio Optimizer v0.1 · 该策略下的研究型权重建议，不构成投资建议。</div>
+                  <div class="result-grid" id="optimizer-grid"></div>
+                  <div class="weight-grid" id="optimizer-weight-grid"></div>
+                  <ul class="workflow-list" id="optimizer-notes"></ul>
+                </div>
+                <div class="card chart-card" id="recommendation-card" hidden>
+                  <div class="strategy-panel-title">Portfolio Recommendation</div>
+                  <div class="result-grid" id="recommendation-action-grid"></div>
+                  <ul class="workflow-list" id="recommendation-reasons"></ul>
+                  <ul class="workflow-list" id="recommendation-suggestions"></ul>
+                  <ul class="workflow-list" id="recommendation-risks"></ul>
+                  <div class="workflow-note" id="recommendation-disclaimer"></div>
+                </div>
+                <div class="card chart-card" id="risk-report-card" hidden>
+                  <div class="strategy-panel-title">Risk Engine v0.1</div>
+                  <div class="result-grid" id="risk-report-grid"></div>
+                  <div class="workflow-note" id="risk-report-note"></div>
                 </div>
               </div>
               <div class="backtest-results" id="backtest-results">
@@ -1358,24 +1594,6 @@
                 <div class="strategy-panel-title">AI 自动分析结果（模板生成，非实时 AI 推理）</div>
                 <div class="workflow-note" id="ai-summary-conclusion"></div>
                 <ul class="workflow-list" id="ai-summary-findings"></ul>
-              </div>
-              <div class="card chart-card" id="recommendation-card" hidden>
-                <div class="strategy-panel-title">Portfolio Recommendation</div>
-                <div class="result-grid" id="recommendation-action-grid"></div>
-                <ul class="workflow-list" id="recommendation-reasons"></ul>
-                <ul class="workflow-list" id="recommendation-suggestions"></ul>
-                <ul class="workflow-list" id="recommendation-risks"></ul>
-                <div class="workflow-note" id="recommendation-disclaimer"></div>
-              </div>
-              <div class="card chart-card" id="risk-report-card" hidden>
-                <div class="strategy-panel-title">Risk Engine v0.1</div>
-                <div class="result-grid" id="risk-report-grid"></div>
-                <div class="workflow-note" id="risk-report-note"></div>
-              </div>
-              <div class="card chart-card" id="optimizer-card" hidden>
-                <div class="strategy-panel-title">Portfolio Optimizer v0.1</div>
-                <div class="result-grid" id="optimizer-grid"></div>
-                <ul class="workflow-list" id="optimizer-notes"></ul>
               </div>
               <div class="workflow-note">本系统仅用于投资研究辅助，不构成任何投资建议。</div>
             </div>
@@ -1447,6 +1665,16 @@
 
       <aside class="rightbar">
         <div class="section-title">研究操作</div>
+        <div class="constraint-field">
+          <label for="portfolio-strategy">加入到组合</label>
+          <select id="portfolio-strategy">
+            <option value="Core Watch">核心观察</option>
+            <option value="Momentum">动量组合</option>
+            <option value="AI Theme">AI 概念</option>
+            <option value="Semiconductor">半导体</option>
+            <option value="Risk Hedge">风险对冲</option>
+          </select>
+        </div>
         <div class="action-stack">
           <button id="action-report">生成研究报告</button>
           <button id="action-score">刷新 AI 评分</button>
@@ -1481,6 +1709,19 @@
       </aside>
     </div>
 
+    <div class="modal-backdrop" id="strategy-modal-backdrop" hidden>
+      <form class="strategy-modal" id="strategy-modal-form">
+        <div class="strategy-modal-title">新增策略</div>
+        <div class="muted">选择策略模板并保存当前 Portfolio Research Workbench 的策略参数，之后可应用到任意组合。</div>
+        <select id="strategy-modal-name"></select>
+        <div class="note" id="strategy-modal-status" hidden></div>
+        <div class="strategy-modal-actions">
+          <button id="strategy-modal-cancel" type="button">取消</button>
+          <button id="strategy-modal-submit" type="submit">保存策略</button>
+        </div>
+      </form>
+    </div>
+
     <script>
       const API = window.location.origin;
       const state = {
@@ -1491,6 +1732,10 @@
         chartSizeKey: "",
         portfolios: {},
         portfolioConfigs: {},
+        strategies: {},
+        // Label only: not cleared when the user edits a field after applying,
+        // so it can drift from the form's actual current values.
+        appliedStrategyName: null,
         uxStrategyTouched: false,
         uxConstraintsTouched: false,
       };
@@ -1501,7 +1746,14 @@
       const scanUniverseButton = document.getElementById("scan-universe-button");
       const portfolioStrategy = document.getElementById("portfolio-strategy");
       const portfolioList = document.getElementById("portfolio-list");
-      const addPortfolioButton = document.getElementById("add-portfolio-button");
+      const strategyList = document.getElementById("strategy-list");
+      const addStrategyButton = document.getElementById("add-strategy-button");
+      const strategyModalBackdrop = document.getElementById("strategy-modal-backdrop");
+      const strategyModalForm = document.getElementById("strategy-modal-form");
+      const strategyModalName = document.getElementById("strategy-modal-name");
+      const strategyModalStatus = document.getElementById("strategy-modal-status");
+      const strategyModalCancel = document.getElementById("strategy-modal-cancel");
+      const strategyModalSubmit = document.getElementById("strategy-modal-submit");
       const workflowStrategy = document.getElementById("workflow-strategy");
       const targetReturnInput = document.getElementById("target-return");
       const maxDrawdownInput = document.getElementById("max-drawdown");
@@ -1539,6 +1791,7 @@
       const riskReportNote = document.getElementById("risk-report-note");
       const optimizerCard = document.getElementById("optimizer-card");
       const optimizerGrid = document.getElementById("optimizer-grid");
+      const optimizerWeightGrid = document.getElementById("optimizer-weight-grid");
       const optimizerNotes = document.getElementById("optimizer-notes");
       const backtestSelectionSummary = document.getElementById("backtest-selection-summary");
       const workflowUniverseSummary = document.getElementById("workflow-universe-summary");
@@ -1727,6 +1980,236 @@
         renderBacktestSelectionSummary();
       }
 
+      function currentStrategyPayload() {
+        return {
+          preferences: {
+            scoring_mode: "algorithm_v0.3",
+            backtest_mode: signalModeSelect.value === "ai_score" ? "ai_score" : "technical",
+            optimizer_method: optimizerMethod(),
+            rebalance_frequency: rebalanceFrequencySelect.value,
+          },
+          constraints: {
+            max_position_weight: percentInputToRatio(maxPositionInput),
+            min_cash_weight: percentInputToRatio(minCashInput),
+            max_drawdown: percentInputToRatio(maxDrawdownInput),
+            benchmark_symbol: benchmarkSymbolInput.value.trim().toUpperCase() || "SPY",
+            backtest_years: Number(backtestYearsInput.value || 3),
+          },
+        };
+      }
+
+      const WORKFLOW_STRATEGY_FROM_OPTIMIZER_METHOD = {
+        market_cap: "market_cap_weighted",
+        risk_parity: "volatility_weighted",
+        equal_weight: "equal_weight",
+        minimum_variance: "technical_score_weighted",
+      };
+
+      const STRATEGY_LIBRARY_OPTIONS = [
+        { name: "Equal Weight", method: "equal_weight", summary: "等权基准策略，适合快速建立中性组合。" },
+        { name: "Momentum", method: "minimum_variance", summary: "动量研究模板，适合跟踪强趋势候选股。" },
+        { name: "Growth", method: "minimum_variance", summary: "成长风格模板，聚焦营收和盈利扩张。" },
+        { name: "Quality", method: "minimum_variance", summary: "质量风格模板，强调盈利稳定性和资产质量。" },
+        { name: "Value", method: "minimum_variance", summary: "价值风格模板，关注估值安全边际。" },
+        { name: "Low Volatility", method: "risk_parity", summary: "低波动模板，优先控制组合波动。" },
+        { name: "Dividend", method: "equal_weight", summary: "股息风格模板，适合收益型候选组合。" },
+        { name: "Minimum Variance", method: "minimum_variance", summary: "最小方差模板，适合风险优先研究。" },
+        { name: "AI Momentum", method: "minimum_variance", summary: "AI 评分 + 动量模板，适合因子增强研究。" },
+        { name: "Sector Rotation", method: "market_cap", summary: "行业轮动模板，适合主题和板块比较。" },
+        { name: "Risk Parity", method: "risk_parity", summary: "风险平价模板，按风险贡献分配权重。" },
+        { name: "Black-Litterman", method: "minimum_variance", summary: "Black-Litterman 研究模板，预留主观观点融合。" },
+      ];
+
+      function populateStrategySelect() {
+        strategyModalName.innerHTML = STRATEGY_LIBRARY_OPTIONS
+          .map((option) => `<option value="${escapeHtml(option.name)}">${escapeHtml(option.name)}</option>`)
+          .join("");
+      }
+
+      async function loadStrategies() {
+        const data = await request("/strategies");
+        state.strategies = {};
+        data.items.forEach((strategy) => {
+          state.strategies[strategy.name] = strategy;
+        });
+        renderStrategyList();
+      }
+
+      function renderStrategyList() {
+        strategyList.innerHTML = "";
+        const configuredOptions = [...STRATEGY_LIBRARY_OPTIONS];
+        Object.values(state.strategies).forEach((strategy) => {
+          if (configuredOptions.some((option) => option.name === strategy.name)) return;
+          configuredOptions.push({
+            name: strategy.name,
+            method: strategy.preferences?.optimizer_method || "minimum_variance",
+            summary: "历史保存的自定义策略组合，可继续应用、更新或删除。",
+          });
+        });
+        configuredOptions.forEach((option) => {
+          const strategy = state.strategies[option.name];
+          const isSaved = Boolean(strategy);
+          const isSelected = state.appliedStrategyName === option.name;
+          const prefs = strategy?.preferences || {};
+          const optimizer = prefs.optimizer_method || option.method;
+          const backtestMode = prefs.backtest_mode || "technical";
+          const rebalance = prefs.rebalance_frequency || "monthly";
+          const item = document.createElement("div");
+          item.className = `strategy-item${isSelected ? " selected" : ""}`;
+          item.innerHTML = `
+            <div class="strategy-item-head">
+              <span>${escapeHtml(option.name)}</span>
+              <span class="strategy-item-badges">
+                ${isSelected ? '<span class="strategy-badge selected">当前选择</span>' : ""}
+                <span class="strategy-badge">${isSaved ? "已保存" : "待保存"}</span>
+              </span>
+            </div>
+            <div class="strategy-item-summary">${escapeHtml(optimizer)} · ${escapeHtml(backtestMode)} · ${escapeHtml(rebalance)}</div>
+            <div class="strategy-item-summary">${escapeHtml(option.summary)}</div>
+            <div class="strategy-item-actions">
+              ${isSaved ? '<button type="button" data-action="apply">应用</button>' : ""}
+              <button type="button" data-action="recommend">推荐组合</button>
+              <button type="button" data-action="save">${isSaved ? "更新" : "保存"}</button>
+              ${isSaved ? '<button type="button" data-action="delete">删除</button>' : ""}
+            </div>
+          `;
+          const actions = {
+            apply: () => applyStrategy(option.name),
+            recommend: () => generateStrategyResearchPortfolio(option.name),
+            save: () => saveCurrentFormAsStrategy(option.name),
+            delete: () => deleteStrategyByName(option.name),
+          };
+          item.querySelectorAll("button[data-action]").forEach((button) => {
+            button.addEventListener("click", actions[button.dataset.action]);
+          });
+          strategyList.appendChild(item);
+        });
+        const selected = state.appliedStrategyName || "未选择";
+        const fixedSavedCount = STRATEGY_LIBRARY_OPTIONS.filter((option) => state.strategies[option.name]).length;
+        const customSavedCount = Object.keys(state.strategies).length - fixedSavedCount;
+        document.getElementById("strategy-list-meta").textContent =
+          `当前策略组合：${selected} · 固定已保存 ${fixedSavedCount}/${STRATEGY_LIBRARY_OPTIONS.length} · 自定义 ${customSavedCount}`;
+      }
+
+      function applyStrategy(name) {
+        const strategy = state.strategies[name];
+        if (!strategy) return;
+        const prefs = strategy.preferences || {};
+        const constraints = strategy.constraints || {};
+        workflowStrategy.value =
+          WORKFLOW_STRATEGY_FROM_OPTIMIZER_METHOD[prefs.optimizer_method] || "technical_score_weighted";
+        signalModeSelect.value = prefs.backtest_mode === "ai_score" ? "ai_score" : "technical";
+        rebalanceFrequencySelect.value = prefs.rebalance_frequency || "monthly";
+        if (constraints.benchmark_symbol) benchmarkSymbolInput.value = constraints.benchmark_symbol;
+        if (constraints.max_position_weight != null) {
+          maxPositionInput.value = Math.round(constraints.max_position_weight * 100);
+        }
+        if (constraints.min_cash_weight != null) {
+          minCashInput.value = Math.round(constraints.min_cash_weight * 100);
+        }
+        if (constraints.max_drawdown != null) {
+          maxDrawdownInput.value = Math.round(constraints.max_drawdown * 100);
+        }
+        if (constraints.backtest_years != null) {
+          backtestYearsInput.value = String(constraints.backtest_years);
+        }
+        state.uxStrategyTouched = true;
+        state.uxConstraintsTouched = true;
+        state.appliedStrategyName = name;
+        updateWorkflowSteps();
+        renderStrategyList();
+      }
+
+      function applyStrategyOption(name) {
+        if (state.strategies[name]) {
+          applyStrategy(name);
+          return true;
+        }
+        const option = STRATEGY_LIBRARY_OPTIONS.find((item) => item.name === name);
+        if (!option) return false;
+        workflowStrategy.value = WORKFLOW_STRATEGY_FROM_OPTIMIZER_METHOD[option.method] || "technical_score_weighted";
+        signalModeSelect.value = option.name === "AI Momentum" ? "ai_score" : "technical";
+        rebalanceFrequencySelect.value = "monthly";
+        state.uxStrategyTouched = true;
+        state.uxConstraintsTouched = true;
+        state.appliedStrategyName = name;
+        updateWorkflowSteps();
+        renderStrategyList();
+        return true;
+      }
+
+      async function generateStrategyResearchPortfolio(name) {
+        if (!applyStrategyOption(name)) {
+          alert(`未找到策略组合：${name}`);
+          return;
+        }
+        backtestResults.innerHTML = `<div class="workflow-note">正在基于「${escapeHtml(name)}」生成 Research Portfolio：优化权重、回测、风险和建议。本结果仅用于投资研究辅助，不构成任何投资建议。</div>`;
+        await runPortfolioWorkflow();
+      }
+
+      async function saveCurrentFormAsStrategy(name) {
+        try {
+          const saved = await putJson(`/strategies/${encodeURIComponent(name)}`, currentStrategyPayload());
+          state.strategies[saved.name] = saved;
+          state.appliedStrategyName = saved.name;
+          renderStrategyList();
+          return saved;
+        } catch (error) {
+          alert(`保存策略失败：${error.message}`);
+          return null;
+        }
+      }
+
+      function openStrategyModal() {
+        strategyModalName.selectedIndex = 0;
+        strategyModalStatus.hidden = true;
+        strategyModalStatus.textContent = "";
+        strategyModalSubmit.disabled = false;
+        strategyModalSubmit.textContent = "保存策略";
+        strategyModalBackdrop.hidden = false;
+        strategyModalName.focus();
+      }
+
+      function closeStrategyModal() {
+        strategyModalBackdrop.hidden = true;
+      }
+
+      async function submitStrategyModal(event) {
+        event.preventDefault();
+        const name = strategyModalName.value.trim();
+        if (!name) {
+          strategyModalStatus.hidden = false;
+          strategyModalStatus.textContent = "请选择策略。";
+          strategyModalName.focus();
+          return;
+        }
+        strategyModalStatus.hidden = false;
+        strategyModalStatus.textContent = "正在保存策略...";
+        strategyModalSubmit.disabled = true;
+        strategyModalSubmit.textContent = "保存中";
+        const saved = await saveCurrentFormAsStrategy(name);
+        if (!saved) {
+          strategyModalStatus.textContent = "保存失败，请检查策略参数后重试。";
+          strategyModalSubmit.disabled = false;
+          strategyModalSubmit.textContent = "保存策略";
+          return;
+        }
+        closeStrategyModal();
+      }
+
+      async function deleteStrategyByName(name) {
+        if (!confirm(`删除策略「${name}」？`)) return;
+        try {
+          await deleteJson(`/strategies/${encodeURIComponent(name)}`);
+        } catch (error) {
+          alert(`删除策略失败：${error.message}`);
+          return;
+        }
+        delete state.strategies[name];
+        if (state.appliedStrategyName === name) state.appliedStrategyName = null;
+        renderStrategyList();
+      }
+
       async function generateResearchReport() {
         const statusEl = document.getElementById("report-status");
         const conclusionEl = document.getElementById("report-conclusion");
@@ -1802,12 +2285,6 @@
         return {
           target_weights: Object.fromEntries(symbols.map((symbol) => [symbol, equalWeight])),
           cash_weight: cashWeight,
-          strategy_config: {
-            allocation_method: workflowStrategy.value,
-            signal_mode: signalModeSelect.value,
-            rebalance_frequency: rebalanceFrequencySelect.value,
-            benchmark_symbol: benchmarkSymbolInput.value.trim().toUpperCase() || "SPY",
-          },
         };
       }
 
@@ -1955,6 +2432,7 @@
           portfolio_name: activePortfolioName(),
           symbols: activePortfolioSymbols(),
           research_goal: "balanced_growth",
+          strategy_library_name: state.appliedStrategyName || null,
           constraints: {
             max_position_weight: percentInputToRatio(maxPositionInput),
             min_cash_weight: percentInputToRatio(minCashInput),
@@ -2253,18 +2731,25 @@
       function renderOptimizerResult(result) {
         if (!result) {
           optimizerCard.hidden = true;
+          optimizerWeightGrid.innerHTML = "";
           return;
         }
         optimizerCard.hidden = false;
         const weights = Object.entries(result.target_weights || {})
-          .map(([symbol, weight]) => `${symbol} ${formatPercent(weight * 100)}`)
-          .join(" · ");
+          .sort(([, a], [, b]) => Number(b || 0) - Number(a || 0));
         optimizerGrid.innerHTML = `
           <div class="result-card"><div class="result-label">Method</div><div class="result-value">${escapeHtml(result.method)}</div></div>
           <div class="result-card"><div class="result-label">Cash</div><div class="result-value">${escapeHtml(formatPercent(result.cash_weight * 100))}</div></div>
           <div class="result-card"><div class="result-label">Expected Risk</div><div class="result-value">${escapeHtml(formatPercent(result.expected_risk_percent))}</div></div>
-          <div class="result-card"><div class="result-label">Weights</div><div class="result-value">${escapeHtml(weights || "--")}</div></div>
         `;
+        optimizerWeightGrid.innerHTML = weights.length
+          ? weights.map(([symbol, weight]) => `
+              <div class="weight-chip">
+                <div class="weight-chip-symbol">${escapeHtml(symbol)}</div>
+                <div class="weight-chip-value">${escapeHtml(formatPercent(Number(weight || 0) * 100))}</div>
+              </div>
+            `).join("")
+          : `<div class="workflow-note">暂无目标权重。</div>`;
         optimizerNotes.innerHTML = (result.notes || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
       }
 
@@ -2961,7 +3446,12 @@
 
       refreshButton.addEventListener("click", loadMarket);
       scanUniverseButton.addEventListener("click", () => loadMostActiveUniverse(100));
-      addPortfolioButton.addEventListener("click", addCurrentSymbolToPortfolio);
+      addStrategyButton.addEventListener("click", openStrategyModal);
+      strategyModalCancel.addEventListener("click", closeStrategyModal);
+      strategyModalBackdrop.addEventListener("click", (event) => {
+        if (event.target === strategyModalBackdrop) closeStrategyModal();
+      });
+      strategyModalForm.addEventListener("submit", submitStrategyModal);
       savePortfolioConfigButton.addEventListener("click", saveActivePortfolioConfig);
       portfolioStrategy.addEventListener("change", renderBacktestSelectionSummary);
       workflowStrategy.addEventListener("change", () => {
@@ -2995,7 +3485,9 @@
       document.getElementById("action-watch").addEventListener("click", addCurrentSymbolToPortfolio);
       document.getElementById("action-backtest").addEventListener("click", () => alert("模拟回测将在 backtesting 模块接入。"));
 
+      populateStrategySelect();
       loadPortfolios();
+      loadStrategies();
       loadMostActiveUniverse(100).then(loadMarket);
       window.setInterval(loadMarket, 60000);
     </script>

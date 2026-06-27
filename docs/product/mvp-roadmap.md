@@ -65,6 +65,7 @@
 ### M4 评分与报告
 
 * 规则化推荐评分（Algorithm Layer，`algorithm-v0.3`，已接入真实 SEC 财务数据、真实技术指标和规则化新闻情绪：基本面（净利润率+ROC）/成长性/估值（P/E+EV/EBIT）/技术面（RSI/均线金死叉/动量）/新闻情绪/风险六因子） [verified]
+* Scoring Profiles 模型权重模块（`packages/scoring_profiles`，把上述六因子权重从硬编码抽成 Balanced/Growth/Value/Defensive/Momentum 5 个内置只读权重组，接入 `/stocks/{symbol}/recommendation`、`/stocks/screening`、`/backtests/run`、`/portfolio-research/run` 的 `scoring_profile` 参数） [verified]
 * AI 选股批量排序（Workflow Layer，`packages/workflow_layer/stock_screening.py`，并发扫描候选池并按分排序，`/stocks/screening`） [verified]
 * 选股结果落库存历史（`stock_scores` 表 + `/stocks/{symbol}/score-history`，支持按时间对比同一只股票的评分变化） [verified]
 * Scoring Agent（基于 Model Layer 的 AI 评分，区别于上面的规则算法） [planned]
@@ -94,20 +95,24 @@
 * `POST /workflows/portfolio-research` API [verified]
 * 前端完整接入 Portfolio Research Workflow，并展示节点状态和 trace_id [verified]
 * Workflow Run 持久化与按 trace_id 查询复盘 [verified]
-* 完整 Workflow / Report 复盘页 [planned]
+* Research Run History API（`packages/research_history`、`GET /research-runs`，按时间/组合/策略库存档名查询历史运行列表，复用既有 `workflow_runs` 表） [verified]
+* 完整 Workflow / Report 复盘页（前端历史列表/详情页，消费 `GET /research-runs`） [planned]
 * Portfolio Research Module v0.1（一个入口整合 Workflow、Backtesting、Risk、Optimizer、AI Summary、Recommendation）[verified]
 * `POST /portfolio-research/run` 和 `GET /portfolio-research/{trace_id}` [verified]
 * 前端 Portfolio Research Workbench 调用统一入口 [verified]
 
 ### M8 Portfolio / Risk MVP
 
-* Portfolio 权重管理（`PUT /portfolios/{name}/config`，保存 target_weights、cash_weight、strategy_config）[verified]
+* Portfolio 权重管理（`PUT /portfolios/{name}/config`，保存 target_weights、cash_weight；策略参数已收敛到独立的策略库，不再重复保存在这里）[verified]
 * Risk Engine v0.1（`packages/risk_engine`，输出 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure）[verified]
 * `POST /risk/portfolio` API [verified]
 * 前端组合策略面板保存权重并展示 Risk Engine 摘要 [verified]
 * Portfolio Optimizer v0.1（`packages/portfolio_optimizer`，支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版）[verified]
 * `POST /optimizer/portfolio` API [verified]
 * 前端组合策略面板展示 Optimizer 目标权重摘要 [verified]
+* 策略库 Strategy Library（`packages/db/strategies.py`，策略与 Portfolio 解耦的独立可复用实体）[verified]
+* `GET/PUT/DELETE /strategies` API [verified]
+* 前端「策略库」面板支持新增/应用/更新/删除已保存策略，选股加入组合的动作改为跟随当前查看的股票（右边栏），不再绑定在左边栏的桶选择上 [verified]
 
 ### 额外扩展（超出原路线图）
 
@@ -133,15 +138,29 @@
 仍需补齐：
 
 ```text
-稳定数据体系 + 完整风险引擎 + 组合优化器 + 多 Agent 自动研究 + 正式报告系统 + 前端完整 workflow 化
+Trace 复盘页 + Report Archive + 稳定数据体系 + 多 Agent 自动研究
 ```
 
 下一阶段优先级：
 
 ```text
-1. 前端接入 Portfolio Research Workflow
-2. Portfolio 权重管理
-3. Risk Engine v0.1
-4. Portfolio Optimizer v0.1
-5. AI Report 归档
+1. trace_id 完整复盘页
+2. Report Archive v0.1
+3. 数据源健康检查
+4. Strategy Library v0.2
+5. Portfolio Manager v0.2
+```
+
+已完成并从下一阶段移除：
+
+```text
+PRD v0.3 / Roadmap 对齐
+Scoring Profiles / 模型权重模块 v0.1
+Research Run History API
+前端接入 Portfolio Research Workflow
+Portfolio 权重管理
+Risk Engine v0.1
+Portfolio Optimizer v0.1
+Strategy Library v0.1
+Portfolio Research Module v0.1
 ```

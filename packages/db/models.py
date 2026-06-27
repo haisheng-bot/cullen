@@ -112,10 +112,13 @@ class Portfolio(Base):
 
 
 class PortfolioConfig(Base):
-    """Target weights and strategy settings for a named portfolio.
+    """Target weights and cash allocation for a named portfolio.
 
     Kept in a separate table so existing `portfolios.symbols` data remains
-    backward-compatible on local SQLite databases.
+    backward-compatible on local SQLite databases. Strategy parameters
+    (allocation method, signal mode, rebalance frequency, etc.) live in the
+    independent `Strategy` table instead — a portfolio is just stocks and
+    weights, not a strategy.
     """
 
     __tablename__ = "portfolio_configs"
@@ -124,7 +127,26 @@ class PortfolioConfig(Base):
     name: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     target_weights: Mapped[dict] = mapped_column(JSON, default=dict)
     cash_weight: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    strategy_config: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
+class Strategy(Base):
+    """A named, reusable strategy preset, decoupled from any specific
+    Portfolio. Any saved strategy can be applied to any portfolio's symbols
+    at run time; this table only persists the reusable preferences/
+    constraints, not which stocks it has been used with.
+    """
+
+    __tablename__ = "strategies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    preferences: Mapped[dict] = mapped_column(JSON, default=dict)
+    constraints: Mapped[dict] = mapped_column(JSON, default=dict)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),

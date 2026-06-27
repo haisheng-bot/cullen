@@ -278,11 +278,19 @@ AI Report 必须支持：
 下一阶段优先收口：
 
 ```text
-1. 前端接入 Portfolio Research Workflow
-2. Portfolio 权重管理
-3. Risk Engine v0.1
-4. Portfolio Optimizer v0.1
-5. AI Report 归档
+1. trace_id 完整复盘页
+2. Report Archive v0.1
+3. 数据源健康检查
+4. Strategy Library v0.2
+5. Portfolio Manager v0.2
+```
+
+已完成并从下一阶段移除：
+
+```text
+PRD v0.3 / Roadmap 对齐
+Scoring Profiles / 模型权重模块 v0.1
+Research Run History API
 ```
 
 ## 9. 成功标准
