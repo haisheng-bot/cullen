@@ -146,3 +146,25 @@ class BacktestRun(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )
+
+
+class WorkflowRun(Base):
+    """One row per Portfolio Research Workflow run, keyed by trace_id so the
+    user can revisit the exact node states, outputs and failure details later.
+    """
+
+    __tablename__ = "workflow_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    trace_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    workflow_name: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    workflow_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    state: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    request: Mapped[dict] = mapped_column(JSON, default=dict)
+    response: Mapped[dict] = mapped_column(JSON, default=dict)
+    risk_disclaimer: Mapped[str] = mapped_column(Text, nullable=False)
+    started_at: Mapped[str] = mapped_column(String(64), nullable=False)
+    completed_at: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )
