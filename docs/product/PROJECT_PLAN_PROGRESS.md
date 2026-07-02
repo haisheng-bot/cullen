@@ -109,6 +109,7 @@
 ```text
 日期：2026-07-02
 测试：P7 局部测试通过（quote、Tiger history、trend、history、SEC filings、news、FRED observations、治理测试）；`py_compile` 通过；Node 提取 `<script>` 语法检查通过。
+GitHub：P4-P7 四个独立功能提交已推送到 `origin/develop`：`73083a9` Report Archive、`b472e1f` Daily Research Home、`74aaa1f` Data Source Health、`307d0b9` Data Quality Flags。
 状态：完成 P7 数据质量标记——新增 `packages/data_sources/quality.py`，给 quote/trend/history/filings/news/macro/Tiger 数据响应统一附加 `data_quality`（source/as_of/freshness/missing_fields/fallback），前端报价区展示数据 source/freshness。下一步进入 P8 Portfolio Manager v0.2。
 ```
 
