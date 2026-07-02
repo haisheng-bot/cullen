@@ -49,7 +49,7 @@
 | M15 | Tiger OpenAPI | 官方只读行情数据接入，不抓 App，不自动交易 | status、quote、history 接口骨架和标准已完成 | usable | 真实 SDK adapter 未完整接通 | 完成官方 SDK adapter 和凭证联调 | 修改 Tiger 接入时 |
 | M16 | Broker Layer | 未来可接券商 API，人工确认后交易 | `packages/brokers` 仍为空 | planned | 第一阶段不做交易 | 暂只保留接口边界，不开发自动交易 | 开始券商接口设计时 |
 | M17 | 数据可追溯 / 审计 | AI 输出写 audit_logs，结论有数据来源和时间 | Agent 基类和 ModelResponse 审计路径已建立，Portfolio Research Workflow run 已按 trace_id 持久化 | partial | 普通算法输出审计和 report archive 还需增强 | 做 report archive 和普通算法输出审计增强 | 新增 AI/Workflow 输出时 |
-| M18 | Git / 发布管理 | develop 开发、main 稳定、功能拆分提交 | develop 已完成本地 P3 提交；origin 已配置为 `haisheng-bot/cullen`；2026-07-02 再次尝试 `git push origin develop`，仍受本机 GitHub HTTPS 认证阻塞 | partial | 远端 main 是独立初始提交，develop 尚未推送；本机缺 HTTPS 凭证/凭证管理器认证和 SSH 公钥 | 配置 GitHub PAT、SSH key 或 `gh auth login` 后推送 `develop`，再从 develop 发起 PR 合并 main | 准备 PR 或发布时 |
+| M18 | Git / 发布管理 | develop 开发、main 稳定、功能拆分提交 | SSH key 已配置到 GitHub；origin 已切换为 `git@github.com:haisheng-bot/cullen.git`；`develop` 已成功推送到 GitHub | usable | 远端 main 是独立初始提交，仍需从 develop 发起 PR 合并 main | 从 `develop` 发起 PR 合并到 `main`，后续继续按功能提交并推送 | 准备 PR 或发布时 |
 
 ## 5. 下一阶段执行顺序
 
@@ -105,7 +105,7 @@
 ```text
 日期：2026-07-02
 测试：236 tests OK（`.venv311/bin/python -m unittest discover -s tests`）；`git diff --check` 通过；Node 提取 `<script>` 语法检查通过；Playwright 验证本地工作台 Research Run 复盘面板可加载历史列表，点击历史记录后可打开 trace_id 详情并渲染 Recommended Research Portfolio、Portfolio Recommendation、Risk Engine 和 Trace ID，刷新后无 console error。
-GitHub：本地提交 `feat: add research run review page` 已完成；`git push origin develop` 失败，错误为 `fatal: could not read Username for 'https://github.com': Device not configured`，仍需先配置 PAT、SSH key 或 GitHub CLI 登录。
+GitHub：本地提交 `feat: add research run review page` 已完成；SSH key 已添加到 `haisheng-bot`，`ssh -T git@github.com` 验证通过；`git push -u origin develop` 已成功把 `develop` 推送到 GitHub。
 状态：完成 P3 Research Run 复盘页——前端 Portfolio Research Workbench 新增 Research Run 复盘面板，复用既有 `GET /research-runs` 和 `GET /portfolio-research/{trace_id}`，支持按组合、策略库存档名、状态和日期筛选历史运行，点击记录后复用现有结果渲染展示 Workflow 节点、回测、Risk、Optimizer、AI Summary 和 Recommendation。下一步进入 P4 Report Archive v0.1。
 ```
 
