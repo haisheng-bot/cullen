@@ -395,6 +395,11 @@ class ProjectGovernanceTest(unittest.TestCase):
             "renderWorkflowResult",
             "workflow-trace-note",
             "GET /portfolio-research/",
+            "Research Run 复盘",
+            "research-run-list",
+            "request(`/research-runs?",
+            "loadResearchRunDetail",
+            "request(`/portfolio-research/${encodeURIComponent(traceId)}`",
         ]
         missing_html = [term for term in required_html_terms if term not in html]
         self.assertEqual([], missing_html)

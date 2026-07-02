@@ -26,7 +26,7 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 | Model Layer | 部分完成 | 统一接口、LiteLLM-compatible provider、Mock provider、Router、Validator 已有 |
 | Workflow Engine | 部分完成 | 状态机、节点、trace_id、输入输出摘要、耗时、失败记录已落地 |
 | Universe Layer | 部分完成 | Most Active Top 100 候选池已可用 |
-| Algorithm Layer | 部分完成 | 五/六因子规则评分、技术指标、财务因子、新闻规则情绪已接入 |
+| Algorithm Layer | 部分完成 | 五/六因子规则评分、技术指标、财务因子、新闻规则情绪已接入；当前算法制作范围收敛为 1 年推荐 |
 | Backtesting | 部分完成 | 技术面回测和 AI-score 回测已可用 |
 | Portfolio Research Workflow | 已完成 | `POST /workflows/portfolio-research` v0.1，前端已通过统一入口接入 |
 | Portfolio Research Module | 已完成 | `packages/portfolio_research`，`POST /portfolio-research/run` 统一整合 Workflow/Risk/Optimizer/AI Summary/Recommendation，支持按 `trace_id` 复盘 |
@@ -101,13 +101,14 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 
 差距级别：中高。
 
-### 3.4 前端接入 Portfolio Research Workflow 已完成，历史归档页仍缺
+### 3.4 前端接入 Portfolio Research Workflow 与 Research Run 复盘页已完成，报告归档页仍缺
 
 当前状态：
 
 * 页面已通过统一入口 `POST /portfolio-research/run` 调用 Workflow/Backtesting/Risk/Optimizer/AI Summary/Recommendation，节点状态、AI Summary、Portfolio Recommendation、trace_id 均已展示
 * 「策略库 Strategy Library」面板已接入，策略与组合解耦
-* 仍缺：按 `trace_id`/日期浏览历史 workflow run 的列表页和复盘页（当前只能查单个 `trace_id`，没有列表入口）
+* Research Run 复盘面板已接入，支持按组合、策略库存档名、状态和日期查询历史 workflow run，并打开 `trace_id` 详情复盘
+* 仍缺：Report Archive 正式报告列表、Markdown/HTML 报告详情和报告级归档
 
 目标状态：
 
@@ -118,10 +119,11 @@ AI Portfolio Operating System 完成度：约 25% - 35%
   -> 回测结果
   -> AI 解释
   -> 组合建议
-  -> 历史归档（仍缺列表/复盘页）
+  -> 历史运行复盘
+  -> 报告归档（仍缺）
 ```
 
-差距级别：中（核心闭环已打通，缺历史归档 UI）。
+差距级别：低到中（核心运行复盘已打通，缺报告归档 UI）。
 
 ### 3.5 数据源稳定性仍需加强
 
@@ -187,14 +189,17 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 建议顺序（下一批）：
 
 ```text
-1. trace_id 完整复盘页
-2. AI Report 归档
+1. AI Report 归档
+2. 每日研究首页
 3. 数据源健康检查
-4. Strategy Library v0.2
+4. 数据质量标记
 5. Portfolio Manager v0.2
-6. Risk Engine 尾部风险指标（VaR、CVaR、Stress Test）
-7. Portfolio Optimizer 高级求解器（HRP、Black-Litterman）
-8. Model Center / Agent Center 基础版
+6. Strategy Library v0.2
+7. Stock Research 独立页
+8. 1 年推荐算法打磨
+9. Risk/Optimizer 高级能力暂缓
+10. Model Center / Agent Center 暂缓
+11. Rebalance Engine 仅保留设计
 ```
 
 ## 5. 近期优先级
@@ -243,7 +248,7 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 
 * 保存 AI Report
 * 保存 Workflow Run（已完成，按 `trace_id` 可查）
-* 支持按日期复盘（仍缺列表/复盘页）
+* 支持按日期复盘（Research Run 复盘页已完成，报告归档仍缺）
 * 支持 Markdown / HTML 输出
 
 ### P5：策略库导入导出 / Strategy Marketplace 评估
@@ -268,7 +273,7 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 * 增加 Research Run 历史列表 API
 * 支持按组合、策略库存档名、状态和日期查询历史运行
 
-### P8：Trace 复盘页 [下一步]
+### P8：Trace 复盘页 [已完成]
 
 目标：
 
@@ -286,5 +291,5 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 但距离完整生产力系统仍缺：
 
 ```text
-稳定数据体系 + 风险引擎尾部指标（VaR/CVaR） + 优化器高级求解器（HRP/Black-Litterman） + 多 Agent 自动研究 + 正式报告系统 + workflow 历史复盘页
+稳定数据体系 + 风险引擎尾部指标（VaR/CVaR） + 优化器高级求解器（HRP/Black-Litterman） + 多 Agent 自动研究 + 正式报告系统
 ```

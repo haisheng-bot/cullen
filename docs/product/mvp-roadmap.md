@@ -96,7 +96,7 @@
 * 前端完整接入 Portfolio Research Workflow，并展示节点状态和 trace_id [verified]
 * Workflow Run 持久化与按 trace_id 查询复盘 [verified]
 * Research Run History API（`packages/research_history`、`GET /research-runs`，按时间/组合/策略库存档名查询历史运行列表，复用既有 `workflow_runs` 表） [verified]
-* 完整 Workflow / Report 复盘页（前端历史列表/详情页，消费 `GET /research-runs`） [planned]
+* Research Run 复盘页（前端历史列表/详情页，消费 `GET /research-runs` 与 `GET /portfolio-research/{trace_id}`） [verified]
 * Portfolio Research Module v0.1（一个入口整合 Workflow、Backtesting、Risk、Optimizer、AI Summary、Recommendation）[verified]
 * `POST /portfolio-research/run` 和 `GET /portfolio-research/{trace_id}` [verified]
 * 前端 Portfolio Research Workbench 调用统一入口 [verified]
@@ -138,16 +138,16 @@
 仍需补齐：
 
 ```text
-Trace 复盘页 + Report Archive + 稳定数据体系 + 多 Agent 自动研究
+Report Archive + 每日研究首页 + 稳定数据体系 + 多 Agent 自动研究
 ```
 
 下一阶段优先级：
 
 ```text
-1. trace_id 完整复盘页
-2. Report Archive v0.1
+1. Report Archive v0.1
+2. 每日研究首页
 3. 数据源健康检查
-4. Strategy Library v0.2
+4. 数据质量标记
 5. Portfolio Manager v0.2
 ```
 
@@ -157,6 +157,7 @@ Trace 复盘页 + Report Archive + 稳定数据体系 + 多 Agent 自动研究
 PRD v0.3 / Roadmap 对齐
 Scoring Profiles / 模型权重模块 v0.1
 Research Run History API
+Research Run 复盘页
 前端接入 Portfolio Research Workflow
 Portfolio 权重管理
 Risk Engine v0.1

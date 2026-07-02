@@ -57,7 +57,7 @@ packages/algorithm_layer/
 
 第一阶段先实现：
 
-* 单只股票推荐评分
+* 单只股票 1 年推荐评分
 * 推荐等级
 * 趋势因子
 * 波动风险因子
@@ -65,7 +65,7 @@ packages/algorithm_layer/
 * 可解释推荐理由
 * 风险提示
 
-暂不把第一阶段算法写成最终投资策略。
+第一阶段算法只输出 `recommendation_horizon=1y`。暂不做 3 年、5 年、10 年预测，不做自动交易算法，也不把第一阶段算法写成最终投资策略。
 
 ## 5. 推荐等级
 
@@ -124,6 +124,7 @@ packages/algorithm_layer/
 * algorithm_version
 * analysis_time
 * risk_disclaimer
+* recommendation_horizon（第一阶段固定为 `1y`）
 
 ## 8. 独立开发要求
 
@@ -147,8 +148,8 @@ algorithm-v0.1    趋势型推荐算法 [released]
 algorithm-v0.2    加入财务和估值因子（基于 SEC XBRL company facts） [released]
 algorithm-v0.2.1  技术面因子升级为真实技术指标（RSI/均线金死叉/动量） [released]
 algorithm-v0.2.2  基本面/估值因子加入 Magic Formula 指标（ROC、EV/EBIT） [released]
-algorithm-v0.3    加入新闻情绪因子 [released]
-algorithm-v0.4    加入风险模型 [planned]
+algorithm-v0.3    加入新闻情绪因子，固定为 1 年推荐周期 [released]
+algorithm-v0.4    1 年推荐算法稳定性和复盘解释增强 [planned]
 algorithm-v1.0    稳定推荐算法 [planned]
 ```
 
@@ -198,7 +199,7 @@ valuation    = P/E 50% + EV/EBIT 50%
 
 ### 9.4 algorithm-v0.3 新闻情绪因子说明
 
-v0.3 接入 News / Policy Layer，新增 `news_sentiment` 因子，权重 10%。
+v0.3 接入 News / Policy Layer，新增 `news_sentiment` 因子，权重 10%。该版本明确为 1 年推荐算法，API 输出 `recommendation_horizon=1y`；其他周期不进入当前算法制作范围。
 
 ```text
 fundamentals       30%

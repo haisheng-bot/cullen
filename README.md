@@ -48,16 +48,16 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 ```text
 已完成：架构骨架 + 核心 API + 初版页面 + 初版算法 + 初版回测 + 初版 workflow
 
-未完成：稳定数据体系 + 多 Agent 自动研究 + 正式报告系统 + 完整复盘页
+未完成：稳定数据体系 + 多 Agent 自动研究 + 正式报告系统 + 每日报告归档
 ```
 
 下一阶段优先收口：
 
 ```text
-1. trace_id 完整复盘页
-2. Report Archive v0.1
+1. Report Archive v0.1
+2. 每日研究首页
 3. 数据源健康检查
-4. Strategy Library v0.2
+4. 数据质量标记
 5. Portfolio Manager v0.2
 ```
 
@@ -225,7 +225,7 @@ Universe Builder
   -> Portfolio Recommendation
 ```
 
-API 入口为 `POST /workflows/portfolio-research`。v0.1 的 AI Summary 是可审计的规则解释，后续可替换为 Research Agent / Report Agent 节点。每次运行都会写入 `workflow_runs` 表，并可通过 `GET /workflows/portfolio-research/{trace_id}` 复盘节点状态、回测结果、AI Summary 和 Portfolio Recommendation。
+API 入口为 `POST /workflows/portfolio-research`。v0.1 的 AI Summary 是可审计的规则解释，后续可替换为 Research Agent / Report Agent 节点。每次运行都会写入 `workflow_runs` 表，并可通过 `GET /workflows/portfolio-research/{trace_id}` 复盘节点状态、回测结果、AI Summary 和 Portfolio Recommendation。当前工作台已接入 Research Run 复盘面板，消费 `GET /research-runs` 和 `GET /portfolio-research/{trace_id}`，可按组合、策略、状态和日期打开历史研究详情。
 
 每次调用都会把候选评分写入 `stock_scores` 表（`packages/db/stock_scores.py`），通过 `GET /stocks/{symbol}/score-history` 可以读出某只股票历次评分，方便对比"这只股票最近几次扫描分数是涨是跌"——这是把 AI 选股从一次性即时计算变成有历史记录的个人工具的关键一步。
 

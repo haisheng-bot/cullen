@@ -312,12 +312,13 @@ GET /stocks/{symbol}/recommendation
 * 调用独立 Algorithm Layer
 * 返回股票评分和推荐等级
 * 展示因子分、推荐理由和风险
+* 当前仅输出 1 年推荐，响应字段 `recommendation_horizon` 固定为 `1y`
 
 查询参数：
 
 * `scoring_profile`（可选，默认 `balanced`）：`balanced`/`growth`/`value`/`defensive`/`momentum` 五个内置权重组之一，详见 `docs/standards/SCORING_PROFILES_STANDARD.md`。未知名返回 400。
 
-当前算法：`algorithm-v0.3`，六个因子（以下权重为 `balanced` 默认值，其余 profile 权重不同）：
+当前算法：`algorithm-v0.3`，1 年推荐，六个因子（以下权重为 `balanced` 默认值，其余 profile 权重不同）：
 
 * `fundamentals` 基本面（净利润率 50% + ROC 资本回报率 50%，合计 30%）—— 来自 SEC XBRL company facts
 * `growth` 成长性（营收同比，20%）—— 来自 SEC XBRL company facts
@@ -350,6 +351,7 @@ ROC、EV/EBIT 是 Joel Greenblatt「Magic Formula」用的两个经典指标，�
   "source": "Yahoo Finance chart API",
   "algorithm_version": "algorithm-v0.3",
   "analysis_time": "2026-06-25T14:30:46.957647+00:00",
+  "recommendation_horizon": "1y",
   "scoring_profile": "balanced",
   "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。"
 }
@@ -858,7 +860,7 @@ GET /research-runs?limit=20&offset=0&workflow_name=&state=&portfolio_name=&strat
 
 * 复用既有的 `workflow_runs` 表（`/workflows/portfolio-research` 和 `/portfolio-research/run` 两条路径都已写入这张表），不新建表
 * 按时间、组合、策略库存档名查询历史研究运行列表，每行带 trace_id、组合、策略、状态、摘要和时间
-* 前端历史复盘页（P3，未做）会消费这个列表
+* 前端 Research Run 复盘面板（P3）已消费这个列表，并用 `GET /portfolio-research/{trace_id}` 打开完整详情
 
 请求参数：
 

@@ -4,6 +4,9 @@
 
 ### Added
 
+* 重新排序当前开发计划：下一阶段从 Research Run 复盘页、Report Archive、每日研究首页开始，随后补数据源健康检查和数据质量标记，再做 Portfolio/Strategy/Stock Research 增强，最后推进 Risk/Optimizer v0.2、Model Center、Agent Center、Rebalance 和 Marketplace 远期设计
+* Research Run 复盘页（P3）：前端 Portfolio Research Workbench 新增历史复盘面板，消费既有 `GET /research-runs` 和 `GET /portfolio-research/{trace_id}`，支持按组合、策略库存档名、状态和日期筛选历史研究运行，点击记录后复用现有结果区展示 Workflow 节点、回测、Risk、Optimizer、AI Summary 和 Recommendation
+* Algorithm Layer 推荐结果新增 `recommendation_horizon=1y`，明确当前 AI 算法制作只做 1 年推荐；3 年/5 年/10 年预测、复杂优化器和自动交易算法不进入当前范围
 * Research Run History API v0.1（`packages/research_history`，`GET /research-runs`），复用既有 `workflow_runs` 表，按 `workflow_name`/`state`/`portfolio_name`/`strategy_library_name`/日期查询历史研究运行列表，返回 trace_id、组合、策略库存档名、状态、摘要和时间；新增 `strategy_library_name` 字段（`PortfolioResearchRunRequest`/`PortfolioResearchWorkflowRequest`），前端「策略库」应用/新增/更新会记住当前应用的存档名并随 `/portfolio-research/run` 提交
 * Scoring Profiles 模型权重模块 v0.1（`packages/scoring_profiles`），把 Algorithm Layer 评分权重从硬编码抽成 5 个内置只读权重组（Balanced/Growth/Value/Defensive/Momentum），接入 `/stocks/{symbol}/recommendation`、`/stocks/screening`、`/backtests/run`、`/portfolio-research/run` 的 `scoring_profile` 参数；`packages/backtesting/signals.py` 的 `AI_SCORE_WEIGHTS` 硬编码常量同步移除，改为按 profile 动态排除 `news_sentiment` 后重新归一化
 * Project Constitution v1.0 and AI Development Charter v1.0 as highest-priority project governance rules; README, `.ai/AGENTS.md`, `.ai/PROJECT_RULES.md`, and governance tests now reference them as mandatory development inputs

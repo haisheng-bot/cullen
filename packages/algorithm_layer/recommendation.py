@@ -24,7 +24,7 @@ NO_DATA_SCORE = 50
 
 
 class TrendRecommendationAlgorithm(RecommendationAlgorithm):
-    """algorithm-v0.3: adds a replaceable news sentiment factor on top of
+    """algorithm-v0.3: 1-year research recommendation. Adds a replaceable news sentiment factor on top of
     the v0.2.2 financial/valuation/technical factors. The first v0.3
     implementation uses rule-based public news and SEC disclosure signals;
     it can later be replaced by FinBERT or an LLM without changing the
@@ -32,6 +32,7 @@ class TrendRecommendationAlgorithm(RecommendationAlgorithm):
     """
 
     algorithm_version = "algorithm-v0.3"
+    recommendation_horizon = "1y"
 
     def recommend(
         self, data: RecommendationInput, profile: ScoringProfile | None = None
@@ -113,6 +114,7 @@ class TrendRecommendationAlgorithm(RecommendationAlgorithm):
             source=data.source,
             algorithm_version=self.algorithm_version,
             analysis_time=data.analysis_time,
+            recommendation_horizon=self.recommendation_horizon,
             scoring_profile=profile.name,
         )
 

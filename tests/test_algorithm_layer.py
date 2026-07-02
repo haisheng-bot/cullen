@@ -37,6 +37,8 @@ class AlgorithmLayerTest(unittest.TestCase):
 
         self.assertEqual("AAPL", result.symbol)
         self.assertEqual("algorithm-v0.3", result.algorithm_version)
+        self.assertEqual("1y", result.recommendation_horizon)
+        self.assertEqual("1y", result.to_dict()["recommendation_horizon"])
         self.assertGreaterEqual(result.total_score, 0)
         self.assertLessEqual(result.total_score, 100)
         self.assertEqual(6, len(result.factors))

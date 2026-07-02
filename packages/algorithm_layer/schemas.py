@@ -95,6 +95,7 @@ class RecommendationResult:
     source: str
     algorithm_version: str
     analysis_time: str
+    recommendation_horizon: str = "1y"
     scoring_profile: str = "balanced"
     risk_disclaimer: str = RISK_DISCLAIMER
 
@@ -109,6 +110,7 @@ class RecommendationResult:
             "source": self.source,
             "algorithm_version": self.algorithm_version,
             "analysis_time": self.analysis_time,
+            "recommendation_horizon": self.recommendation_horizon,
             "scoring_profile": self.scoring_profile,
             "risk_disclaimer": self.risk_disclaimer,
         }
