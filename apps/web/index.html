@@ -754,6 +754,52 @@
         font-weight: 800;
       }
 
+      .report-archive-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .report-archive-actions button {
+        height: 32px;
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        background: white;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .report-archive-actions button.primary {
+        background: var(--indigo);
+        color: white;
+      }
+
+      .report-detail {
+        max-height: 260px;
+        overflow: auto;
+        margin-top: 8px;
+        border: 1px solid #dfe5f2;
+        border-radius: 6px;
+        background: white;
+        padding: 10px;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .report-detail h1,
+      .report-detail h2,
+      .report-detail h3 {
+        margin: 8px 0 4px;
+      }
+
+      .report-detail p,
+      .report-detail ul {
+        margin: 6px 0;
+      }
+
       .result-priority-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1701,6 +1747,22 @@
                 <div class="workflow-note" id="research-history-status">等待加载历史研究记录。</div>
                 <div class="research-run-list" id="research-run-list"></div>
               </div>
+              <div class="research-history">
+                <div class="research-history-head">
+                  <div>
+                    <div class="research-history-title">Report Archive</div>
+                    <div class="workflow-note">从已完成的 trace_id 生成 Markdown/HTML 报告，并保留报告归档。</div>
+                  </div>
+                  <span class="status-pill">P4</span>
+                </div>
+                <div class="report-archive-actions">
+                  <button class="primary" id="generate-report-button" type="button">生成当前报告</button>
+                  <button id="report-archive-refresh" type="button">刷新报告</button>
+                </div>
+                <div class="workflow-note" id="report-archive-status">请选择一条 Research Run 后生成报告。</div>
+                <div class="research-run-list" id="report-archive-list"></div>
+                <div class="report-detail" id="report-detail" hidden></div>
+              </div>
               <div class="card chart-card equity-chart-card" id="equity-chart-card" hidden>
                 <canvas id="equity-chart"></canvas>
               </div>
@@ -1865,6 +1927,7 @@
         // Label only: not cleared when the user edits a field after applying,
         // so it can drift from the form's actual current values.
         appliedStrategyName: null,
+        selectedResearchTraceId: null,
         uxStrategyTouched: false,
         uxConstraintsTouched: false,
       };
@@ -1909,6 +1972,11 @@
       const researchHistoryRefresh = document.getElementById("research-history-refresh");
       const researchHistoryStatus = document.getElementById("research-history-status");
       const researchRunList = document.getElementById("research-run-list");
+      const generateReportButton = document.getElementById("generate-report-button");
+      const reportArchiveRefresh = document.getElementById("report-archive-refresh");
+      const reportArchiveStatus = document.getElementById("report-archive-status");
+      const reportArchiveList = document.getElementById("report-archive-list");
+      const reportDetail = document.getElementById("report-detail");
       const equityChartCard = document.getElementById("equity-chart-card");
       const equityChartCanvas = document.getElementById("equity-chart");
       const tradesTableWrap = document.getElementById("trades-table-wrap");
@@ -3021,6 +3089,7 @@
 
       async function loadResearchRunDetail(traceId) {
         if (!traceId) return;
+        state.selectedResearchTraceId = traceId;
         researchHistoryStatus.textContent = `正在复盘 trace_id ${traceId}...`;
         try {
           const result = await request(`/portfolio-research/${encodeURIComponent(traceId)}`);
@@ -3031,6 +3100,87 @@
           });
         } catch (error) {
           researchHistoryStatus.textContent = friendlyBacktestError(error);
+        }
+      }
+
+      function reportArchiveQuery() {
+        const params = new URLSearchParams({ limit: "20", offset: "0" });
+        const portfolioName = researchHistoryPortfolio.value.trim() || activePortfolioName();
+        if (portfolioName) params.set("portfolio_name", portfolioName);
+        return params.toString();
+      }
+
+      function renderReportList(items, totalCount) {
+        if (!items.length) {
+          reportArchiveList.innerHTML = "";
+          reportArchiveStatus.textContent = "暂无匹配的报告归档。";
+          return;
+        }
+        reportArchiveStatus.textContent = `已加载 ${items.length}/${totalCount} 份报告。`;
+        reportArchiveList.innerHTML = items.map((item) => `
+          <button class="research-run-item" type="button" data-trace-id="${escapeHtml(item.trace_id)}">
+            <span class="research-run-main">
+              <span class="research-run-name">${escapeHtml(item.title || "Research Report")}</span>
+              <span class="research-run-summary">${escapeHtml(item.portfolio_name || "未命名组合")} · ${escapeHtml(item.risk_disclaimer || "")}</span>
+              <span class="research-run-meta">${escapeHtml(formatRunTime(item.generated_at))} · ${escapeHtml(item.trace_id)}</span>
+            </span>
+            <span class="research-run-state">HTML</span>
+          </button>
+        `).join("");
+        reportArchiveList.querySelectorAll(".research-run-item").forEach((button) => {
+          button.addEventListener("click", () => loadReportDetail(button.dataset.traceId));
+        });
+      }
+
+      function renderReportDetail(report) {
+        reportDetail.hidden = false;
+        reportDetail.innerHTML = `
+          <div class="research-run-name">${escapeHtml(report.title || "Research Report")}</div>
+          <div class="research-run-meta">${escapeHtml(report.portfolio_name || "未命名组合")} · ${escapeHtml(formatRunTime(report.generated_at))} · ${escapeHtml(report.trace_id)}</div>
+          ${report.html || `<pre>${escapeHtml(report.markdown || "")}</pre>`}
+        `;
+      }
+
+      async function loadReports() {
+        reportArchiveStatus.textContent = "正在加载报告归档...";
+        try {
+          const payload = await request(`/reports?${reportArchiveQuery()}`);
+          renderReportList(payload.items || [], payload.total_count || 0);
+        } catch (error) {
+          reportArchiveList.innerHTML = "";
+          reportArchiveStatus.textContent = friendlyBacktestError(error);
+        }
+      }
+
+      async function loadReportDetail(traceId) {
+        if (!traceId) return;
+        reportArchiveStatus.textContent = `正在打开报告 ${traceId}...`;
+        try {
+          const report = await request(`/reports/${encodeURIComponent(traceId)}`);
+          renderReportDetail(report);
+          reportArchiveStatus.textContent = `已打开报告 ${traceId}。`;
+          reportArchiveList.querySelectorAll(".research-run-item").forEach((button) => {
+            button.classList.toggle("active", button.dataset.traceId === traceId);
+          });
+        } catch (error) {
+          reportArchiveStatus.textContent = friendlyBacktestError(error);
+        }
+      }
+
+      async function createReportFromSelectedTrace() {
+        const traceId = state.selectedResearchTraceId;
+        if (!traceId) {
+          reportArchiveStatus.textContent = "请先在 Research Run 复盘中选择一条 trace_id。";
+          return;
+        }
+        reportArchiveStatus.textContent = `正在生成报告 ${traceId}...`;
+        try {
+          const report = await postJson(`/reports/from-trace/${encodeURIComponent(traceId)}`, {});
+          renderReportDetail(report);
+          await loadReports();
+          reportArchiveStatus.textContent = `已生成并归档报告 ${traceId}。`;
+        } catch (error) {
+          reportArchiveStatus.textContent = friendlyBacktestError(error);
         }
       }
 
@@ -3057,6 +3207,7 @@
         backtestResults.innerHTML = `<div class="workflow-note">正在运行 Portfolio Research：评分 → 回测 → 风险 → 优化 → 解释 → 建议...</div>`;
         try {
           const result = await postJson("/portfolio-research/run", buildPortfolioResearchPayload());
+          state.selectedResearchTraceId = result.trace_id;
           renderPortfolioResearchResult(result);
           await loadResearchRuns();
         } catch (error) {
@@ -3664,6 +3815,7 @@
       portfolioStrategy.addEventListener("change", () => {
         renderBacktestSelectionSummary();
         loadResearchRuns();
+        loadReports();
       });
       workflowStrategy.addEventListener("change", () => {
         state.uxStrategyTouched = true;
@@ -3677,8 +3829,13 @@
       });
       runBacktestButton.addEventListener("click", runPortfolioWorkflow);
       researchHistoryRefresh.addEventListener("click", loadResearchRuns);
+      reportArchiveRefresh.addEventListener("click", loadReports);
+      generateReportButton.addEventListener("click", createReportFromSelectedTrace);
       [researchHistoryPortfolio, researchHistoryStrategy, researchHistoryState, researchHistoryDate].forEach((input) => {
-        input.addEventListener("change", loadResearchRuns);
+        input.addEventListener("change", () => {
+          loadResearchRuns();
+          loadReports();
+        });
       });
       rangeInput.addEventListener("change", loadMarket);
       intervalInput.addEventListener("change", loadMarket);
@@ -3703,6 +3860,7 @@
       populateStrategySelect();
       loadPortfolios();
       loadStrategies();
+      loadReports();
       loadMostActiveUniverse(100).then(loadMarket);
       window.setInterval(loadMarket, 60000);
     </script>

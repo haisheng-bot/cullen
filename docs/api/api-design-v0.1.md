@@ -906,6 +906,45 @@ start_date / end_date  可选，按 started_at 的日期前缀过滤（YYYY-MM-D
 * `strategy_library_name` 字段同时新增在 `POST /portfolio-research/run`（4.5 节）和 `POST /workflows/portfolio-research`（4.4 节）的请求体里，可选；前端在「应用」或「新增/更新」某个 Strategy Library 存档后自动带上，不强制和当前表单实际值一致（用户应用后又手动调整表单，这个字段仍是最后应用/保存的存档名，作为标签，不是强校验）
 * `GET /research-runs` 只读，不修改任何数据
 
+### 4.11 Report Archive
+
+```text
+POST /reports/from-trace/{trace_id}
+GET /reports?limit=20&offset=0&portfolio_name=
+GET /reports/{trace_id}
+```
+
+用途：
+
+* 从已完成的 Portfolio Research `trace_id` 生成 Markdown/HTML 报告，并写入 `report_archives`
+* 查询报告归档列表，支持按 `portfolio_name` 过滤
+* 读取单份报告详情，用于前端 Report Archive 面板展示
+
+响应示例：
+
+```json
+{
+  "trace_id": "9cfecaf7-2e30-4058-b98d-07f4d001ca4a",
+  "portfolio_name": "Core Watch",
+  "title": "Core Watch Research Report",
+  "markdown": "# Core Watch Research Report\n\n...",
+  "html": "<h1>Core Watch Research Report</h1>\n...",
+  "source_summary": {
+    "symbols": ["AAPL", "MSFT"],
+    "workflow_version": "portfolio-research-module-v0.1",
+    "state": "completed"
+  },
+  "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。",
+  "generated_at": "2026-07-02T10:20:30.000000+00:00"
+}
+```
+
+说明：
+
+* `POST /reports/from-trace/{trace_id}` 是幂等 upsert：同一个 `trace_id` 再次生成会覆盖同一份归档
+* 未找到 `trace_id` 返回 404；未找到报告详情返回 404
+* HTML 由服务端从受控 Markdown 生成，用于本地工作台展示；后续 PDF/Dashboard 输出另行扩展
+
 ## 5. 响应要求
 
 所有 AI 分析接口必须返回：

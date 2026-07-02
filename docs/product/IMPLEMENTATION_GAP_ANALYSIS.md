@@ -101,14 +101,15 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 
 差距级别：中高。
 
-### 3.4 前端接入 Portfolio Research Workflow 与 Research Run 复盘页已完成，报告归档页仍缺
+### 3.4 前端接入 Portfolio Research Workflow、Research Run 复盘页与 Report Archive 初版已完成
 
 当前状态：
 
 * 页面已通过统一入口 `POST /portfolio-research/run` 调用 Workflow/Backtesting/Risk/Optimizer/AI Summary/Recommendation，节点状态、AI Summary、Portfolio Recommendation、trace_id 均已展示
 * 「策略库 Strategy Library」面板已接入，策略与组合解耦
 * Research Run 复盘面板已接入，支持按组合、策略库存档名、状态和日期查询历史 workflow run，并打开 `trace_id` 详情复盘
-* 仍缺：Report Archive 正式报告列表、Markdown/HTML 报告详情和报告级归档
+* Report Archive v0.1 已接入，支持从 Portfolio Research `trace_id` 生成 Markdown/HTML 报告、查看报告列表和报告详情
+* 仍缺：PDF/Dashboard 报告、更丰富模板和每日研究首页
 
 目标状态：
 
@@ -120,10 +121,10 @@ AI Portfolio Operating System 完成度：约 25% - 35%
   -> AI 解释
   -> 组合建议
   -> 历史运行复盘
-  -> 报告归档（仍缺）
+  -> 报告归档
 ```
 
-差距级别：低到中（核心运行复盘已打通，缺报告归档 UI）。
+差距级别：低到中（核心运行复盘和报告归档初版已打通，缺每日首页、PDF/Dashboard 报告和更丰富模板）。
 
 ### 3.5 数据源稳定性仍需加强
 
@@ -246,50 +247,50 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 
 目标：
 
-* 保存 AI Report
+* 保存 AI Report（v0.1 已完成）
 * 保存 Workflow Run（已完成，按 `trace_id` 可查）
-* 支持按日期复盘（Research Run 复盘页已完成，报告归档仍缺）
-* 支持 Markdown / HTML 输出
+* 支持按日期复盘（Research Run 复盘页已完成；报告归档列表已完成）
+* 支持 Markdown / HTML 输出（v0.1 已完成）
 
-### P5：策略库导入导出 / Strategy Marketplace 评估
-
-目标：
-
-* 策略库 v0.1（新增/应用/更新/删除）已完成
-* 评估是否需要导入导出、分享给其他用户（PRD 里的 Strategy Marketplace 远期方向）
-
-### P6：Scoring Profiles / 模型权重模块 [已完成]
+### P5：每日研究首页
 
 目标：
 
-* 将评分因子权重从 Algorithm Layer 中独立出来
-* 内置 Balanced / Growth / Value / Defensive / Momentum 研究风格
-* 让单股评分、批量筛选和 Portfolio Research 都支持 `scoring_profile`
+* 打开项目后直接看到今日候选池、组合状态、最近研究和待复盘事项
+* 聚合 Most Active Top 100、Top 20 推荐、最近 5 次 research run、主要组合风险摘要
 
-### P7：Research History API [已完成]
-
-目标：
-
-* 增加 Research Run 历史列表 API
-* 支持按组合、策略库存档名、状态和日期查询历史运行
-
-### P8：Trace 复盘页 [已完成]
+### P6：数据源健康检查
 
 目标：
 
-* 前端支持从历史列表打开 trace_id
-* 展示 Workflow 节点、回测、Risk、Optimizer、AI Summary、Recommendation
+* 展示 Yahoo/SEC/FRED/Tiger 的配置、可用性、最近错误和 fallback 状态
+* 给前端提供统一健康检查 API
+
+### P7：数据质量标记
+
+目标：
+
+* 在行情、财报、新闻、宏观数据返回中暴露 `source`、`as_of`、`freshness`、`missing_fields` 和 `fallback` 标记
+* 让分析结果能看出数据是否完整可靠
+
+### 已完成：Scoring Profiles / Research History / Trace 复盘页
+
+目标：
+
+* Scoring Profiles 模型权重模块已完成
+* Research Run History API 已完成
+* 前端 Trace 复盘页已完成，支持从历史列表打开 trace_id 并展示 Workflow 节点、回测、Risk、Optimizer、AI Summary、Recommendation
 
 ## 6. 当前真实状态一句话
 
 当前项目已经具备：
 
 ```text
-架构骨架 + 核心 API + 完整页面 + 初版算法 + 初版回测 + 统一 workflow（含 Risk/Optimizer/策略库）
+架构骨架 + 核心 API + 完整页面 + 初版算法 + 初版回测 + 统一 workflow（含 Risk/Optimizer/策略库/报告归档）
 ```
 
 但距离完整生产力系统仍缺：
 
 ```text
-稳定数据体系 + 风险引擎尾部指标（VaR/CVaR） + 优化器高级求解器（HRP/Black-Litterman） + 多 Agent 自动研究 + 正式报告系统
+每日研究首页 + 稳定数据体系 + 风险引擎尾部指标（VaR/CVaR） + 优化器高级求解器（HRP/Black-Litterman） + 多 Agent 自动研究 + PDF/Dashboard 报告
 ```

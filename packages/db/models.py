@@ -190,3 +190,25 @@ class WorkflowRun(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
     )
+
+
+class ReportArchive(Base):
+    """Saved Markdown/HTML research report generated from a Portfolio
+    Research trace_id. The source workflow response remains in
+    `workflow_runs`; this table stores the user-facing report artifact.
+    """
+
+    __tablename__ = "report_archives"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    trace_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    portfolio_name: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    markdown: Mapped[str] = mapped_column(Text, nullable=False)
+    html: Mapped[str] = mapped_column(Text, nullable=False)
+    source_summary: Mapped[dict] = mapped_column(JSON, default=dict)
+    risk_disclaimer: Mapped[str] = mapped_column(Text, nullable=False)
+    generated_at: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+    )

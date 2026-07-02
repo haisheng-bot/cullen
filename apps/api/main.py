@@ -51,6 +51,7 @@ from packages.db.portfolios import (
     save_portfolio_config,
 )
 from packages.db.price_history_cache import get_or_fetch_closes
+from packages.db.report_archives import get_report_archive, list_report_archives, save_report_archive
 from packages.db.session import check_database_connection, session_scope
 from packages.db.stock_scores import get_score_history, write_screening_result
 from packages.db.strategies import delete_strategy, get_strategy, list_strategies, save_strategy
@@ -62,6 +63,7 @@ from packages.portfolio_optimizer.engine import optimize_portfolio
 from packages.portfolio_optimizer.schemas import OPTIMIZER_METHODS
 from packages.portfolio_research.archive import get_portfolio_research_run, write_portfolio_research_run
 from packages.portfolio_research.engine import PortfolioResearchEngine
+from packages.portfolio_research.reports import build_report_from_run, report_detail, report_summary
 from packages.portfolio_research.schemas import (
     PortfolioResearchRunRequest as PortfolioResearchModuleRequest,
     ResearchConstraints,
@@ -847,6 +849,35 @@ def _fetch_portfolio_research_run(trace_id: str) -> dict | None:
         return get_portfolio_research_run(session, trace_id)
 
 
+def _save_report_for_trace_id(trace_id: str) -> dict:
+    run = _fetch_portfolio_research_run(trace_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="portfolio research run not found")
+    report = build_report_from_run(run)
+    with session_scope() as session:
+        record = save_report_archive(session, **report.to_dict())
+        return report_detail(record)
+
+
+def _list_reports(*, limit: int, offset: int, portfolio_name: str | None) -> dict:
+    with session_scope() as session:
+        reports = [report_summary(record) for record in list_report_archives(session, portfolio_name=portfolio_name)]
+    total_count = len(reports)
+    return {
+        "items": reports[offset : offset + limit],
+        "total_count": total_count,
+        "limit": limit,
+        "offset": offset,
+        "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。",
+    }
+
+
+def _get_report(trace_id: str) -> dict | None:
+    with session_scope() as session:
+        record = get_report_archive(session, trace_id)
+        return report_detail(record) if record else None
+
+
 def _portfolio_risk_response(request: PortfolioRiskRequest) -> dict:
     symbols = [normalize_symbol(symbol) for symbol in request.symbols]
     weights = {normalize_symbol(symbol): weight for symbol, weight in request.weights.items()}
@@ -1096,6 +1127,28 @@ def get_portfolio_research(trace_id: str) -> dict:
     if response is None:
         raise HTTPException(status_code=404, detail="portfolio research run not found")
     return response
+
+
+@app.post("/reports/from-trace/{trace_id}")
+def create_report_from_trace(trace_id: str) -> dict:
+    return _save_report_for_trace_id(trace_id)
+
+
+@app.get("/reports")
+def get_reports(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    portfolio_name: str | None = None,
+) -> dict:
+    return _list_reports(limit=limit, offset=offset, portfolio_name=portfolio_name)
+
+
+@app.get("/reports/{trace_id}")
+def get_report(trace_id: str) -> dict:
+    report = _get_report(trace_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="report not found")
+    return report
 
 
 @app.post("/workflows/portfolio-research")

@@ -325,6 +325,9 @@ class ApiEndpointsTest(unittest.TestCase):
         self.original_portfolio_optimizer_response = main._portfolio_optimizer_response
         self.original_run_portfolio_research_module = main._run_portfolio_research_module
         self.original_fetch_portfolio_research_run = main._fetch_portfolio_research_run
+        self.original_save_report_for_trace_id = main._save_report_for_trace_id
+        self.original_list_reports = main._list_reports
+        self.original_get_report = main._get_report
         main.trend_client = FakeTrendClient()
         main.history_client = FakeHistoryClient()
         main.sec_filing_client = FakeSECFilingClient()
@@ -435,6 +438,43 @@ class ApiEndpointsTest(unittest.TestCase):
             "risk_disclaimer": RISK_DISCLAIMER,
         }
         main._fetch_portfolio_research_run = self.persisted_portfolio_research_runs.get
+        self.reports: dict[str, dict] = {}
+
+        def fake_save_report_for_trace_id(trace_id: str) -> dict:
+            run = self.persisted_portfolio_research_runs.get(trace_id)
+            if run is None:
+                raise main.HTTPException(status_code=404, detail="portfolio research run not found")
+            portfolio_name = run["portfolio"]["name"]
+            report = {
+                "trace_id": trace_id,
+                "portfolio_name": portfolio_name,
+                "title": f"{portfolio_name} Research Report",
+                "markdown": f"# {portfolio_name} Research Report",
+                "html": f"<h1>{portfolio_name} Research Report</h1>",
+                "source_summary": {"symbols": run["portfolio"]["symbols"]},
+                "risk_disclaimer": RISK_DISCLAIMER,
+                "generated_at": run["completed_at"],
+            }
+            self.reports[trace_id] = report
+            return report
+
+        main._save_report_for_trace_id = fake_save_report_for_trace_id
+        def fake_list_reports(limit: int, offset: int, portfolio_name: str | None) -> dict:
+            reports = [
+                {key: value for key, value in report.items() if key not in {"markdown", "html"}}
+                for report in self.reports.values()
+                if portfolio_name is None or report["portfolio_name"] == portfolio_name
+            ]
+            return {
+                "items": reports[offset : offset + limit],
+                "total_count": len(reports),
+                "limit": limit,
+                "offset": offset,
+                "risk_disclaimer": RISK_DISCLAIMER,
+            }
+
+        main._list_reports = fake_list_reports
+        main._get_report = self.reports.get
         main._fetch_score_history = lambda symbol, limit: [
             {
                 "screened_at": "2026-06-25T13:32:00+00:00",
@@ -475,6 +515,9 @@ class ApiEndpointsTest(unittest.TestCase):
         main._portfolio_optimizer_response = self.original_portfolio_optimizer_response
         main._run_portfolio_research_module = self.original_run_portfolio_research_module
         main._fetch_portfolio_research_run = self.original_fetch_portfolio_research_run
+        main._save_report_for_trace_id = self.original_save_report_for_trace_id
+        main._list_reports = self.original_list_reports
+        main._get_report = self.original_get_report
 
     def test_popular_stocks_endpoint(self) -> None:
         payload = main.get_popular_us_stocks()
@@ -886,6 +929,25 @@ class ApiEndpointsTest(unittest.TestCase):
             session.commit()
         return trace_id
 
+    def _seed_portfolio_research_run(self, label: str, portfolio_name: str) -> str:
+        trace_id = f"{label}-{uuid.uuid4()}"
+        self.persisted_portfolio_research_runs[trace_id] = {
+            "trace_id": trace_id,
+            "workflow_name": "portfolio_research_module",
+            "workflow_version": "portfolio-research-module-v0.1",
+            "state": "completed",
+            "started_at": "2026-06-27T00:00:00+00:00",
+            "completed_at": "2026-06-27T00:00:01+00:00",
+            "risk_disclaimer": RISK_DISCLAIMER,
+            "portfolio": {"name": portfolio_name, "symbols": ["AAPL", "MSFT"]},
+            "recommendation": {"action": "research_candidate"},
+            "backtest_summary": {"total_return_percent": 5.0},
+            "risk_summary": {"volatility_percent": 18.5},
+            "optimized_weights": {"target_weights": {"AAPL": 0.5, "MSFT": 0.4}},
+            "ai_explanation": {"conclusion": "test"},
+        }
+        return trace_id
+
     def test_research_run_history_endpoint_lists_with_summary(self) -> None:
         trace_id = self._seed_workflow_run("history-trace-1", "History Test Portfolio", "History Test Strategy")
 
@@ -945,6 +1007,36 @@ class ApiEndpointsTest(unittest.TestCase):
 
         self.assertEqual(1, len(first_page["items"]))
         self.assertEqual(2, first_page["total_count"])
+
+    def test_create_report_from_trace_endpoint_persists_report(self) -> None:
+        trace_id = self._seed_portfolio_research_run("report-trace-1", "Report Portfolio")
+
+        report = main.create_report_from_trace(trace_id)
+
+        self.assertEqual(trace_id, report["trace_id"])
+        self.assertEqual("Report Portfolio", report["portfolio_name"])
+        self.assertIn("# Report Portfolio Research Report", report["markdown"])
+        self.assertIn("<h1>Report Portfolio Research Report</h1>", report["html"])
+        self.assertEqual(RISK_DISCLAIMER, report["risk_disclaimer"])
+
+        readback = main.get_report(trace_id)
+        self.assertEqual(report["markdown"], readback["markdown"])
+
+    def test_get_reports_endpoint_lists_generated_reports(self) -> None:
+        trace_id = self._seed_portfolio_research_run("report-trace-2", "Report List Portfolio")
+        main.create_report_from_trace(trace_id)
+
+        payload = main.get_reports(limit=20, offset=0, portfolio_name="Report List Portfolio")
+
+        trace_ids = [item["trace_id"] for item in payload["items"]]
+        self.assertIn(trace_id, trace_ids)
+        self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
+
+    def test_create_report_from_trace_endpoint_404_for_missing_trace(self) -> None:
+        with self.assertRaises(main.HTTPException) as context:
+            main.create_report_from_trace("missing-trace")
+
+        self.assertEqual(404, context.exception.status_code)
 
     def test_analyze_portfolio_risk_endpoint(self) -> None:
         payload = main.analyze_portfolio_risk_endpoint(

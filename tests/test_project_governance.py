@@ -400,6 +400,11 @@ class ProjectGovernanceTest(unittest.TestCase):
             "request(`/research-runs?",
             "loadResearchRunDetail",
             "request(`/portfolio-research/${encodeURIComponent(traceId)}`",
+            "Report Archive",
+            "report-archive-list",
+            "postJson(`/reports/from-trace/${encodeURIComponent(traceId)}`",
+            "request(`/reports?",
+            "loadReportDetail",
         ]
         missing_html = [term for term in required_html_terms if term not in html]
         self.assertEqual([], missing_html)

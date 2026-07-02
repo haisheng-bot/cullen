@@ -438,11 +438,11 @@ Application Layer
 
 当前优先收口：
 
-* trace_id 完整复盘页
-* Report Archive v0.1
+* 每日研究首页
 * 数据源健康检查
-* Strategy Library v0.2
+* 数据质量标记
 * Portfolio Manager v0.2
+* Strategy Library v0.2
 
 ### Phase 3
 

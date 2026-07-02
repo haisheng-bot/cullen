@@ -138,17 +138,17 @@
 仍需补齐：
 
 ```text
-Report Archive + 每日研究首页 + 稳定数据体系 + 多 Agent 自动研究
+每日研究首页 + 稳定数据体系 + 多 Agent 自动研究 + PDF/Dashboard 报告
 ```
 
 下一阶段优先级：
 
 ```text
-1. Report Archive v0.1
-2. 每日研究首页
-3. 数据源健康检查
-4. 数据质量标记
-5. Portfolio Manager v0.2
+1. 每日研究首页
+2. 数据源健康检查
+3. 数据质量标记
+4. Portfolio Manager v0.2
+5. Strategy Library v0.2
 ```
 
 已完成并从下一阶段移除：
@@ -158,6 +158,7 @@ PRD v0.3 / Roadmap 对齐
 Scoring Profiles / 模型权重模块 v0.1
 Research Run History API
 Research Run 复盘页
+Report Archive v0.1
 前端接入 Portfolio Research Workflow
 Portfolio 权重管理
 Risk Engine v0.1

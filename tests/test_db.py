@@ -17,6 +17,7 @@ from packages.db.portfolios import (
     save_portfolio_config,
 )
 from packages.db.price_history_cache import get_or_fetch_closes
+from packages.db.report_archives import get_report_archive, list_report_archives, save_report_archive
 from packages.db.session import build_engine
 from packages.db.strategies import delete_strategy, get_strategy, save_strategy
 from packages.db.stock_scores import get_score_history, write_screening_result
@@ -206,6 +207,67 @@ class PortfolioConfigPersistenceTest(unittest.TestCase):
 
         self.assertEqual({"AAPL": 0.4, "MSFT": 0.5}, config.target_weights)
         self.assertEqual(0.1, config.cash_weight)
+
+
+class ReportArchivePersistenceTest(unittest.TestCase):
+    def test_save_report_archive_round_trips_markdown_and_html(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            save_report_archive(
+                session,
+                trace_id="trace-report-db",
+                portfolio_name="Core Watch",
+                title="Core Watch Research Report",
+                markdown="# Report",
+                html="<h1>Report</h1>",
+                source_summary={"symbols": ["AAPL"]},
+                risk_disclaimer=RISK_DISCLAIMER,
+                generated_at="2026-07-02T00:00:00+00:00",
+            )
+            session.commit()
+
+        with Session(engine) as session:
+            report = get_report_archive(session, "trace-report-db")
+            reports = list_report_archives(session, portfolio_name="Core Watch")
+
+        self.assertEqual("Core Watch Research Report", report.title)
+        self.assertEqual("<h1>Report</h1>", report.html)
+        self.assertEqual(1, len(reports))
+
+    def test_save_report_archive_upserts_by_trace_id(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            save_report_archive(
+                session,
+                trace_id="trace-report-upsert",
+                portfolio_name="Core Watch",
+                title="Old",
+                markdown="# Old",
+                html="<h1>Old</h1>",
+                source_summary={},
+                risk_disclaimer=RISK_DISCLAIMER,
+                generated_at="2026-07-02T00:00:00+00:00",
+            )
+            save_report_archive(
+                session,
+                trace_id="trace-report-upsert",
+                portfolio_name="Core Watch",
+                title="New",
+                markdown="# New",
+                html="<h1>New</h1>",
+                source_summary={},
+                risk_disclaimer=RISK_DISCLAIMER,
+                generated_at="2026-07-02T00:00:01+00:00",
+            )
+            session.commit()
+
+        with Session(engine) as session:
+            reports = list_report_archives(session)
+
+        self.assertEqual(1, len(reports))
+        self.assertEqual("New", reports[0].title)
 
 
 class StrategyPersistenceTest(unittest.TestCase):

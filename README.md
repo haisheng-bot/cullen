@@ -36,6 +36,7 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * 策略库（Strategy Library）：策略与 Portfolio（股票桶）解耦的独立可复用实体（`packages/db/strategies.py`、`GET/PUT/DELETE /strategies`），前端「策略库」面板支持新增/应用/更新/删除已保存策略
 * Scoring Profiles 模型权重模块：把 Algorithm Layer 评分权重从硬编码抽成独立模块（`packages/scoring_profiles`），内置 Balanced/Growth/Value/Defensive/Momentum 5 个只读权重组，接入推荐、选股、回测、Portfolio Research 四个入口的 `scoring_profile` 参数
 * Research Run History API：`GET /research-runs`（`packages/research_history`），复用既有 `workflow_runs` 表按时间/组合/策略库存档名查询历史研究运行列表；前端「应用策略」会带上 `strategy_library_name` 一并提交
+* Report Archive v0.1：`report_archives` 表和 `/reports` API，可从 Portfolio Research `trace_id` 生成 Markdown/HTML 报告，前端 Report Archive 面板支持生成、刷新、查看报告详情
 
 ## 当前差距
 
@@ -46,22 +47,22 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 当前真实状态：
 
 ```text
-已完成：架构骨架 + 核心 API + 初版页面 + 初版算法 + 初版回测 + 初版 workflow
+已完成：架构骨架 + 核心 API + 初版页面 + 初版算法 + 初版回测 + 初版 workflow + 初版报告归档
 
-未完成：稳定数据体系 + 多 Agent 自动研究 + 正式报告系统 + 每日报告归档
+未完成：稳定数据体系 + 多 Agent 自动研究 + PDF/Dashboard 报告 + 每日研究首页
 ```
 
 下一阶段优先收口：
 
 ```text
-1. Report Archive v0.1
-2. 每日研究首页
-3. 数据源健康检查
-4. 数据质量标记
-5. Portfolio Manager v0.2
+1. 每日研究首页
+2. 数据源健康检查
+3. 数据质量标记
+4. Portfolio Manager v0.2
+5. Strategy Library v0.2
 ```
 
-已完成：PRD v0.3 / Roadmap 对齐、Scoring Profiles / 模型权重模块 v0.1、Research Run History API。
+已完成：PRD v0.3 / Roadmap 对齐、Scoring Profiles / 模型权重模块 v0.1、Research Run History API、Research Run 复盘页、Report Archive v0.1。
 
 ## 文档入口
 
