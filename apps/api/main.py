@@ -37,6 +37,7 @@ from packages.data_sources.market_trend import (
 from packages.data_sources.fred import FREDClient, FREDError
 from packages.data_sources.health import build_data_source_health
 from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
+from packages.data_sources.quality import attach_data_quality
 from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
 from packages.data_sources.sec_financials import SECFinancialsClient, SECFinancialsError
 from packages.data_sources.tiger_openapi import TigerOpenAPIClient, TigerOpenAPIError
@@ -306,7 +307,11 @@ def get_stock_quote(symbol: str) -> dict:
     try:
         normalized_symbol = normalize_symbol(symbol)
         trend = trend_client.fetch_trend(normalized_symbol, range_="1d", interval="1m")
-        return trend.to_quote_dict()
+        return attach_data_quality(
+            trend.to_quote_dict(),
+            fallback="Use Yahoo chart latest point when regular market price is unavailable.",
+            required_fields=("price", "source", "analysis_time"),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except MarketTrendError as exc:
@@ -317,7 +322,11 @@ def get_stock_quote(symbol: str) -> dict:
 def get_tiger_stock_quote(symbol: str) -> dict:
     try:
         normalized_symbol = normalize_symbol(symbol)
-        return tiger_openapi_client.fetch_quote(normalized_symbol).to_dict()
+        return attach_data_quality(
+            tiger_openapi_client.fetch_quote(normalized_symbol).to_dict(),
+            fallback="Use Yahoo market data when Tiger OpenAPI is not configured or unavailable.",
+            required_fields=("price", "source", "analysis_time"),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except TigerOpenAPIError as exc:
@@ -332,9 +341,11 @@ def get_tiger_stock_history(
 ) -> dict:
     try:
         normalized_symbol = normalize_symbol(symbol)
-        return tiger_openapi_client.fetch_kline(
-            normalized_symbol, period=period, years=years
-        ).to_dict()
+        return attach_data_quality(
+            tiger_openapi_client.fetch_kline(normalized_symbol, period=period, years=years).to_dict(),
+            fallback="Use Yahoo history when Tiger OpenAPI is not configured or unavailable.",
+            required_fields=("points", "source", "analysis_time"),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except TigerOpenAPIError as exc:
@@ -601,7 +612,11 @@ def get_stock_trend(
 ) -> dict:
     try:
         normalized_symbol = normalize_symbol(symbol)
-        return trend_client.fetch_trend(normalized_symbol, range_=range_, interval=interval).to_dict()
+        return attach_data_quality(
+            trend_client.fetch_trend(normalized_symbol, range_=range_, interval=interval).to_dict(),
+            fallback="No fallback inside trend endpoint; caller should show source error.",
+            required_fields=("points", "source", "analysis_time"),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except MarketTrendError as exc:
@@ -616,9 +631,11 @@ def get_stock_price_history(
 ) -> dict:
     try:
         normalized_symbol = normalize_symbol(symbol)
-        return history_client.fetch_history(
-            normalized_symbol, range_=range_, interval=interval
-        ).to_dict()
+        return attach_data_quality(
+            history_client.fetch_history(normalized_symbol, range_=range_, interval=interval).to_dict(),
+            fallback="Use cached price history where available; otherwise show source error.",
+            required_fields=("points", "source", "analysis_time"),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except PriceHistoryError as exc:
@@ -634,9 +651,11 @@ def get_stock_sec_filings(
     try:
         normalized_symbol = normalize_symbol(symbol)
         form_types = tuple(form.strip() for form in forms.split(",") if form.strip())
-        return sec_filing_client.list_filings(
-            normalized_symbol, forms=form_types, limit=limit
-        ).to_dict()
+        return attach_data_quality(
+            sec_filing_client.list_filings(normalized_symbol, forms=form_types, limit=limit).to_dict(),
+            fallback="SEC filings may be empty for symbols without a mapped CIK.",
+            required_fields=("filings", "source", "analysis_time"),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except SECFilingError as exc:
@@ -671,7 +690,11 @@ def get_stock_news_policy(
 ) -> dict:
     try:
         normalized_symbol = normalize_symbol(symbol)
-        return news_policy_client.fetch(normalized_symbol, years=years, limit=limit).to_dict()
+        return attach_data_quality(
+            news_policy_client.fetch(normalized_symbol, years=years, limit=limit).to_dict(),
+            fallback="News panel keeps SEC disclosure coverage when Yahoo RSS has no recent items.",
+            required_fields=("items", "sources", "generated_at"),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except NewsPolicyError as exc:
@@ -686,9 +709,11 @@ def get_fred_observations(
     limit: int = Query(100, ge=1, le=1000),
 ) -> dict:
     try:
-        return fred_client.fetch_observations(
-            series_id, start_date=start_date, end_date=end_date, limit=limit
-        ).to_dict()
+        return attach_data_quality(
+            fred_client.fetch_observations(series_id, start_date=start_date, end_date=end_date, limit=limit).to_dict(),
+            fallback="Macro data is unavailable until FRED_API_KEY is configured.",
+            required_fields=("observations", "source", "analysis_time"),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except FREDError as exc:

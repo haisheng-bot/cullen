@@ -1004,3 +1004,39 @@ GET /reports/{trace_id}
 统一风险提示：
 
 > 本系统仅用于投资研究辅助，不构成任何投资建议。
+
+### 5.1 数据质量标记
+
+外部数据源响应必须尽量包含 `data_quality`，当前覆盖：
+
+```text
+GET /stocks/{symbol}/quote
+GET /stocks/{symbol}/trend
+GET /stocks/{symbol}/history
+GET /stocks/{symbol}/filings
+GET /stocks/{symbol}/news
+GET /macro/{series_id}/observations
+GET /stocks/{symbol}/tiger/quote
+GET /stocks/{symbol}/tiger/history
+```
+
+字段：
+
+```json
+{
+  "data_quality": {
+    "source": "Yahoo Finance chart API",
+    "as_of": "2026-07-02T10:20:30.000000+00:00",
+    "freshness": "fresh",
+    "missing_fields": [],
+    "fallback": "Use cached price history where available; otherwise show source error."
+  }
+}
+```
+
+说明：
+
+* `freshness` 取值为 `fresh` / `recent` / `stale` / `unknown`
+* `missing_fields` 只标记当前响应必需但为空的顶层字段
+* `fallback` 描述当前端点数据不可用时的降级策略，不代表已经发生降级
+* 前端报价区展示当前 quote 的 `source` 和 `freshness`

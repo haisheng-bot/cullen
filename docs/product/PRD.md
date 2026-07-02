@@ -438,11 +438,11 @@ Application Layer
 
 当前优先收口：
 
-* 数据质量标记
 * Portfolio Manager v0.2
 * Strategy Library v0.2
 * Stock Research 独立页
 * News Agent / Risk Agent v0.1
+* PDF/Dashboard 报告
 
 ### Phase 3
 

@@ -3666,7 +3666,9 @@
 
       function renderQuote(quote) {
         document.getElementById("quote-symbol").textContent = quote.symbol;
-        document.getElementById("quote-meta").textContent = `${quote.exchange_name || "US"} · ${quote.currency || "USD"}`;
+        const quality = quote.data_quality || {};
+        document.getElementById("quote-meta").textContent =
+          `${quote.exchange_name || "US"} · ${quote.currency || "USD"} · ${quality.source || quote.source || "--"} · ${quality.freshness || "unknown"}`;
         document.getElementById("quote-price").textContent = fmt(quote.price);
         const change = quote.change || 0;
         const cls = change >= 0 ? "positive" : "negative";

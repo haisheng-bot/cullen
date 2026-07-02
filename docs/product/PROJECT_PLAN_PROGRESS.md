@@ -23,8 +23,8 @@
 
 | 项目维度 | 目标 | 当前判断 | 差异 |
 |---|---|---|---|
-| MVP 架构骨架 | 支撑股票研究、组合、回测、AI 报告和 Workflow | 约 90% | 仍缺数据质量提示和正式 PDF/Dashboard 报告输出 |
-| 个人股票研究生产力工具 | 支撑 Cullen 每日选股、研究、回测、报告和复盘 | 约 80%-85% | 日常闭环还缺数据可信度提示和更自动化的每日复盘 |
+| MVP 架构骨架 | 支撑股票研究、组合、回测、AI 报告和 Workflow | 约 91% | 仍缺正式 PDF/Dashboard 报告输出和组合导入导出 |
+| 个人股票研究生产力工具 | 支撑 Cullen 每日选股、研究、回测、报告和复盘 | 约 83%-88% | 日常闭环还缺更自动化的每日复盘和组合管理增强 |
 | AI Portfolio Operating System | Workflow 驱动组合研究、风险、优化、报告和再平衡 | 约 35%-40% | Risk/Optimizer、Research Run 复盘和 Report Archive 初版已成型；仍缺多 Agent、Rebalance Engine 和高级风险/优化能力 |
 
 ## 4. 计划与进度总表
@@ -33,7 +33,7 @@
 |---|---|---|---|---|---|---|---|
 | M0 | 项目重建与治理 | 建立标准文档、GitHub 协作、CI、测试规范 | 项目标准、需求、架构、GitHub 模板、治理测试、`.ai/` AI 开发规范、`PROJECT_CONSTITUTION.md`、`AI_DEVELOPMENT_CHARTER.md` 和 `.ai/AI_STARTUP_PROTOCOL.md` 已建立 | released | 基本无 | 保持文档随开发同步；未来开发必须先遵守 Constitution / Charter / Startup Protocol | 新增模块或标准时 |
 | M1 | 后端基础 | FastAPI、配置、数据库、audit_logs、Docker 本地服务 | FastAPI、配置、SQLite fallback、Postgres/Redis compose、初始化脚本已可用 | verified | 需要更多运行监控 | 补 API 响应时间和错误统计 | 新增 API 或 DB 表时 |
-| M2 | 数据源层 | Yahoo、SEC、FRED、Tiger、Alpha Vantage、Finnhub、Polygon 可替换接入 | Yahoo/SEC/FRED/Tiger 已有不同程度接入；`GET /data-sources/health` 已展示配置、可用性、最近错误和 fallback 状态；Alpha Vantage/Finnhub/Polygon 未接 | usable | 仍缺数据质量标记、重试、限流和商业源覆盖 | 做数据质量标记 | 新增或修改外部数据源时 |
+| M2 | 数据源层 | Yahoo、SEC、FRED、Tiger、Alpha Vantage、Finnhub、Polygon 可替换接入 | Yahoo/SEC/FRED/Tiger 已有不同程度接入；`GET /data-sources/health` 已展示配置、可用性、最近错误和 fallback 状态；quote/trend/history/filings/news/macro/Tiger 数据响应已带 `data_quality`；Alpha Vantage/Finnhub/Polygon 未接 | usable | 仍缺重试、限流和商业源覆盖 | 后续补重试限流和商业数据源 | 新增或修改外部数据源时 |
 | M3 | Model Layer | OpenAI、Claude、Gemini、DeepSeek、Qwen、Llama、Ollama 统一调用 | LiteLLM-compatible provider、mock provider、router、validator 已完成 | partial | 真实多模型联调不足 | 补多模型配置样例、成本统计、失败 fallback 测试 | 新增模型或 Agent 时 |
 | M4 | AI Agent Layer | Research、News、Financial、Risk、Strategy、Portfolio、Macro、Report、Decision Agents | SEC Filing Agent、Report Agent 已落地 | partial | 多数 Agent 未实现，多 Agent workflow 未成型 | 先做 News Agent 和 Risk Agent v0.1 | 新增 Agent 或 AI 输出时 |
 | M5 | Universe / Screener | 每日扫描美股最活跃 100 只票，支持主题和自定义股票池 | Most Active Top 100 已可用，概念板块预览已接入页面 | usable | 主题筛选和自定义股票池不完整 | 增加 AI、Semiconductor、Growth、Dividend 等主题 universe | 新增筛选维度时 |
@@ -41,14 +41,14 @@
 | M7 | Stock Research | 单股实时价格、K 线、财务、新闻、评分、报告 | 报价、趋势、历史、SEC、新闻、推荐、报告接口已存在 | usable | 独立深度分析页未完成 | 做独立 Stock Research 页面 | 前端新增研究视图时 |
 | M8 | Portfolio | 多组合创建、删除、编辑、导入、导出、权重管理、对比 | 基础组合保存、增删股票、目标权重、现金比例已完成；选股加入组合改为跟随当前查看的股票（右边栏），不再绑定左边栏桶选择；`PortfolioConfig.strategy_config` 旧字段已删除，组合现在只管股票和权重，策略参数全部收敛到策略库 | usable | 缺导入导出、多组合对比 | 做导入导出和多组合对比 | 修改组合数据结构时 |
 | M9 | Strategy / Backtesting | 策略配置、约束、回测、收益风险指标 | `/backtests/run`、technical / ai_score 回测、交易明细和净值曲线已可用；策略库 Strategy Library v0.1 已完成（`packages/db/strategies.py`、`GET/PUT/DELETE /strategies`），策略与 Portfolio 完全解耦为独立可复用实体（旧的 `PortfolioConfig.strategy_config` 重叠字段已删除），前端支持新增/应用/更新/删除 | verified | 历史新闻情绪未接；策略库暂无导入导出/分享 | 接入历史新闻归档输入，评估策略市场（导入导出/分享）需求 | 新增策略或回测指标时 |
-| M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成；Portfolio Research Module v0.1 已作为前端统一入口接入 `/portfolio-research/run`；workflow run 支持按 trace_id 查询；`GET /research-runs` 历史列表 API 已接入前端 Research Run 复盘面板；Report Archive 可从 trace_id 生成报告 | verified | 后续缺数据质量提示和更细的报告节点编排 | 做数据质量标记 | 新增 workflow 或节点时 |
+| M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成；Portfolio Research Module v0.1 已作为前端统一入口接入 `/portfolio-research/run`；workflow run 支持按 trace_id 查询；`GET /research-runs` 历史列表 API 已接入前端 Research Run 复盘面板；Report Archive 可从 trace_id 生成报告 | verified | 后续缺更细的报告节点编排 | 做 Portfolio Manager v0.2 | 新增 workflow 或节点时 |
 | M11 | Risk Engine | VaR、CVaR、Beta、波动率、回撤、行业暴露、持仓集中度 | 独立 `packages/risk_engine` v0.1 已形成，支持 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure，接入 `POST /risk/portfolio` 和前端摘要 | verified | VaR/CVaR/Stress Test/Monte Carlo 未接 | 后续扩展 VaR、CVaR 和 Stress Test | 新增风险指标时 |
 | M12 | Portfolio Optimizer | Mean Variance、Risk Parity、HRP、Minimum Variance、Black-Litterman | 独立 `packages/portfolio_optimizer` v0.1 已完成，支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版，接入 `POST /optimizer/portfolio` 和前端摘要 | verified | HRP、Black-Litterman 和完整协方差求解器未接 | 后续做高级优化器求解器 | 新增优化器时 |
 | M13 | AI Report / Archive | PDF、Markdown、HTML、Dashboard、报告归档、每日复盘 | Report Archive v0.1 已完成：新增 `report_archives` 表、`POST /reports/from-trace/{trace_id}`、`GET /reports`、`GET /reports/{trace_id}`，可从 Portfolio Research trace 生成 Markdown/HTML 报告并归档 | usable | 缺 PDF、Dashboard 和更丰富报告模板 | 后续扩展 PDF/Dashboard 报告 | 新增报告模板时 |
-| M14 | 前端工作台 | 操作界面可完成查询、筛选、组合、回测、报告 | 当前工作台可用，首页已聚合 Most Active、Top 20 推荐、最近 5 次 Research Run 和当前组合风险；Data Source Health 面板已展示 Yahoo/SEC/FRED/Tiger 配置、可用性、最近错误和 fallback；Portfolio Research Workbench、Research Run 复盘面板和 Report Archive 面板已接入 | usable | 缺数据质量提示 | 做数据质量标记 | 修改页面 workflow 时 |
+| M14 | 前端工作台 | 操作界面可完成查询、筛选、组合、回测、报告 | 当前工作台可用，首页已聚合 Most Active、Top 20 推荐、最近 5 次 Research Run 和当前组合风险；Data Source Health 面板已展示 Yahoo/SEC/FRED/Tiger 配置、可用性、最近错误和 fallback；报价区已显示数据质量 source/freshness；Portfolio Research Workbench、Research Run 复盘面板和 Report Archive 面板已接入 | usable | 缺 Portfolio 导入导出和组合对比 | 做 Portfolio Manager v0.2 | 修改页面 workflow 时 |
 | M15 | Tiger OpenAPI | 官方只读行情数据接入，不抓 App，不自动交易 | status、quote、history 接口骨架和标准已完成 | usable | 真实 SDK adapter 未完整接通 | 完成官方 SDK adapter 和凭证联调 | 修改 Tiger 接入时 |
 | M16 | Broker Layer | 未来可接券商 API，人工确认后交易 | `packages/brokers` 仍为空 | planned | 第一阶段不做交易 | 暂只保留接口边界，不开发自动交易 | 开始券商接口设计时 |
-| M17 | 数据可追溯 / 审计 | AI 输出写 audit_logs，结论有数据来源和时间 | Agent 基类和 ModelResponse 审计路径已建立，Portfolio Research Workflow run 已按 trace_id 持久化；数据源健康状态已可见 | partial | 普通算法输出审计和数据质量标记还需增强 | 做数据质量标记和普通算法输出审计增强 | 新增 AI/Workflow 输出时 |
+| M17 | 数据可追溯 / 审计 | AI 输出写 audit_logs，结论有数据来源和时间 | Agent 基类和 ModelResponse 审计路径已建立，Portfolio Research Workflow run 已按 trace_id 持久化；数据源健康状态和 `data_quality` 已可见 | partial | 普通算法输出审计还需增强 | 做普通算法输出审计增强 | 新增 AI/Workflow 输出时 |
 | M18 | Git / 发布管理 | develop 开发、main 稳定、功能拆分提交 | SSH key 已配置到 GitHub；origin 已切换为 `git@github.com:haisheng-bot/cullen.git`；`develop` 已成功推送到 GitHub | usable | 远端 main 是独立初始提交，仍需从 develop 发起 PR 合并 main | 从 `develop` 发起 PR 合并到 `main`，后续继续按功能提交并推送 | 准备 PR 或发布时 |
 
 ## 5. 下一阶段执行顺序
@@ -64,7 +64,7 @@
 | P4 | ~~Report Archive v0.1~~ | ~~每次 Portfolio Research 可生成并保存 Markdown/HTML 报告~~ | 已完成：新增 `report_archives` 表和 `/reports` API；支持从 trace_id 生成报告；前端可生成、刷新、查看报告列表和 HTML 详情 |
 | P5 | ~~每日研究首页~~ | ~~打开项目后直接看到今日候选池、组合状态、最近研究和待复盘事项~~ | 已完成：主区域顶部新增每日研究首页，聚合 Most Active Top 100、Top 20 推荐、最近 5 次 Research Run 和当前组合风险摘要 |
 | P6 | ~~数据源健康检查~~ | ~~Yahoo/SEC/FRED/Tiger 数据状态可观测~~ | 已完成：新增 `GET /data-sources/health` 和前端 Data Source Health 面板，展示配置、可用性、最近错误和 fallback 状态 |
-| P7 | 数据质量标记 | 让每个分析结果能看出数据是否完整可靠 | 行情/财报/新闻/宏观数据返回 source、as_of、freshness、missing_fields 和 fallback 标记 |
+| P7 | ~~数据质量标记~~ | ~~让每个分析结果能看出数据是否完整可靠~~ | 已完成：quote/trend/history/filings/news/macro/Tiger 数据响应新增 `data_quality`，包含 source、as_of、freshness、missing_fields、fallback；前端报价区显示 source/freshness |
 | P8 | Portfolio Manager v0.2 | 组合支持导入导出和组合对比 | 可比较两个组合的持仓、权重、收益、风险和行业暴露；支持 JSON/CSV 导入导出 |
 | P9 | Strategy Library v0.2 | 策略支持版本、复制、导入导出和分类 | 策略可 Clone/Save As；支持 JSON 导入导出；策略可绑定默认 scoring_profile |
 | P10 | Stock Research 独立页 | 单只股票从工作台侧栏升级为完整研究页 | 展示行情、K 线、新闻/政策、SEC、评分历史、报告入口和风险提示 |
@@ -90,6 +90,7 @@
 12. Report Archive v0.1
 13. 每日研究首页
 14. 数据源健康检查
+15. 数据质量标记
 ```
 
 ## 6. 同步规则
@@ -104,6 +105,12 @@
 6. 运行测试并记录结果。
 
 ## 7. 最近一次同步
+
+```text
+日期：2026-07-02
+测试：P7 局部测试通过（quote、Tiger history、trend、history、SEC filings、news、FRED observations、治理测试）；`py_compile` 通过；Node 提取 `<script>` 语法检查通过。
+状态：完成 P7 数据质量标记——新增 `packages/data_sources/quality.py`，给 quote/trend/history/filings/news/macro/Tiger 数据响应统一附加 `data_quality`（source/as_of/freshness/missing_fields/fallback），前端报价区展示数据 source/freshness。下一步进入 P8 Portfolio Manager v0.2。
+```
 
 ```text
 日期：2026-07-02

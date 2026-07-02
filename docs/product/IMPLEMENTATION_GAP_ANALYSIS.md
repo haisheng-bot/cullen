@@ -111,7 +111,8 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 * Report Archive v0.1 已接入，支持从 Portfolio Research `trace_id` 生成 Markdown/HTML 报告、查看报告列表和报告详情
 * 每日研究首页已接入，首屏聚合 Most Active、Top 20 推荐、最近 5 次 Research Run 和当前组合风险
 * Data Source Health 面板已接入，展示 Yahoo/SEC/FRED/Tiger 的配置、可用性、最近错误和 fallback 状态
-* 仍缺：PDF/Dashboard 报告、更丰富模板和数据质量提示
+* 数据质量标记已接入，外部数据响应带 `data_quality`，前端报价区展示 source/freshness
+* 仍缺：PDF/Dashboard 报告、更丰富模板和 Portfolio 导入导出
 
 目标状态：
 
@@ -126,7 +127,7 @@ AI Portfolio Operating System 完成度：约 25% - 35%
   -> 报告归档
 ```
 
-差距级别：低到中（核心运行复盘、报告归档和每日首页初版已打通，缺 PDF/Dashboard 报告、更丰富模板和数据质量提示）。
+差距级别：低到中（核心运行复盘、报告归档、每日首页和数据可信度初版已打通，缺 PDF/Dashboard 报告、更丰富模板和 Portfolio 导入导出）。
 
 ### 3.5 数据源稳定性仍需加强
 
@@ -268,12 +269,12 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 * 展示 Yahoo/SEC/FRED/Tiger 的配置、可用性、最近错误和 fallback 状态（已完成）
 * 给前端提供统一健康检查 API（已完成）
 
-### P7：数据质量标记
+### P7：数据质量标记 [已完成]
 
 目标：
 
-* 在行情、财报、新闻、宏观数据返回中暴露 `source`、`as_of`、`freshness`、`missing_fields` 和 `fallback` 标记
-* 让分析结果能看出数据是否完整可靠
+* 在行情、财报、新闻、宏观数据返回中暴露 `source`、`as_of`、`freshness`、`missing_fields` 和 `fallback` 标记（已完成）
+* 让分析结果能看出数据是否完整可靠（已完成）
 
 ### 已完成：Scoring Profiles / Research History / Trace 复盘页
 
@@ -294,5 +295,5 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 但距离完整生产力系统仍缺：
 
 ```text
-数据质量提示 + 商业数据源覆盖 + 风险引擎尾部指标（VaR/CVaR） + 优化器高级求解器（HRP/Black-Litterman） + 多 Agent 自动研究 + PDF/Dashboard 报告
+商业数据源覆盖 + Portfolio 导入导出 + 风险引擎尾部指标（VaR/CVaR） + 优化器高级求解器（HRP/Black-Litterman） + 多 Agent 自动研究 + PDF/Dashboard 报告
 ```

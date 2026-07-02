@@ -531,6 +531,9 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("AAPL", payload["symbol"])
         self.assertEqual(102.0, payload["price"])
         self.assertEqual(2.0, payload["change"])
+        self.assertEqual("test-source", payload["data_quality"]["source"])
+        self.assertIn(payload["data_quality"]["freshness"], {"fresh", "recent", "stale"})
+        self.assertEqual([], payload["data_quality"]["missing_fields"])
 
     def test_tiger_status_endpoint_is_read_only(self) -> None:
         payload = main.get_tiger_openapi_status()
@@ -610,12 +613,14 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual(900000, payload["points"][0]["volume"])
         self.assertEqual(210500000.0, payload["points"][1]["amount"])
         self.assertEqual("historical_kline_reference", payload["data_scope"])
+        self.assertEqual("Tiger Brokers OpenAPI", payload["data_quality"]["source"])
 
     def test_trend_endpoint(self) -> None:
         payload = main.get_stock_trend("AAPL", range_="1d", interval="1m")
 
         self.assertEqual("AAPL", payload["symbol"])
         self.assertEqual(2, len(payload["points"]))
+        self.assertEqual([], payload["data_quality"]["missing_fields"])
 
     def test_history_endpoint(self) -> None:
         payload = main.get_stock_price_history("AAPL", range_="10y", interval="1d")
@@ -624,6 +629,7 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("10y", payload["range"])
         self.assertEqual(2, len(payload["points"]))
         self.assertEqual(95.0, payload["points"][0]["open"])
+        self.assertEqual("test-source", payload["data_quality"]["source"])
 
     def test_sec_filings_endpoint(self) -> None:
         payload = main.get_stock_sec_filings("AAPL", forms="10-K,10-Q,8-K", limit=10)
@@ -632,6 +638,7 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("0000320193", payload["cik"])
         self.assertEqual(1, len(payload["filings"]))
         self.assertEqual("10-K", payload["filings"][0]["form"])
+        self.assertEqual("test-source", payload["data_quality"]["source"])
 
     def test_fred_observations_endpoint(self) -> None:
         payload = main.get_fred_observations("fedfunds", limit=2)
@@ -639,6 +646,7 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("FEDFUNDS", payload["series_id"])
         self.assertEqual(2, len(payload["observations"]))
         self.assertEqual(5.33, payload["observations"][0]["value"])
+        self.assertEqual("test-source", payload["data_quality"]["source"])
 
     def test_sec_summary_agent_endpoint(self) -> None:
         payload = main.get_stock_sec_summary("AAPL")
@@ -662,6 +670,8 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual("AAPL", payload["symbol"])
         self.assertEqual(3, payload["years"])
         self.assertEqual("management_change", payload["items"][0]["category"])
+        self.assertEqual("SEC EDGAR", payload["data_quality"]["source"])
+        self.assertIn("fallback", payload["data_quality"])
 
     def test_stock_screening_endpoint(self) -> None:
         payload = main.get_stock_screening(limit=5)

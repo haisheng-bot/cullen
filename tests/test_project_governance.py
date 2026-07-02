@@ -416,6 +416,9 @@ class ProjectGovernanceTest(unittest.TestCase):
             "data-source-health-list",
             "loadDataSourceHealth",
             "request(\"/data-sources/health\")",
+            "data_quality",
+            "quality.source",
+            "quality.freshness",
         ]
         missing_html = [term for term in required_html_terms if term not in html]
         self.assertEqual([], missing_html)
