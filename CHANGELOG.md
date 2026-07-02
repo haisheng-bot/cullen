@@ -4,6 +4,7 @@
 
 ### Added
 
+* Portfolio Manager v0.2（P8）：组合支持导出（JSON/CSV，客户端直接从已加载状态生成下载）、导入（复用既有 `/portfolios/{name}/symbols` 增删和 `/portfolios/{name}/config` 保存权重，不新增 API）和两两对比（复用既有 `POST /risk/portfolio` 分别计算，前端并排展示持仓/风险指标/行业暴露差异）；前端「我的组合 Portfolios」面板每个组合卡片新增导出/导入按钮和对比勾选框
 * Report Archive v0.1（P4）：新增 `report_archives` 表、`packages/portfolio_research/reports.py` 和 `/reports` API，可从 Portfolio Research `trace_id` 生成 Markdown/HTML 报告，支持报告列表和详情；前端 Portfolio Research Workbench 新增 Report Archive 面板，可生成当前 trace 报告、刷新归档并查看 HTML 详情
 * 每日研究首页（P5）：前端主区域顶部新增 Daily Research Home，复用 `/stocks/universe/most-active`、`/stocks/screening`、`/research-runs` 和 `/risk/portfolio`，展示 Most Active Top 100、Top 20 推荐、最近 5 次 Research Run 和当前组合风险摘要
 * 数据源健康检查（P6）：新增 `packages/data_sources/health.py` 和 `GET /data-sources/health`，前端新增 Data Source Health 面板，展示 Yahoo/SEC/FRED/Tiger 的配置、可用性、最近错误、fallback 和 capabilities

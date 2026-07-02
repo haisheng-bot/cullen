@@ -1629,10 +1629,17 @@
 
         <div class="portfolio-panel">
           <div class="section-title">我的组合 Portfolios</div>
+          <div class="side-actions">
+            <button id="portfolio-compare-button" type="button" disabled>对比选中 (0/2)</button>
+          </div>
           <div class="portfolio-list" id="portfolio-list"></div>
+          <div class="workflow-note" id="portfolio-compare-status" hidden></div>
+          <div id="portfolio-compare-result" hidden></div>
         </div>
 
       </aside>
+
+      <input type="file" id="portfolio-import-input" accept=".json,.csv" hidden>
 
       <main>
         <section class="daily-home">
@@ -2137,6 +2144,8 @@
         selectedResearchTraceId: null,
         uxStrategyTouched: false,
         uxConstraintsTouched: false,
+        compareSelection: [],
+        importTargetName: null,
       };
 
       const stockList = document.getElementById("stock-list");
@@ -2145,6 +2154,10 @@
       const scanUniverseButton = document.getElementById("scan-universe-button");
       const portfolioStrategy = document.getElementById("portfolio-strategy");
       const portfolioList = document.getElementById("portfolio-list");
+      const portfolioCompareButton = document.getElementById("portfolio-compare-button");
+      const portfolioCompareStatus = document.getElementById("portfolio-compare-status");
+      const portfolioCompareResult = document.getElementById("portfolio-compare-result");
+      const portfolioImportInput = document.getElementById("portfolio-import-input");
       const strategyList = document.getElementById("strategy-list");
       const addStrategyButton = document.getElementById("add-strategy-button");
       const strategyModalBackdrop = document.getElementById("strategy-modal-backdrop");
@@ -2812,13 +2825,19 @@
                 </span>
               `).join("")
             : `<span class="muted">未选择股票</span>`;
+          const checked = state.compareSelection.includes(strategy) ? "checked" : "";
           group.innerHTML = `
             <div class="portfolio-group-head">
-              <span>${escapeHtml(strategy)}</span>
+              <label><input type="checkbox" class="portfolio-compare-check" data-name="${escapeHtml(strategy)}" ${checked}> ${escapeHtml(strategy)}</label>
               <span class="muted">${symbols.length} stocks</span>
             </div>
             <div class="portfolio-symbols">${chips}</div>
             <div class="muted">Cash ${formatPercent((config.cash_weight || 0) * 100)} · ${escapeHtml(savedWeightText)}</div>
+            <div class="report-archive-actions">
+              <button type="button" data-action="export-json" data-name="${escapeHtml(strategy)}">导出 JSON</button>
+              <button type="button" data-action="export-csv" data-name="${escapeHtml(strategy)}">导出 CSV</button>
+              <button type="button" data-action="import" data-name="${escapeHtml(strategy)}">导入</button>
+            </div>
           `;
           portfolioList.appendChild(group);
         });
@@ -2828,7 +2847,228 @@
             removeSymbolFromPortfolio(button.dataset.strategy, button.dataset.symbol);
           });
         });
+
+        portfolioList.querySelectorAll(".portfolio-compare-check").forEach((checkbox) => {
+          checkbox.addEventListener("change", () => togglePortfolioCompareSelection(checkbox));
+        });
+
+        portfolioList.querySelectorAll("[data-action]").forEach((button) => {
+          button.addEventListener("click", () => handlePortfolioAction(button.dataset.action, button.dataset.name));
+        });
       }
+
+      function togglePortfolioCompareSelection(checkbox) {
+        const name = checkbox.dataset.name;
+        if (checkbox.checked && state.compareSelection.length >= 2 && !state.compareSelection.includes(name)) {
+          checkbox.checked = false;
+          alert("最多同时对比 2 个组合，请先取消一个已选组合。");
+          return;
+        }
+        state.compareSelection = checkbox.checked
+          ? [...new Set([...state.compareSelection, name])]
+          : state.compareSelection.filter((item) => item !== name);
+        portfolioCompareButton.disabled = state.compareSelection.length !== 2;
+        portfolioCompareButton.textContent = `对比选中 (${state.compareSelection.length}/2)`;
+      }
+
+      function handlePortfolioAction(action, name) {
+        if (action === "export-json") return exportPortfolio(name, "json");
+        if (action === "export-csv") return exportPortfolio(name, "csv");
+        if (action === "import") return openPortfolioImport(name);
+      }
+
+      function downloadTextFile(filename, content, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      // ponytail: export reads straight from already-loaded `state`, no backend
+      // export endpoint needed since /portfolios already gave us this data.
+      function portfolioExportPayload(name) {
+        const config = state.portfolioConfigs[name] || {};
+        return {
+          name,
+          symbols: state.portfolios[name] || [],
+          target_weights: config.target_weights || {},
+          cash_weight: config.cash_weight || 0,
+        };
+      }
+
+      function exportPortfolio(name, format) {
+        const payload = portfolioExportPayload(name);
+        if (format === "json") {
+          downloadTextFile(`${name}.json`, JSON.stringify(payload, null, 2), "application/json");
+          return;
+        }
+        const rows = ["symbol,weight"];
+        payload.symbols.forEach((symbol) => {
+          rows.push(`${symbol},${payload.target_weights[symbol] || 0}`);
+        });
+        rows.push(`CASH,${payload.cash_weight}`);
+        downloadTextFile(`${name}.csv`, rows.join("\n"), "text/csv");
+      }
+
+      function openPortfolioImport(name) {
+        state.importTargetName = name;
+        portfolioImportInput.value = "";
+        portfolioImportInput.click();
+      }
+
+      function parsePortfolioImportText(text) {
+        const trimmed = text.trim();
+        if (trimmed.startsWith("{")) {
+          const data = JSON.parse(trimmed);
+          return {
+            symbols: (data.symbols || Object.keys(data.target_weights || {})).map((symbol) => symbol.toUpperCase()),
+            target_weights: data.target_weights || {},
+            cash_weight: data.cash_weight || 0,
+          };
+        }
+        const symbols = [];
+        const targetWeights = {};
+        let cashWeight = 0;
+        trimmed.split("\n").slice(1).forEach((line) => {
+          const [rawSymbol, rawWeight] = line.split(",");
+          if (!rawSymbol) return;
+          const symbol = rawSymbol.trim().toUpperCase();
+          const weight = Number(rawWeight) || 0;
+          if (symbol === "CASH") {
+            cashWeight = weight;
+            return;
+          }
+          symbols.push(symbol);
+          targetWeights[symbol] = weight;
+        });
+        return { symbols, target_weights: targetWeights, cash_weight: cashWeight };
+      }
+
+      // ponytail: import replaces a portfolio's symbols/weights by diffing
+      // against the existing add/remove-symbol and save-config endpoints
+      // instead of adding a new bulk-import API.
+      async function importPortfolioFromData(name, data) {
+        const desired = [...new Set(data.symbols)];
+        const current = state.portfolios[name] || [];
+        for (const symbol of current.filter((item) => !desired.includes(item))) {
+          await deleteJson(`/portfolios/${encodeURIComponent(name)}/symbols/${encodeURIComponent(symbol)}`);
+        }
+        for (const symbol of desired.filter((item) => !current.includes(item))) {
+          await postJson(`/portfolios/${encodeURIComponent(name)}/symbols`, { symbol });
+        }
+        await putJson(`/portfolios/${encodeURIComponent(name)}/config`, {
+          target_weights: data.target_weights,
+          cash_weight: data.cash_weight,
+        });
+      }
+
+      portfolioImportInput.addEventListener("change", async () => {
+        const file = portfolioImportInput.files[0];
+        const name = state.importTargetName;
+        if (!file || !name) return;
+        try {
+          const text = await file.text();
+          const data = parsePortfolioImportText(text);
+          await importPortfolioFromData(name, data);
+          await loadPortfolios();
+          alert(`已导入到组合「${name}」。`);
+        } catch (error) {
+          alert(`导入失败：${error.message}`);
+        }
+      });
+
+      // ponytail: compare calls the existing single-portfolio /risk/portfolio
+      // endpoint twice and diffs client-side, no new compare API.
+      async function fetchPortfolioRiskFor(name) {
+        const symbols = [...new Set((state.portfolios[name] || []).map((symbol) => symbol.toUpperCase()))];
+        if (symbols.length < 2) return { name, symbols, risk: null };
+        const config = state.portfolioConfigs[name] || {};
+        const sectorMap = Object.fromEntries(
+          state.stocks.filter((stock) => symbols.includes(stock.symbol)).map((stock) => [stock.symbol, stock.sector || "Unknown"])
+        );
+        const risk = await postJson("/risk/portfolio", {
+          symbols,
+          weights: config.target_weights || {},
+          benchmark_symbol: benchmarkSymbolInput.value.trim().toUpperCase() || "SPY",
+          sector_map: sectorMap,
+        });
+        return { name, symbols, config, risk };
+      }
+
+      function renderPortfolioCompareResult(a, b) {
+        const weightRows = [...new Set([...a.symbols, ...b.symbols])].sort().map((symbol) => `
+          <tr>
+            <td class="symbol">${escapeHtml(symbol)}</td>
+            <td>${formatPercent(((a.config?.target_weights || {})[symbol] || 0) * 100)}</td>
+            <td>${formatPercent(((b.config?.target_weights || {})[symbol] || 0) * 100)}</td>
+          </tr>
+        `).join("");
+        const riskMetrics = [
+          ["Volatility", "volatility_percent", formatPercent],
+          ["Beta", "beta", formatRatio],
+          ["Max Drawdown", "max_drawdown_percent", formatPercent],
+          ["Concentration", "concentration_percent", formatPercent],
+        ];
+        const riskRows = riskMetrics.map(([label, key, formatter]) => `
+          <tr>
+            <td class="symbol">${label}</td>
+            <td>${a.risk ? formatter(a.risk[key]) : "--"}</td>
+            <td>${b.risk ? formatter(b.risk[key]) : "--"}</td>
+          </tr>
+        `).join("");
+        const sectors = [...new Set([...Object.keys(a.risk?.sector_exposure || {}), ...Object.keys(b.risk?.sector_exposure || {})])].sort();
+        const sectorRows = sectors.map((sector) => `
+          <tr>
+            <td class="symbol">${escapeHtml(sector)}</td>
+            <td>${formatPercent((a.risk?.sector_exposure || {})[sector] || 0)}</td>
+            <td>${formatPercent((b.risk?.sector_exposure || {})[sector] || 0)}</td>
+          </tr>
+        `).join("");
+        portfolioCompareResult.innerHTML = `
+          <div class="trades-table-wrap">
+            <table class="trades-table">
+              <thead><tr><th>持仓</th><th>${escapeHtml(a.name)}</th><th>${escapeHtml(b.name)}</th></tr></thead>
+              <tbody>${weightRows}</tbody>
+            </table>
+          </div>
+          <div class="trades-table-wrap">
+            <table class="trades-table">
+              <thead><tr><th>风险指标</th><th>${escapeHtml(a.name)}</th><th>${escapeHtml(b.name)}</th></tr></thead>
+              <tbody>${riskRows}</tbody>
+            </table>
+          </div>
+          <div class="trades-table-wrap">
+            <table class="trades-table">
+              <thead><tr><th>行业暴露</th><th>${escapeHtml(a.name)}</th><th>${escapeHtml(b.name)}</th></tr></thead>
+              <tbody>${sectorRows || `<tr><td colspan="3" class="muted">暂无行业暴露数据</td></tr>`}</tbody>
+            </table>
+          </div>
+        `;
+        portfolioCompareResult.hidden = false;
+      }
+
+      async function runPortfolioCompare() {
+        if (state.compareSelection.length !== 2) return;
+        portfolioCompareStatus.hidden = false;
+        portfolioCompareStatus.textContent = "正在计算组合对比...";
+        portfolioCompareResult.hidden = true;
+        try {
+          const [a, b] = await Promise.all(state.compareSelection.map(fetchPortfolioRiskFor));
+          if (!a.risk || !b.risk) {
+            portfolioCompareStatus.textContent = "两个组合都至少需要 2 只股票才能计算风险对比。";
+            return;
+          }
+          renderPortfolioCompareResult(a, b);
+          portfolioCompareStatus.textContent = "本系统仅用于投资研究辅助，不构成任何投资建议。";
+        } catch (error) {
+          portfolioCompareStatus.textContent = `组合对比失败：${error.message}`;
+        }
+      }
+
+      portfolioCompareButton.addEventListener("click", runPortfolioCompare);
 
       function activePortfolioName() {
         return portfolioStrategy.value;

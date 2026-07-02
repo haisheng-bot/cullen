@@ -39,13 +39,13 @@
 | M5 | Universe / Screener | 每日扫描美股最活跃 100 只票，支持主题和自定义股票池 | Most Active Top 100 已可用，概念板块预览已接入页面 | usable | 主题筛选和自定义股票池不完整 | 增加 AI、Semiconductor、Growth、Dividend 等主题 universe | 新增筛选维度时 |
 | M6 | Algorithm Layer | 独立推荐算法、评分因子、可解释输出 | algorithm-v0.3 已收敛为 1 年推荐算法，输出 `recommendation_horizon=1y`；已有财务、估值、技术、新闻规则情绪、风险因子；权重已从硬编码抽成 Scoring Profiles 模块 | verified | 近期不做多周期预测、不做复杂量化模型、不做自动交易算法 | 优先把 1 年推荐结果用于首页、复盘页和报告归档 | 调整评分权重或因子时 |
 | M7 | Stock Research | 单股实时价格、K 线、财务、新闻、评分、报告 | 报价、趋势、历史、SEC、新闻、推荐、报告接口已存在 | usable | 独立深度分析页未完成 | 做独立 Stock Research 页面 | 前端新增研究视图时 |
-| M8 | Portfolio | 多组合创建、删除、编辑、导入、导出、权重管理、对比 | 基础组合保存、增删股票、目标权重、现金比例已完成；选股加入组合改为跟随当前查看的股票（右边栏），不再绑定左边栏桶选择；`PortfolioConfig.strategy_config` 旧字段已删除，组合现在只管股票和权重，策略参数全部收敛到策略库 | usable | 缺导入导出、多组合对比 | 做导入导出和多组合对比 | 修改组合数据结构时 |
+| M8 | Portfolio | 多组合创建、删除、编辑、导入、导出、权重管理、对比 | 基础组合保存、增删股票、目标权重、现金比例已完成；选股加入组合改为跟随当前查看的股票（右边栏），不再绑定左边栏桶选择；`PortfolioConfig.strategy_config` 旧字段已删除，组合现在只管股票和权重，策略参数全部收敛到策略库；Portfolio Manager v0.2 已完成导入导出（JSON/CSV）和两两对比 | usable | 仍缺整组合创建/删除（当前是 5 个固定桶） | 评估是否需要自定义新建/删除组合 | 修改组合数据结构时 |
 | M9 | Strategy / Backtesting | 策略配置、约束、回测、收益风险指标 | `/backtests/run`、technical / ai_score 回测、交易明细和净值曲线已可用；策略库 Strategy Library v0.1 已完成（`packages/db/strategies.py`、`GET/PUT/DELETE /strategies`），策略与 Portfolio 完全解耦为独立可复用实体（旧的 `PortfolioConfig.strategy_config` 重叠字段已删除），前端支持新增/应用/更新/删除 | verified | 历史新闻情绪未接；策略库暂无导入导出/分享 | 接入历史新闻归档输入，评估策略市场（导入导出/分享）需求 | 新增策略或回测指标时 |
-| M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成；Portfolio Research Module v0.1 已作为前端统一入口接入 `/portfolio-research/run`；workflow run 支持按 trace_id 查询；`GET /research-runs` 历史列表 API 已接入前端 Research Run 复盘面板；Report Archive 可从 trace_id 生成报告 | verified | 后续缺更细的报告节点编排 | 做 Portfolio Manager v0.2 | 新增 workflow 或节点时 |
+| M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成；Portfolio Research Module v0.1 已作为前端统一入口接入 `/portfolio-research/run`；workflow run 支持按 trace_id 查询；`GET /research-runs` 历史列表 API 已接入前端 Research Run 复盘面板；Report Archive 可从 trace_id 生成报告 | verified | 后续缺更细的报告节点编排 | 做 Strategy Library v0.2 | 新增 workflow 或节点时 |
 | M11 | Risk Engine | VaR、CVaR、Beta、波动率、回撤、行业暴露、持仓集中度 | 独立 `packages/risk_engine` v0.1 已形成，支持 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure，接入 `POST /risk/portfolio` 和前端摘要 | verified | VaR/CVaR/Stress Test/Monte Carlo 未接 | 后续扩展 VaR、CVaR 和 Stress Test | 新增风险指标时 |
 | M12 | Portfolio Optimizer | Mean Variance、Risk Parity、HRP、Minimum Variance、Black-Litterman | 独立 `packages/portfolio_optimizer` v0.1 已完成，支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版，接入 `POST /optimizer/portfolio` 和前端摘要 | verified | HRP、Black-Litterman 和完整协方差求解器未接 | 后续做高级优化器求解器 | 新增优化器时 |
 | M13 | AI Report / Archive | PDF、Markdown、HTML、Dashboard、报告归档、每日复盘 | Report Archive v0.1 已完成：新增 `report_archives` 表、`POST /reports/from-trace/{trace_id}`、`GET /reports`、`GET /reports/{trace_id}`，可从 Portfolio Research trace 生成 Markdown/HTML 报告并归档 | usable | 缺 PDF、Dashboard 和更丰富报告模板 | 后续扩展 PDF/Dashboard 报告 | 新增报告模板时 |
-| M14 | 前端工作台 | 操作界面可完成查询、筛选、组合、回测、报告 | 当前工作台可用，首页已聚合 Most Active、Top 20 推荐、最近 5 次 Research Run 和当前组合风险；Data Source Health 面板已展示 Yahoo/SEC/FRED/Tiger 配置、可用性、最近错误和 fallback；报价区已显示数据质量 source/freshness；Portfolio Research Workbench、Research Run 复盘面板和 Report Archive 面板已接入 | usable | 缺 Portfolio 导入导出和组合对比 | 做 Portfolio Manager v0.2 | 修改页面 workflow 时 |
+| M14 | 前端工作台 | 操作界面可完成查询、筛选、组合、回测、报告 | 当前工作台可用，首页已聚合 Most Active、Top 20 推荐、最近 5 次 Research Run 和当前组合风险；Data Source Health 面板已展示 Yahoo/SEC/FRED/Tiger 配置、可用性、最近错误和 fallback；报价区已显示数据质量 source/freshness；Portfolio Research Workbench、Research Run 复盘面板、Report Archive 面板和 Portfolio Manager v0.2（导入导出/对比）已接入 | usable | 缺 Strategy Library v0.2 和 Stock Research 独立页 | 做 Strategy Library v0.2 | 修改页面 workflow 时 |
 | M15 | Tiger OpenAPI | 官方只读行情数据接入，不抓 App，不自动交易 | status、quote、history 接口骨架和标准已完成 | usable | 真实 SDK adapter 未完整接通 | 完成官方 SDK adapter 和凭证联调 | 修改 Tiger 接入时 |
 | M16 | Broker Layer | 未来可接券商 API，人工确认后交易 | `packages/brokers` 仍为空 | planned | 第一阶段不做交易 | 暂只保留接口边界，不开发自动交易 | 开始券商接口设计时 |
 | M17 | 数据可追溯 / 审计 | AI 输出写 audit_logs，结论有数据来源和时间 | Agent 基类和 ModelResponse 审计路径已建立，Portfolio Research Workflow run 已按 trace_id 持久化；数据源健康状态和 `data_quality` 已可见 | partial | 普通算法输出审计还需增强 | 做普通算法输出审计增强 | 新增 AI/Workflow 输出时 |
@@ -65,7 +65,7 @@
 | P5 | ~~每日研究首页~~ | ~~打开项目后直接看到今日候选池、组合状态、最近研究和待复盘事项~~ | 已完成：主区域顶部新增每日研究首页，聚合 Most Active Top 100、Top 20 推荐、最近 5 次 Research Run 和当前组合风险摘要 |
 | P6 | ~~数据源健康检查~~ | ~~Yahoo/SEC/FRED/Tiger 数据状态可观测~~ | 已完成：新增 `GET /data-sources/health` 和前端 Data Source Health 面板，展示配置、可用性、最近错误和 fallback 状态 |
 | P7 | ~~数据质量标记~~ | ~~让每个分析结果能看出数据是否完整可靠~~ | 已完成：quote/trend/history/filings/news/macro/Tiger 数据响应新增 `data_quality`，包含 source、as_of、freshness、missing_fields、fallback；前端报价区显示 source/freshness |
-| P8 | Portfolio Manager v0.2 | 组合支持导入导出和组合对比 | 可比较两个组合的持仓、权重、收益、风险和行业暴露；支持 JSON/CSV 导入导出 |
+| P8 | ~~Portfolio Manager v0.2~~ | ~~组合支持导入导出和组合对比~~ | 已完成：前端支持 JSON/CSV 导入导出（客户端直接生成/解析，复用既有增删股票和保存权重 API）；支持勾选两个组合对比持仓、权重、风险指标（Volatility/Beta/Max Drawdown/Concentration）和行业暴露（复用 `POST /risk/portfolio`） |
 | P9 | Strategy Library v0.2 | 策略支持版本、复制、导入导出和分类 | 策略可 Clone/Save As；支持 JSON 导入导出；策略可绑定默认 scoring_profile |
 | P10 | Stock Research 独立页 | 单只股票从工作台侧栏升级为完整研究页 | 展示行情、K 线、新闻/政策、SEC、评分历史、报告入口和风险提示 |
 | P11 | 1 年推荐算法打磨 | 只围绕 `recommendation_horizon=1y` 提升推荐解释、稳定性和复盘可用性 | 首页、单股页、复盘页和报告都明确展示 1 年推荐；不增加 3 年/5 年/10 年预测 |
@@ -91,6 +91,7 @@
 13. 每日研究首页
 14. 数据源健康检查
 15. 数据质量标记
+16. Portfolio Manager v0.2（导入导出/对比）
 ```
 
 ## 6. 同步规则
@@ -105,6 +106,12 @@
 6. 运行测试并记录结果。
 
 ## 7. 最近一次同步
+
+```text
+日期：2026-07-02（本次）
+测试：243 tests OK（unittest discover，.venv311 / Python 3.11）；`git diff --check` 通过；Node 提取 `<script>` 语法检查通过。
+状态：完成 P8 Portfolio Manager v0.2——组合支持导出（JSON/CSV，前端直接从已加载的 `state.portfolios`/`state.portfolioConfigs` 生成下载，不新增导出 API）、导入（解析上传文件后复用既有 `/portfolios/{name}/symbols` 增删和 `/portfolios/{name}/config` 保存权重）和两两对比（对选中的两个组合分别调用既有 `POST /risk/portfolio`，前端并排展示持仓、风险指标、行业暴露差异，不新增对比 API）；前端「我的组合 Portfolios」面板每张组合卡片新增导出/导入按钮和对比勾选框；新增治理测试 `test_project_interface_includes_portfolio_manager_v2`，同步 `PORTFOLIO_STRATEGY_STANDARD.md` §5.2、CHANGELOG。下一步进入 P9 Strategy Library v0.2。
+```
 
 ```text
 日期：2026-07-02

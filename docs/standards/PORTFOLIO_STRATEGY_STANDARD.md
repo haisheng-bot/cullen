@@ -173,6 +173,16 @@ DELETE /strategies/{name}
 
 前端「策略库 Strategy Library」面板（左边栏）提供新增/应用/更新/删除：应用会把已保存策略的参数写回表单（不自动运行），调整后可以「更新」覆盖保存，或用新名字「新增策略」存成一个克隆变体；运行回测时仍然是表单当前值通过 `POST /portfolio-research/run` 提交，策略库只负责参数的保存与复用，不参与运行时编排。
 
+### 5.2 组合导入导出与对比（Portfolio Manager v0.2）
+
+导入导出和对比不新增 API：
+
+* 导出：直接读取前端已加载的 `state.portfolios`/`state.portfolioConfigs`（来自 `GET /portfolios`），在浏览器内生成 JSON 或 CSV 文件下载，不经过后端。
+* 导入：解析上传的 JSON/CSV 文件后，用已有的 `POST /portfolios/{name}/symbols`、`DELETE /portfolios/{name}/symbols/{symbol}`、`PUT /portfolios/{name}/config` 把目标组合的持仓和权重覆盖为导入内容（先补齐新增股票、移除多余股票，再保存权重）。
+* 对比：对选中的两个组合各自调用一次已有的 `POST /risk/portfolio`（与单组合风险摘要用的是同一个端点），前端把两份持仓、权重和风险结果并排展示为持仓/风险指标/行业暴露三张对比表，不做后端聚合。
+
+CSV 格式为 `symbol,weight` 表格，末尾追加一行 `CASH,<cash_weight>` 表示现金比例，导出与导入使用同一格式，可以直接往返。
+
 ## 6. 版本管理
 
 代码中的实际版本号是 `BacktestResult.algorithm_version`（`packages/backtesting/engine.py` 的 `ALGORITHM_VERSION` 常量），与下表一一对应：

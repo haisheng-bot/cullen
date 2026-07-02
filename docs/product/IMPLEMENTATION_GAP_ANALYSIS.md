@@ -33,7 +33,7 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 | Risk Engine v0.1 | 已完成 | `packages/risk_engine`，`POST /risk/portfolio`，输出 Volatility/Beta/Max Drawdown/Correlation/Concentration/Sector Exposure |
 | Portfolio Optimizer v0.1 | 已完成 | `packages/portfolio_optimizer`，`POST /optimizer/portfolio`，支持 Equal Weight/Market Cap/Minimum Variance/Risk Parity 初版 |
 | 策略库 Strategy Library | 已完成 | `GET/PUT/DELETE /strategies`，策略与 Portfolio 解耦的独立可复用实体，前端支持新增/应用/更新/删除 |
-| Portfolio | 已完成 | 基础组合保存、增删股票、目标权重、现金比例已可用 |
+| Portfolio | 已完成 | 基础组合保存、增删股票、目标权重、现金比例、Portfolio Manager v0.2（导入导出/对比）已可用 |
 | Report Agent | 初版完成 | 单股研究报告 Agent 已接入 |
 | Tiger OpenAPI | 骨架完成 | 只读 quote/history 接口边界已定义，真实 SDK adapter 仍待完善 |
 
@@ -112,7 +112,8 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 * 每日研究首页已接入，首屏聚合 Most Active、Top 20 推荐、最近 5 次 Research Run 和当前组合风险
 * Data Source Health 面板已接入，展示 Yahoo/SEC/FRED/Tiger 的配置、可用性、最近错误和 fallback 状态
 * 数据质量标记已接入，外部数据响应带 `data_quality`，前端报价区展示 source/freshness
-* 仍缺：PDF/Dashboard 报告、更丰富模板和 Portfolio 导入导出
+* Portfolio Manager v0.2 已接入，组合支持 JSON/CSV 导入导出和两两对比（持仓/风险指标/行业暴露）
+* 仍缺：PDF/Dashboard 报告、更丰富模板
 
 目标状态：
 
@@ -127,7 +128,7 @@ AI Portfolio Operating System 完成度：约 25% - 35%
   -> 报告归档
 ```
 
-差距级别：低到中（核心运行复盘、报告归档、每日首页和数据可信度初版已打通，缺 PDF/Dashboard 报告、更丰富模板和 Portfolio 导入导出）。
+差距级别：低到中（核心运行复盘、报告归档、每日首页、数据可信度和 Portfolio 管理初版已打通，缺 PDF/Dashboard 报告和更丰富模板）。
 
 ### 3.5 数据源稳定性仍需加强
 
@@ -193,11 +194,11 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 建议顺序（下一批）：
 
 ```text
-1. AI Report 归档
-2. 每日研究首页
-3. 数据源健康检查
-4. 数据质量标记
-5. Portfolio Manager v0.2
+1. ~~AI Report 归档~~ [已完成]
+2. ~~每日研究首页~~ [已完成]
+3. ~~数据源健康检查~~ [已完成]
+4. ~~数据质量标记~~ [已完成]
+5. ~~Portfolio Manager v0.2~~ [已完成]
 6. Strategy Library v0.2
 7. Stock Research 独立页
 8. 1 年推荐算法打磨
@@ -224,7 +225,7 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 * 每个组合支持目标权重
 * 支持现金比例
 * 支持保存策略配置
-* 支持组合导入 / 导出（导入/导出仍未做）
+* 支持组合导入 / 导出（Portfolio Manager v0.2 已完成，见 P8）
 
 ### P2：Risk Engine v0.1 [已完成]
 
@@ -246,7 +247,7 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 * Minimum Variance
 * Risk Parity 初版
 
-### P4：Report Archive
+### P4：Report Archive [已完成]
 
 目标：
 
@@ -284,16 +285,23 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 * Research Run History API 已完成
 * 前端 Trace 复盘页已完成，支持从历史列表打开 trace_id 并展示 Workflow 节点、回测、Risk、Optimizer、AI Summary、Recommendation
 
+### P8：Portfolio Manager v0.2 [已完成]
+
+目标：
+
+* 组合支持 JSON/CSV 导入导出（前端直接从已加载状态生成/解析，复用既有增删股票和保存权重 API，不新增导入导出 API）
+* 支持两两对比持仓、权重、风险指标（Volatility/Beta/Max Drawdown/Concentration）和行业暴露（复用既有 `POST /risk/portfolio`，不新增对比 API）
+
 ## 6. 当前真实状态一句话
 
 当前项目已经具备：
 
 ```text
-架构骨架 + 核心 API + 完整页面 + 初版算法 + 初版回测 + 统一 workflow（含 Risk/Optimizer/策略库/报告归档）
+架构骨架 + 核心 API + 完整页面 + 初版算法 + 初版回测 + 统一 workflow（含 Risk/Optimizer/策略库/报告归档/组合导入导出对比）
 ```
 
 但距离完整生产力系统仍缺：
 
 ```text
-商业数据源覆盖 + Portfolio 导入导出 + 风险引擎尾部指标（VaR/CVaR） + 优化器高级求解器（HRP/Black-Litterman） + 多 Agent 自动研究 + PDF/Dashboard 报告
+商业数据源覆盖 + 风险引擎尾部指标（VaR/CVaR） + 优化器高级求解器（HRP/Black-Litterman） + 多 Agent 自动研究 + PDF/Dashboard 报告
 ```

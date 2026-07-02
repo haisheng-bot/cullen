@@ -113,6 +113,7 @@
 * 策略库 Strategy Library（`packages/db/strategies.py`，策略与 Portfolio 解耦的独立可复用实体）[verified]
 * `GET/PUT/DELETE /strategies` API [verified]
 * 前端「策略库」面板支持新增/应用/更新/删除已保存策略，选股加入组合的动作改为跟随当前查看的股票（右边栏），不再绑定在左边栏的桶选择上 [verified]
+* Portfolio Manager v0.2：组合导出（JSON/CSV，前端直接从已加载状态生成下载）、导入（复用既有增删股票和保存权重 API）、两两对比（复用既有 `POST /risk/portfolio`，前端展示持仓/风险指标/行业暴露差异）[verified]
 
 ### 额外扩展（超出原路线图）
 
@@ -138,17 +139,16 @@
 仍需补齐：
 
 ```text
-多 Agent 自动研究 + PDF/Dashboard 报告 + 商业数据源覆盖 + Portfolio 导入导出
+多 Agent 自动研究 + PDF/Dashboard 报告 + 商业数据源覆盖
 ```
 
 下一阶段优先级：
 
 ```text
-1. Portfolio Manager v0.2
-2. Strategy Library v0.2
-3. Stock Research 独立页
-4. News Agent / Risk Agent v0.1
-5. PDF/Dashboard 报告
+1. Strategy Library v0.2
+2. Stock Research 独立页
+3. News Agent / Risk Agent v0.1
+4. PDF/Dashboard 报告
 ```
 
 已完成并从下一阶段移除：
@@ -162,6 +162,7 @@ Report Archive v0.1
 每日研究首页
 数据源健康检查
 数据质量标记
+Portfolio Manager v0.2
 前端接入 Portfolio Research Workflow
 Portfolio 权重管理
 Risk Engine v0.1

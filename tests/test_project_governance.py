@@ -480,6 +480,30 @@ class ProjectGovernanceTest(unittest.TestCase):
         missing_standard = [term for term in required_standard_terms if term not in standard]
         self.assertEqual([], missing_standard)
 
+    def test_project_interface_includes_portfolio_manager_v2(self) -> None:
+        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        standard = (ROOT / "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md").read_text(encoding="utf-8")
+
+        required_html_terms = [
+            "portfolio-compare-button",
+            "exportPortfolio",
+            "openPortfolioImport",
+            "importPortfolioFromData",
+            "parsePortfolioImportText",
+            "runPortfolioCompare",
+            "fetchPortfolioRiskFor",
+            "renderPortfolioCompareResult",
+            "portfolio-import-input",
+        ]
+        missing_html = [term for term in required_html_terms if term not in html]
+        self.assertEqual([], missing_html)
+
+        required_standard_terms = [
+            "Portfolio Manager v0.2",
+        ]
+        missing_standard = [term for term in required_standard_terms if term not in standard]
+        self.assertEqual([], missing_standard)
+
     def test_project_interface_includes_us_concept_preview(self) -> None:
         html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
 
