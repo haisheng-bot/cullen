@@ -438,11 +438,11 @@ Application Layer
 
 当前优先收口：
 
-* 每日研究首页
 * 数据源健康检查
 * 数据质量标记
 * Portfolio Manager v0.2
 * Strategy Library v0.2
+* Stock Research 独立页
 
 ### Phase 3
 

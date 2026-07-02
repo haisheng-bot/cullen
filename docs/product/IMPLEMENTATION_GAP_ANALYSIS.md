@@ -109,7 +109,8 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 * 「策略库 Strategy Library」面板已接入，策略与组合解耦
 * Research Run 复盘面板已接入，支持按组合、策略库存档名、状态和日期查询历史 workflow run，并打开 `trace_id` 详情复盘
 * Report Archive v0.1 已接入，支持从 Portfolio Research `trace_id` 生成 Markdown/HTML 报告、查看报告列表和报告详情
-* 仍缺：PDF/Dashboard 报告、更丰富模板和每日研究首页
+* 每日研究首页已接入，首屏聚合 Most Active、Top 20 推荐、最近 5 次 Research Run 和当前组合风险
+* 仍缺：PDF/Dashboard 报告、更丰富模板和数据质量提示
 
 目标状态：
 
@@ -124,7 +125,7 @@ AI Portfolio Operating System 完成度：约 25% - 35%
   -> 报告归档
 ```
 
-差距级别：低到中（核心运行复盘和报告归档初版已打通，缺每日首页、PDF/Dashboard 报告和更丰富模板）。
+差距级别：低到中（核心运行复盘、报告归档和每日首页初版已打通，缺 PDF/Dashboard 报告、更丰富模板和数据质量提示）。
 
 ### 3.5 数据源稳定性仍需加强
 
@@ -252,12 +253,12 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 * 支持按日期复盘（Research Run 复盘页已完成；报告归档列表已完成）
 * 支持 Markdown / HTML 输出（v0.1 已完成）
 
-### P5：每日研究首页
+### P5：每日研究首页 [已完成]
 
 目标：
 
-* 打开项目后直接看到今日候选池、组合状态、最近研究和待复盘事项
-* 聚合 Most Active Top 100、Top 20 推荐、最近 5 次 research run、主要组合风险摘要
+* 打开项目后直接看到今日候选池、组合状态、最近研究和待复盘事项（已完成）
+* 聚合 Most Active Top 100、Top 20 推荐、最近 5 次 research run、主要组合风险摘要（已完成）
 
 ### P6：数据源健康检查
 
@@ -292,5 +293,5 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 但距离完整生产力系统仍缺：
 
 ```text
-每日研究首页 + 稳定数据体系 + 风险引擎尾部指标（VaR/CVaR） + 优化器高级求解器（HRP/Black-Litterman） + 多 Agent 自动研究 + PDF/Dashboard 报告
+稳定数据体系 + 数据质量提示 + 风险引擎尾部指标（VaR/CVaR） + 优化器高级求解器（HRP/Black-Litterman） + 多 Agent 自动研究 + PDF/Dashboard 报告
 ```

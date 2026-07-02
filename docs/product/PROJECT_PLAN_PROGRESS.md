@@ -23,8 +23,8 @@
 
 | 项目维度 | 目标 | 当前判断 | 差异 |
 |---|---|---|---|
-| MVP 架构骨架 | 支撑股票研究、组合、回测、AI 报告和 Workflow | 约 88% | 仍缺每日研究首页和正式 PDF/Dashboard 报告输出 |
-| 个人股票研究生产力工具 | 支撑 Cullen 每日选股、研究、回测、报告和复盘 | 约 75%-80% | 日常闭环还缺每日研究首页和数据可信度提示 |
+| MVP 架构骨架 | 支撑股票研究、组合、回测、AI 报告和 Workflow | 约 88% | 仍缺数据源健康、数据质量提示和正式 PDF/Dashboard 报告输出 |
+| 个人股票研究生产力工具 | 支撑 Cullen 每日选股、研究、回测、报告和复盘 | 约 80%-85% | 日常闭环还缺数据可信度提示和更自动化的每日复盘 |
 | AI Portfolio Operating System | Workflow 驱动组合研究、风险、优化、报告和再平衡 | 约 35%-40% | Risk/Optimizer、Research Run 复盘和 Report Archive 初版已成型；仍缺多 Agent、Rebalance Engine 和高级风险/优化能力 |
 
 ## 4. 计划与进度总表
@@ -41,11 +41,11 @@
 | M7 | Stock Research | 单股实时价格、K 线、财务、新闻、评分、报告 | 报价、趋势、历史、SEC、新闻、推荐、报告接口已存在 | usable | 独立深度分析页未完成 | 做独立 Stock Research 页面 | 前端新增研究视图时 |
 | M8 | Portfolio | 多组合创建、删除、编辑、导入、导出、权重管理、对比 | 基础组合保存、增删股票、目标权重、现金比例已完成；选股加入组合改为跟随当前查看的股票（右边栏），不再绑定左边栏桶选择；`PortfolioConfig.strategy_config` 旧字段已删除，组合现在只管股票和权重，策略参数全部收敛到策略库 | usable | 缺导入导出、多组合对比 | 做导入导出和多组合对比 | 修改组合数据结构时 |
 | M9 | Strategy / Backtesting | 策略配置、约束、回测、收益风险指标 | `/backtests/run`、technical / ai_score 回测、交易明细和净值曲线已可用；策略库 Strategy Library v0.1 已完成（`packages/db/strategies.py`、`GET/PUT/DELETE /strategies`），策略与 Portfolio 完全解耦为独立可复用实体（旧的 `PortfolioConfig.strategy_config` 重叠字段已删除），前端支持新增/应用/更新/删除 | verified | 历史新闻情绪未接；策略库暂无导入导出/分享 | 接入历史新闻归档输入，评估策略市场（导入导出/分享）需求 | 新增策略或回测指标时 |
-| M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成；Portfolio Research Module v0.1 已作为前端统一入口接入 `/portfolio-research/run`；workflow run 支持按 trace_id 查询；`GET /research-runs` 历史列表 API 已接入前端 Research Run 复盘面板；Report Archive 可从 trace_id 生成报告 | verified | 后续缺每日研究首页和更细的报告节点编排 | 做每日研究首页 | 新增 workflow 或节点时 |
+| M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成；Portfolio Research Module v0.1 已作为前端统一入口接入 `/portfolio-research/run`；workflow run 支持按 trace_id 查询；`GET /research-runs` 历史列表 API 已接入前端 Research Run 复盘面板；Report Archive 可从 trace_id 生成报告 | verified | 后续缺数据源健康、数据质量提示和更细的报告节点编排 | 做数据源健康检查 | 新增 workflow 或节点时 |
 | M11 | Risk Engine | VaR、CVaR、Beta、波动率、回撤、行业暴露、持仓集中度 | 独立 `packages/risk_engine` v0.1 已形成，支持 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure，接入 `POST /risk/portfolio` 和前端摘要 | verified | VaR/CVaR/Stress Test/Monte Carlo 未接 | 后续扩展 VaR、CVaR 和 Stress Test | 新增风险指标时 |
 | M12 | Portfolio Optimizer | Mean Variance、Risk Parity、HRP、Minimum Variance、Black-Litterman | 独立 `packages/portfolio_optimizer` v0.1 已完成，支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版，接入 `POST /optimizer/portfolio` 和前端摘要 | verified | HRP、Black-Litterman 和完整协方差求解器未接 | 后续做高级优化器求解器 | 新增优化器时 |
-| M13 | AI Report / Archive | PDF、Markdown、HTML、Dashboard、报告归档、每日复盘 | Report Archive v0.1 已完成：新增 `report_archives` 表、`POST /reports/from-trace/{trace_id}`、`GET /reports`、`GET /reports/{trace_id}`，可从 Portfolio Research trace 生成 Markdown/HTML 报告并归档 | usable | 缺 PDF、Dashboard 和更丰富报告模板 | 做每日研究首页，并后续扩展 PDF/Dashboard | 新增报告模板时 |
-| M14 | 前端工作台 | 操作界面可完成查询、筛选、组合、回测、报告 | 当前工作台可用，Portfolio Research Workbench 已调用统一 `/portfolio-research/run`，并展示回测、Risk、Optimizer、AI Summary、Recommendation；Research Run 复盘面板和 Report Archive 面板已接入；左边栏改造为「策略库 Strategy Library」面板，股票选择移至右边栏 | usable | 缺每日研究首页 | 做每日研究首页 | 修改页面 workflow 时 |
+| M13 | AI Report / Archive | PDF、Markdown、HTML、Dashboard、报告归档、每日复盘 | Report Archive v0.1 已完成：新增 `report_archives` 表、`POST /reports/from-trace/{trace_id}`、`GET /reports`、`GET /reports/{trace_id}`，可从 Portfolio Research trace 生成 Markdown/HTML 报告并归档 | usable | 缺 PDF、Dashboard 和更丰富报告模板 | 后续扩展 PDF/Dashboard 报告 | 新增报告模板时 |
+| M14 | 前端工作台 | 操作界面可完成查询、筛选、组合、回测、报告 | 当前工作台可用，首页已聚合 Most Active、Top 20 推荐、最近 5 次 Research Run 和当前组合风险；Portfolio Research Workbench 已调用统一 `/portfolio-research/run`，并展示回测、Risk、Optimizer、AI Summary、Recommendation；Research Run 复盘面板和 Report Archive 面板已接入；左边栏改造为「策略库 Strategy Library」面板，股票选择移至右边栏 | usable | 缺数据源健康和数据质量提示 | 做数据源健康检查 | 修改页面 workflow 时 |
 | M15 | Tiger OpenAPI | 官方只读行情数据接入，不抓 App，不自动交易 | status、quote、history 接口骨架和标准已完成 | usable | 真实 SDK adapter 未完整接通 | 完成官方 SDK adapter 和凭证联调 | 修改 Tiger 接入时 |
 | M16 | Broker Layer | 未来可接券商 API，人工确认后交易 | `packages/brokers` 仍为空 | planned | 第一阶段不做交易 | 暂只保留接口边界，不开发自动交易 | 开始券商接口设计时 |
 | M17 | 数据可追溯 / 审计 | AI 输出写 audit_logs，结论有数据来源和时间 | Agent 基类和 ModelResponse 审计路径已建立，Portfolio Research Workflow run 已按 trace_id 持久化 | partial | 普通算法输出审计和 report archive 还需增强 | 做 report archive 和普通算法输出审计增强 | 新增 AI/Workflow 输出时 |
@@ -62,7 +62,7 @@
 | P2 | ~~Research Run History API~~ | ~~用户可以按时间、组合、策略查询历史研究运行~~ | 已完成：`GET /research-runs` 存在，返回 trace_id、组合、策略库存档名、状态、摘要和时间，支持按 workflow_name/state/portfolio_name/strategy_library_name/日期过滤 |
 | P3 | ~~Research Run 复盘页~~ | ~~把已有 `GET /research-runs` 和 trace_id 查询做成可用页面~~ | 已完成：前端 Research Run 复盘面板可看历史列表、按组合/策略/状态/日期筛选、打开 trace_id 详情，展示 Workflow 节点、回测、Risk、Optimizer、AI Summary、Recommendation |
 | P4 | ~~Report Archive v0.1~~ | ~~每次 Portfolio Research 可生成并保存 Markdown/HTML 报告~~ | 已完成：新增 `report_archives` 表和 `/reports` API；支持从 trace_id 生成报告；前端可生成、刷新、查看报告列表和 HTML 详情 |
-| P5 | 每日研究首页 | 打开项目后直接看到今日候选池、组合状态、最近研究和待复盘事项 | 首页聚合 Most Active Top 100、Top 20 推荐、最近 5 次 research run、主要组合风险摘要 |
+| P5 | ~~每日研究首页~~ | ~~打开项目后直接看到今日候选池、组合状态、最近研究和待复盘事项~~ | 已完成：主区域顶部新增每日研究首页，聚合 Most Active Top 100、Top 20 推荐、最近 5 次 Research Run 和当前组合风险摘要 |
 | P6 | 数据源健康检查 | Yahoo/SEC/FRED/Tiger 数据状态可观测 | 新增数据源健康 API/页面，展示配置、可用性、最近错误和 fallback 状态 |
 | P7 | 数据质量标记 | 让每个分析结果能看出数据是否完整可靠 | 行情/财报/新闻/宏观数据返回 source、as_of、freshness、missing_fields 和 fallback 标记 |
 | P8 | Portfolio Manager v0.2 | 组合支持导入导出和组合对比 | 可比较两个组合的持仓、权重、收益、风险和行业暴露；支持 JSON/CSV 导入导出 |
@@ -88,6 +88,7 @@
 10. Research Run History API
 11. Research Run 复盘页
 12. Report Archive v0.1
+13. 每日研究首页
 ```
 
 ## 6. 同步规则
@@ -102,6 +103,12 @@
 6. 运行测试并记录结果。
 
 ## 7. 最近一次同步
+
+```text
+日期：2026-07-02
+测试：P5 局部测试通过（`.venv311/bin/python -m unittest tests.test_project_governance.ProjectGovernanceTest.test_project_interface_includes_portfolio_strategy_workflow`）；Node 提取 `<script>` 语法检查通过。
+状态：完成 P5 每日研究首页——前端主区域顶部新增 Daily Research Home，复用现有 `/stocks/universe/most-active`、`/stocks/screening`、`/research-runs` 和 `/risk/portfolio`，展示候选池数量、Top 20 推荐、最近 5 次研究运行和当前组合风险摘要。下一步进入 P6 数据源健康检查。
+```
 
 ```text
 日期：2026-07-02

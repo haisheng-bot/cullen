@@ -5,6 +5,7 @@
 ### Added
 
 * Report Archive v0.1（P4）：新增 `report_archives` 表、`packages/portfolio_research/reports.py` 和 `/reports` API，可从 Portfolio Research `trace_id` 生成 Markdown/HTML 报告，支持报告列表和详情；前端 Portfolio Research Workbench 新增 Report Archive 面板，可生成当前 trace 报告、刷新归档并查看 HTML 详情
+* 每日研究首页（P5）：前端主区域顶部新增 Daily Research Home，复用 `/stocks/universe/most-active`、`/stocks/screening`、`/research-runs` 和 `/risk/portfolio`，展示 Most Active Top 100、Top 20 推荐、最近 5 次 Research Run 和当前组合风险摘要
 * 重新排序当前开发计划：下一阶段从 Research Run 复盘页、Report Archive、每日研究首页开始，随后补数据源健康检查和数据质量标记，再做 Portfolio/Strategy/Stock Research 增强，最后推进 Risk/Optimizer v0.2、Model Center、Agent Center、Rebalance 和 Marketplace 远期设计
 * Research Run 复盘页（P3）：前端 Portfolio Research Workbench 新增历史复盘面板，消费既有 `GET /research-runs` 和 `GET /portfolio-research/{trace_id}`，支持按组合、策略库存档名、状态和日期筛选历史研究运行，点击记录后复用现有结果区展示 Workflow 节点、回测、Risk、Optimizer、AI Summary 和 Recommendation
 * Algorithm Layer 推荐结果新增 `recommendation_horizon=1y`，明确当前 AI 算法制作只做 1 年推荐；3 年/5 年/10 年预测、复杂优化器和自动交易算法不进入当前范围

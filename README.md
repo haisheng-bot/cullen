@@ -37,6 +37,7 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * Scoring Profiles 模型权重模块：把 Algorithm Layer 评分权重从硬编码抽成独立模块（`packages/scoring_profiles`），内置 Balanced/Growth/Value/Defensive/Momentum 5 个只读权重组，接入推荐、选股、回测、Portfolio Research 四个入口的 `scoring_profile` 参数
 * Research Run History API：`GET /research-runs`（`packages/research_history`），复用既有 `workflow_runs` 表按时间/组合/策略库存档名查询历史研究运行列表；前端「应用策略」会带上 `strategy_library_name` 一并提交
 * Report Archive v0.1：`report_archives` 表和 `/reports` API，可从 Portfolio Research `trace_id` 生成 Markdown/HTML 报告，前端 Report Archive 面板支持生成、刷新、查看报告详情
+* 每日研究首页：前端首屏聚合 Most Active Top 100、Top 20 推荐、最近 5 次 Research Run 和当前组合风险摘要
 
 ## 当前差距
 
@@ -49,20 +50,20 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 ```text
 已完成：架构骨架 + 核心 API + 初版页面 + 初版算法 + 初版回测 + 初版 workflow + 初版报告归档
 
-未完成：稳定数据体系 + 多 Agent 自动研究 + PDF/Dashboard 报告 + 每日研究首页
+未完成：稳定数据体系 + 多 Agent 自动研究 + PDF/Dashboard 报告 + 数据质量提示
 ```
 
 下一阶段优先收口：
 
 ```text
-1. 每日研究首页
-2. 数据源健康检查
-3. 数据质量标记
-4. Portfolio Manager v0.2
-5. Strategy Library v0.2
+1. 数据源健康检查
+2. 数据质量标记
+3. Portfolio Manager v0.2
+4. Strategy Library v0.2
+5. Stock Research 独立页
 ```
 
-已完成：PRD v0.3 / Roadmap 对齐、Scoring Profiles / 模型权重模块 v0.1、Research Run History API、Research Run 复盘页、Report Archive v0.1。
+已完成：PRD v0.3 / Roadmap 对齐、Scoring Profiles / 模型权重模块 v0.1、Research Run History API、Research Run 复盘页、Report Archive v0.1、每日研究首页。
 
 ## 文档入口
 

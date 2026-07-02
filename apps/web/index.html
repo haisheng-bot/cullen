@@ -113,6 +113,105 @@
         overflow: auto;
       }
 
+      .daily-home {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 12px;
+        margin-bottom: 12px;
+        box-shadow: var(--shadow);
+      }
+
+      .daily-home-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .daily-home-title {
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .daily-home-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .daily-card {
+        min-width: 0;
+        border: 1px solid #dfe5f2;
+        border-radius: 8px;
+        background: #fbfdfc;
+        padding: 9px;
+      }
+
+      .daily-card-title {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .daily-card-value {
+        margin-top: 5px;
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .daily-card-note {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.4;
+      }
+
+      .daily-lists {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .daily-list {
+        display: grid;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .daily-row {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid #e4ebe7;
+        border-radius: 6px;
+        background: white;
+        padding: 7px;
+        min-height: 38px;
+      }
+
+      .daily-rank {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .daily-symbol {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .daily-meta {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
       .rightbar {
         grid-column: 2;
         grid-row: 3;
@@ -1437,14 +1536,14 @@
         .topbar, aside, main, .rightbar { grid-column: 1; }
         .strategy-config-panel { position: static; }
         canvas { height: 330px; }
-        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .result-grid, .weight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .result-grid, .weight-grid, .daily-home-grid, .daily-lists { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .result-priority-grid { grid-template-columns: 1fr; }
         .strategy-workbench-grid { grid-template-columns: 1fr; }
         .constraint-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
       @media (max-width: 560px) {
-        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .constraint-grid, .result-grid, .weight-grid, .research-history-filters { grid-template-columns: 1fr; }
+        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .constraint-grid, .result-grid, .weight-grid, .research-history-filters, .daily-home-grid, .daily-lists { grid-template-columns: 1fr; }
         .workflow-actions { display: grid; }
         .run-backtest-button { width: 100%; }
       }
@@ -1485,6 +1584,52 @@
       </aside>
 
       <main>
+        <section class="daily-home">
+          <div class="daily-home-head">
+            <div>
+              <div class="daily-home-title">每日研究首页</div>
+              <div class="muted" id="daily-home-status">汇总今日候选池、推荐、最近研究和当前组合风险。</div>
+            </div>
+            <span class="status-pill">P5</span>
+          </div>
+          <div class="daily-home-grid">
+            <div class="daily-card">
+              <div class="daily-card-title">Most Active Universe</div>
+              <div class="daily-card-value" id="daily-universe-count">--</div>
+              <div class="daily-card-note" id="daily-universe-note">等待加载候选池。</div>
+            </div>
+            <div class="daily-card">
+              <div class="daily-card-title">Top Recommendations</div>
+              <div class="daily-card-value" id="daily-recommendation-count">--</div>
+              <div class="daily-card-note" id="daily-recommendation-note">等待评分筛选。</div>
+            </div>
+            <div class="daily-card">
+              <div class="daily-card-title">Recent Research Runs</div>
+              <div class="daily-card-value" id="daily-run-count">--</div>
+              <div class="daily-card-note" id="daily-run-note">等待复盘历史。</div>
+            </div>
+            <div class="daily-card">
+              <div class="daily-card-title">Active Portfolio Risk</div>
+              <div class="daily-card-value" id="daily-risk-value">--</div>
+              <div class="daily-card-note" id="daily-risk-note">请选择至少 2 只股票的组合。</div>
+            </div>
+          </div>
+          <div class="daily-lists">
+            <div class="daily-card">
+              <div class="daily-card-title">Top 20 推荐</div>
+              <div class="daily-list" id="daily-recommendation-list"></div>
+            </div>
+            <div class="daily-card">
+              <div class="daily-card-title">最近 5 次研究</div>
+              <div class="daily-list" id="daily-run-list"></div>
+            </div>
+            <div class="daily-card">
+              <div class="daily-card-title">当前组合摘要</div>
+              <div class="daily-list" id="daily-portfolio-list"></div>
+            </div>
+          </div>
+        </section>
+
         <section class="quote-row">
           <div>
             <div class="quote-symbol" id="quote-symbol">AAPL</div>
@@ -2007,6 +2152,18 @@
       const canvas = document.getElementById("chart");
       const ctx = canvas.getContext("2d");
       const conceptGrid = document.getElementById("concept-grid");
+      const dailyHomeStatus = document.getElementById("daily-home-status");
+      const dailyUniverseCount = document.getElementById("daily-universe-count");
+      const dailyUniverseNote = document.getElementById("daily-universe-note");
+      const dailyRecommendationCount = document.getElementById("daily-recommendation-count");
+      const dailyRecommendationNote = document.getElementById("daily-recommendation-note");
+      const dailyRunCount = document.getElementById("daily-run-count");
+      const dailyRunNote = document.getElementById("daily-run-note");
+      const dailyRiskValue = document.getElementById("daily-risk-value");
+      const dailyRiskNote = document.getElementById("daily-risk-note");
+      const dailyRecommendationList = document.getElementById("daily-recommendation-list");
+      const dailyRunList = document.getElementById("daily-run-list");
+      const dailyPortfolioList = document.getElementById("daily-portfolio-list");
 
       const CONCEPT_DEFINITIONS = [
         { id: "ai", name: "AI / Cloud", tag: "AI", symbols: ["NVDA", "MSFT", "GOOGL", "AMZN", "META", "PLTR", "ORCL", "SNOW", "CRM", "AI", "SOUN"], keywords: ["artificial", "cloud", "software", "data", "analytics"] },
@@ -2132,6 +2289,7 @@
         }
         renderStockList();
         renderConceptPreview();
+        await loadDailyResearchHome();
       }
 
       function renderStockList() {
@@ -2147,6 +2305,102 @@
         });
       }
 
+      const settledValue = (result) => result.status === "fulfilled" ? result.value : null;
+
+      function renderDailyUniverse(universe) {
+        const items = universe?.items || [];
+        dailyUniverseCount.textContent = String(items.length || state.stocks.length || "--");
+        dailyUniverseNote.textContent = universe
+          ? `${universe.universe_name || "Most Active"} · ${universe.source || "source unknown"}`
+          : "候选池暂不可用。";
+      }
+
+      function renderDailyRecommendations(screening) {
+        const candidates = (screening?.candidates || []).filter((_, index) => index < 20);
+        dailyRecommendationCount.textContent = String(candidates.length || "--");
+        dailyRecommendationNote.textContent = screening
+          ? `${screening.scoring_profile || "balanced"} · ${screening.source || "algorithm"}`
+          : "评分筛选暂不可用。";
+        dailyRecommendationList.innerHTML = candidates.length
+          ? candidates.slice(0, 6).map((item) => `
+              <div class="daily-row">
+                <span class="daily-rank">#${escapeHtml(item.rank)}</span>
+                <span class="daily-symbol">${escapeHtml(item.symbol)} · ${escapeHtml(item.recommendation)}</span>
+                <span class="daily-meta">${escapeHtml(item.total_score)}/100</span>
+              </div>
+            `).join("")
+          : `<div class="workflow-note">暂无推荐候选。</div>`;
+      }
+
+      function renderDailyRuns(payload) {
+        const items = (payload?.items || []).slice(0, 5);
+        dailyRunCount.textContent = String(items.length || "--");
+        dailyRunNote.textContent = payload ? "最近 Portfolio Research 复盘记录。" : "历史研究暂不可用。";
+        dailyRunList.innerHTML = items.length
+          ? items.map((item) => `
+              <div class="daily-row">
+                <span class="daily-rank">${escapeHtml(item.state || "--")}</span>
+                <span class="daily-symbol">${escapeHtml(item.portfolio_name || "未命名组合")}</span>
+                <span class="daily-meta">${escapeHtml(formatRunTime(item.started_at))}</span>
+              </div>
+            `).join("")
+          : `<div class="workflow-note">暂无最近研究运行。</div>`;
+      }
+
+      function renderDailyPortfolioRisk(risk) {
+        const symbols = activePortfolioSymbols();
+        if (!symbols.length) {
+          dailyRiskValue.textContent = "--";
+          dailyRiskNote.textContent = "当前组合没有股票。";
+          dailyPortfolioList.innerHTML = `<div class="workflow-note">请先向组合加入股票。</div>`;
+          return;
+        }
+        dailyPortfolioList.innerHTML = `
+          <div class="daily-row">
+            <span class="daily-rank">${escapeHtml(activePortfolioName())}</span>
+            <span class="daily-symbol">${escapeHtml(symbols.join(", "))}</span>
+            <span class="daily-meta">${symbols.length} stocks</span>
+          </div>
+        `;
+        if (!risk) {
+          dailyRiskValue.textContent = symbols.length >= 2 ? "--" : "1 stock";
+          dailyRiskNote.textContent = symbols.length >= 2 ? "组合风险暂不可用。" : "至少 2 只股票后计算组合风险。";
+          return;
+        }
+        dailyRiskValue.textContent = formatPercent(risk.volatility_percent);
+        dailyRiskNote.textContent =
+          `Beta ${formatRatio(risk.beta)} · Max DD ${formatPercent(risk.max_drawdown_percent)} · Concentration ${formatPercent(risk.concentration_percent)}`;
+      }
+
+      async function loadDailyResearchHome() {
+        dailyHomeStatus.textContent = "正在刷新每日研究首页...";
+        const symbols = activePortfolioSymbols();
+        const sectorMap = Object.fromEntries(
+          state.stocks
+            .filter((stock) => symbols.includes(stock.symbol))
+            .map((stock) => [stock.symbol, stock.sector || "Unknown"])
+        );
+        const riskRequest = symbols.length >= 2
+          ? postJson("/risk/portfolio", {
+              symbols,
+              weights: currentPortfolioConfigPayload().target_weights,
+              benchmark_symbol: benchmarkSymbolInput.value.trim().toUpperCase() || "SPY",
+              sector_map: sectorMap,
+            })
+          : Promise.resolve(null);
+        const [universeResult, screeningResult, runsResult, riskResult] = await Promise.allSettled([
+          request("/stocks/universe/most-active?limit=100"),
+          request("/stocks/screening?limit=20"),
+          request("/research-runs?limit=5&offset=0"),
+          riskRequest,
+        ]);
+        renderDailyUniverse(settledValue(universeResult));
+        renderDailyRecommendations(settledValue(screeningResult));
+        renderDailyRuns(settledValue(runsResult));
+        renderDailyPortfolioRisk(settledValue(riskResult));
+        dailyHomeStatus.textContent = "每日研究首页已刷新。本系统仅用于投资研究辅助，不构成任何投资建议。";
+      }
+
       async function loadPortfolios() {
         const data = await request("/portfolios");
         state.portfolios = {};
@@ -2158,6 +2412,7 @@
         renderPortfolioList();
         renderBacktestSelectionSummary();
         await loadResearchRuns();
+        await loadDailyResearchHome();
       }
 
       async function addCurrentSymbolToPortfolio() {
@@ -3210,6 +3465,7 @@
           state.selectedResearchTraceId = result.trace_id;
           renderPortfolioResearchResult(result);
           await loadResearchRuns();
+          await loadDailyResearchHome();
         } catch (error) {
           backtestResults.innerHTML = `<div class="workflow-note">${escapeHtml(friendlyBacktestError(error))}</div>`;
           renderWorkflowNodeSteps([]);
@@ -3816,6 +4072,7 @@
         renderBacktestSelectionSummary();
         loadResearchRuns();
         loadReports();
+        loadDailyResearchHome();
       });
       workflowStrategy.addEventListener("change", () => {
         state.uxStrategyTouched = true;
