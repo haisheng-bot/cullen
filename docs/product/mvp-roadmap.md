@@ -138,17 +138,17 @@
 仍需补齐：
 
 ```text
-稳定数据体系 + 多 Agent 自动研究 + PDF/Dashboard 报告 + 数据质量提示
+数据质量提示 + 多 Agent 自动研究 + PDF/Dashboard 报告 + 商业数据源覆盖
 ```
 
 下一阶段优先级：
 
 ```text
-1. 数据源健康检查
-2. 数据质量标记
-3. Portfolio Manager v0.2
-4. Strategy Library v0.2
-5. Stock Research 独立页
+1. 数据质量标记
+2. Portfolio Manager v0.2
+3. Strategy Library v0.2
+4. Stock Research 独立页
+5. News Agent / Risk Agent v0.1
 ```
 
 已完成并从下一阶段移除：
@@ -160,6 +160,7 @@ Research Run History API
 Research Run 复盘页
 Report Archive v0.1
 每日研究首页
+数据源健康检查
 前端接入 Portfolio Research Workflow
 Portfolio 权重管理
 Risk Engine v0.1

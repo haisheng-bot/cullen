@@ -278,11 +278,11 @@ AI Report 必须支持：
 下一阶段优先收口：
 
 ```text
-1. 数据源健康检查
-2. 数据质量标记
-3. Portfolio Manager v0.2
-4. Strategy Library v0.2
-5. Stock Research 独立页
+1. 数据质量标记
+2. Portfolio Manager v0.2
+3. Strategy Library v0.2
+4. Stock Research 独立页
+5. News Agent / Risk Agent v0.1
 ```
 
 已完成并从下一阶段移除：
@@ -294,6 +294,7 @@ Research Run History API
 trace_id 完整复盘页
 Report Archive v0.1
 每日研究首页
+数据源健康检查
 ```
 
 ## 9. 成功标准

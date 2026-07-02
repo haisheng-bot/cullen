@@ -35,6 +35,7 @@ from packages.data_sources.market_trend import (
     normalize_symbol,
 )
 from packages.data_sources.fred import FREDClient, FREDError
+from packages.data_sources.health import build_data_source_health
 from packages.data_sources.price_history import PriceHistoryError, YahooFinanceHistoryClient
 from packages.data_sources.sec_filings import SECFilingClient, SECFilingError
 from packages.data_sources.sec_financials import SECFinancialsClient, SECFinancialsError
@@ -260,6 +261,11 @@ def health_db() -> dict[str, str]:
 @app.get("/integrations/tiger/status")
 def get_tiger_openapi_status() -> dict:
     return tiger_openapi_client.status().to_dict()
+
+
+@app.get("/data-sources/health")
+def get_data_sources_health() -> dict:
+    return build_data_source_health(tiger_status=tiger_openapi_client.status().to_dict())
 
 
 @app.get("/stocks/popular")

@@ -412,6 +412,10 @@ class ProjectGovernanceTest(unittest.TestCase):
             "loadDailyResearchHome",
             "request(\"/stocks/screening?limit=20\")",
             "request(\"/research-runs?limit=5&offset=0\")",
+            "Data Source Health",
+            "data-source-health-list",
+            "loadDataSourceHealth",
+            "request(\"/data-sources/health\")",
         ]
         missing_html = [term for term in required_html_terms if term not in html]
         self.assertEqual([], missing_html)

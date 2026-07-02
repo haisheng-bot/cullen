@@ -212,6 +212,57 @@
         font-size: 11px;
       }
 
+      .data-health-list {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .data-health-item {
+        border: 1px solid #dfe5f2;
+        border-radius: 8px;
+        background: #fbfdfc;
+        padding: 9px;
+      }
+
+      .data-health-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .data-health-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .data-health-status {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      .data-health-status.available {
+        border-color: #9ad6bd;
+        color: var(--green);
+        background: #e9f7ef;
+      }
+
+      .data-health-status.not_configured,
+      .data-health-status.degraded {
+        border-color: #edd6a6;
+        color: var(--amber);
+        background: #fffaf0;
+      }
+
       .rightbar {
         grid-column: 2;
         grid-row: 3;
@@ -1536,14 +1587,14 @@
         .topbar, aside, main, .rightbar { grid-column: 1; }
         .strategy-config-panel { position: static; }
         canvas { height: 330px; }
-        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .result-grid, .weight-grid, .daily-home-grid, .daily-lists { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .result-grid, .weight-grid, .daily-home-grid, .daily-lists, .data-health-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .result-priority-grid { grid-template-columns: 1fr; }
         .strategy-workbench-grid { grid-template-columns: 1fr; }
         .constraint-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
 
       @media (max-width: 560px) {
-        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .constraint-grid, .result-grid, .weight-grid, .research-history-filters, .daily-home-grid, .daily-lists { grid-template-columns: 1fr; }
+        .metrics, .layer-grid, .guide-grid, .concept-grid, .chart-inspector, .workflow-steps, .constraint-grid, .result-grid, .weight-grid, .research-history-filters, .daily-home-grid, .daily-lists, .data-health-list { grid-template-columns: 1fr; }
         .workflow-actions { display: grid; }
         .run-backtest-button { width: 100%; }
       }
@@ -1628,6 +1679,17 @@
               <div class="daily-list" id="daily-portfolio-list"></div>
             </div>
           </div>
+        </section>
+
+        <section class="daily-home">
+          <div class="daily-home-head">
+            <div>
+              <div class="daily-home-title">Data Source Health</div>
+              <div class="muted" id="data-source-health-status">展示数据源配置、可用性、最近错误和 fallback 状态。</div>
+            </div>
+            <span class="status-pill">P6</span>
+          </div>
+          <div class="data-health-list" id="data-source-health-list"></div>
         </section>
 
         <section class="quote-row">
@@ -2164,6 +2226,8 @@
       const dailyRecommendationList = document.getElementById("daily-recommendation-list");
       const dailyRunList = document.getElementById("daily-run-list");
       const dailyPortfolioList = document.getElementById("daily-portfolio-list");
+      const dataSourceHealthStatus = document.getElementById("data-source-health-status");
+      const dataSourceHealthList = document.getElementById("data-source-health-list");
 
       const CONCEPT_DEFINITIONS = [
         { id: "ai", name: "AI / Cloud", tag: "AI", symbols: ["NVDA", "MSFT", "GOOGL", "AMZN", "META", "PLTR", "ORCL", "SNOW", "CRM", "AI", "SOUN"], keywords: ["artificial", "cloud", "software", "data", "analytics"] },
@@ -2399,6 +2463,37 @@
         renderDailyRuns(settledValue(runsResult));
         renderDailyPortfolioRisk(settledValue(riskResult));
         dailyHomeStatus.textContent = "每日研究首页已刷新。本系统仅用于投资研究辅助，不构成任何投资建议。";
+      }
+
+      function renderDataSourceHealth(payload) {
+        const items = payload?.items || [];
+        dataSourceHealthStatus.textContent = payload
+          ? `${payload.overall_status} · ${payload.available_count}/${payload.total_count} available · ${formatRunTime(payload.checked_at)}`
+          : "数据源健康检查暂不可用。";
+        dataSourceHealthList.innerHTML = items.length
+          ? items.map((item) => `
+              <div class="data-health-item">
+                <div class="data-health-head">
+                  <span class="data-health-name">${escapeHtml(item.name)}</span>
+                  <span class="data-health-status ${escapeHtml(item.status)}">${escapeHtml(item.status)}</span>
+                </div>
+                <div class="daily-card-note">configured: ${escapeHtml(item.configured ? "yes" : "no")} · available: ${escapeHtml(item.available ? "yes" : "no")}</div>
+                <div class="daily-card-note">capabilities: ${escapeHtml((item.capabilities || []).join(", ") || "--")}</div>
+                <div class="daily-card-note">last_error: ${escapeHtml(item.last_error || "none")}</div>
+                <div class="daily-card-note">fallback: ${escapeHtml(item.fallback || "--")}</div>
+              </div>
+            `).join("")
+          : `<div class="workflow-note">暂无数据源健康信息。</div>`;
+      }
+
+      async function loadDataSourceHealth() {
+        dataSourceHealthStatus.textContent = "正在检查数据源健康状态...";
+        try {
+          renderDataSourceHealth(await request("/data-sources/health"));
+        } catch (error) {
+          dataSourceHealthStatus.textContent = friendlyBacktestError(error);
+          dataSourceHealthList.innerHTML = "";
+        }
       }
 
       async function loadPortfolios() {
@@ -4118,6 +4213,7 @@
       loadPortfolios();
       loadStrategies();
       loadReports();
+      loadDataSourceHealth();
       loadMostActiveUniverse(100).then(loadMarket);
       window.setInterval(loadMarket, 60000);
     </script>

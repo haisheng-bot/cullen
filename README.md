@@ -38,6 +38,7 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * Research Run History API：`GET /research-runs`（`packages/research_history`），复用既有 `workflow_runs` 表按时间/组合/策略库存档名查询历史研究运行列表；前端「应用策略」会带上 `strategy_library_name` 一并提交
 * Report Archive v0.1：`report_archives` 表和 `/reports` API，可从 Portfolio Research `trace_id` 生成 Markdown/HTML 报告，前端 Report Archive 面板支持生成、刷新、查看报告详情
 * 每日研究首页：前端首屏聚合 Most Active Top 100、Top 20 推荐、最近 5 次 Research Run 和当前组合风险摘要
+* 数据源健康检查：`GET /data-sources/health` 和前端 Data Source Health 面板展示 Yahoo/SEC/FRED/Tiger 的配置、可用性、最近错误和 fallback 状态
 
 ## 当前差距
 
@@ -50,20 +51,20 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 ```text
 已完成：架构骨架 + 核心 API + 初版页面 + 初版算法 + 初版回测 + 初版 workflow + 初版报告归档
 
-未完成：稳定数据体系 + 多 Agent 自动研究 + PDF/Dashboard 报告 + 数据质量提示
+未完成：数据质量提示 + 多 Agent 自动研究 + PDF/Dashboard 报告 + 商业数据源覆盖
 ```
 
 下一阶段优先收口：
 
 ```text
-1. 数据源健康检查
-2. 数据质量标记
-3. Portfolio Manager v0.2
-4. Strategy Library v0.2
-5. Stock Research 独立页
+1. 数据质量标记
+2. Portfolio Manager v0.2
+3. Strategy Library v0.2
+4. Stock Research 独立页
+5. News Agent / Risk Agent v0.1
 ```
 
-已完成：PRD v0.3 / Roadmap 对齐、Scoring Profiles / 模型权重模块 v0.1、Research Run History API、Research Run 复盘页、Report Archive v0.1、每日研究首页。
+已完成：PRD v0.3 / Roadmap 对齐、Scoring Profiles / 模型权重模块 v0.1、Research Run History API、Research Run 复盘页、Report Archive v0.1、每日研究首页、数据源健康检查。
 
 ## 文档入口
 

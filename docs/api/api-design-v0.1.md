@@ -21,6 +21,7 @@ GET /stocks/{symbol}/score
 GET /stocks/{symbol}/trend
 GET /macro/{series_id}/observations
 GET /integrations/tiger/status
+GET /data-sources/health
 GET /stocks/{symbol}/tiger/quote
 GET /stocks/{symbol}/tiger/history
 GET /workflows/portfolio-research/{trace_id}
@@ -86,6 +87,50 @@ GET /integrations/tiger/status
 说明：
 
 OpenStock AI 不读取、不抓取、不逆向老虎 App。Tiger 数据只能通过官方 OpenAPI 和用户授权凭证接入。第一阶段只做只读研究数据，不提供自动下单。
+
+### 2.2.1.1 数据源健康检查
+
+```text
+GET /data-sources/health
+```
+
+用途：
+
+* 汇总 Yahoo Market Data、SEC EDGAR、FRED Macro、Tiger Brokers OpenAPI 的配置与可用状态
+* 返回每个数据源的 `configured`、`available`、`status`、`capabilities`、`last_error`、`fallback`
+* 支撑前端 Data Source Health 面板，帮助判断当前分析是否缺外部配置
+
+响应示例：
+
+```json
+{
+  "overall_status": "ok",
+  "available_count": 2,
+  "total_count": 4,
+  "items": [
+    {
+      "name": "FRED Macro",
+      "source": "FRED API",
+      "configured": false,
+      "available": false,
+      "status": "not_configured",
+      "capabilities": ["macro_series"],
+      "requires_config": true,
+      "last_error": "FRED_API_KEY is not configured.",
+      "fallback": "Macro panel remains unavailable until FRED_API_KEY is configured.",
+      "checked_at": "2026-07-02T10:20:30.000000+00:00"
+    }
+  ],
+  "risk_disclaimer": "本系统仅用于投资研究辅助，不构成任何投资建议。",
+  "checked_at": "2026-07-02T10:20:30.000000+00:00"
+}
+```
+
+说明：
+
+* 该接口不返回任何密钥或敏感配置值
+* 当前版本是轻量配置/能力健康检查，不在页面加载时发起外部网络探测
+* 未配置的 FRED/Tiger 会显示 `not_configured`，系统继续使用 Yahoo/SEC 等可用数据源
 
 ### 2.2.2 Tiger 近 3 年历史 K 线
 

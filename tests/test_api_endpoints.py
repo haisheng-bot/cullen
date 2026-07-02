@@ -539,6 +539,18 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertFalse(payload["trading_enabled"])
         self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
 
+    def test_data_sources_health_endpoint_lists_config_and_fallbacks(self) -> None:
+        payload = main.get_data_sources_health()
+
+        self.assertEqual("ok", payload["overall_status"])
+        self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
+        sources = {item["name"]: item for item in payload["items"]}
+        self.assertEqual("available", sources["Yahoo Market Data"]["status"])
+        self.assertEqual("available", sources["SEC EDGAR"]["status"])
+        self.assertEqual("not_configured", sources["FRED Macro"]["status"])
+        self.assertEqual("not_configured", sources["Tiger Brokers OpenAPI"]["status"])
+        self.assertIn("fallback", sources["Tiger Brokers OpenAPI"])
+
     def test_tiger_quote_endpoint_returns_503_when_not_configured(self) -> None:
         with self.assertRaises(main.HTTPException) as context:
             main.get_tiger_stock_quote("AAPL")
