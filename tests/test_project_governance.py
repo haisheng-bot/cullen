@@ -444,7 +444,10 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertEqual([], missing_standard)
 
     def test_project_interface_includes_strategy_library(self) -> None:
-        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        # Retargeted at commit 6 of the web-react page-split migration (see
+        # /Users/cullen/.claude/plans/vivid-wibbling-cake.md): Strategy Library carved out of
+        # apps/web/index.html onto its own route.
+        html = (ROOT / "apps/web-react/src/pages/StrategyLibrary.tsx").read_text(encoding="utf-8")
         standard = (ROOT / "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md").read_text(encoding="utf-8")
 
         required_html_terms = [
