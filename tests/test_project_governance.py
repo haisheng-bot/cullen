@@ -505,7 +505,10 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertEqual([], missing_standard)
 
     def test_project_interface_includes_us_concept_preview(self) -> None:
-        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        # Retargeted at commit 4 of the web-react page-split migration (see
+        # /Users/cullen/.claude/plans/vivid-wibbling-cake.md): the concept board moved off
+        # apps/web/index.html onto its own MarketScanner route.
+        html = (ROOT / "apps/web-react/src/pages/MarketScanner.tsx").read_text(encoding="utf-8")
 
         required_terms = [
             "美国概念板块预览",
