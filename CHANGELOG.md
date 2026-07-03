@@ -87,3 +87,4 @@
 * `PortfolioBacktestEngine.run()` 的历史价格 / 财报 / 股数三处按股票预取改为线程池并发（`MAX_CONCURRENT_REQUESTS = 8`，与 `StockScreeningWorkflow` 一致），冷缓存多股票回测不再逐个串行等待网络请求
 * `SECFilingClient.get_cik()`（`packages/data_sources/sec_filings.py`）此前每遇到一个未缓存过的股票代码都会重新下载一次完整的 SEC ticker→CIK 映射表（几千条记录的大文件），现改为整张表只下载一次解析进内存缓存（加锁防止并发请求重复下载），后续任意股票代码的解析不再产生网络请求
 * 修复 `_fetch_companyfacts_payload` / `_fetch_json`（`sec_financials.py` / `sec_filings.py`）未捕获 `http.client.IncompleteRead` 导致的请求崩溃：SEC EDGAR 在响应大文件时偶发连接中断，此前会让 `/stocks/{symbol}/recommendation`、`/backtests/run` 等接口直接抛出未处理异常返回 500，现已归类为「数据缺失」按既有的 best-effort 降级路径处理
+* 前端页面拆分迁移遗留的 3 个治理测试（`test_project_interface_tracks_architecture_layers`、`test_stock_universe_list_uses_scrollable_top_100`、`test_main_analysis_sections_follow_requested_order`）此前仍指向已下线的 `apps/web/index.html`，未实际保护新的 `apps/web-react/` 应用；已改为指向 `App.tsx`/`index.css`/`PortfolioResearch.tsx` 的结构等价断言，并补上此前遗漏、从未迁移过的「项目开发界面」架构分层面板（此前只存在于 legacy 页面，React 版没有）
