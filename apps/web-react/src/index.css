@@ -47,6 +47,26 @@ a { color: inherit; }
   font-weight: 850;
 }
 
+/* project-board (persistent dev-status footer, ported from index.html L1223-1302) */
+.project-board {
+  grid-column: 1 / -1;
+  margin: 0 16px 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--gold);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.project-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.project-title { font-size: 15px; font-weight: 900; }
+.project-board .status-pill { background: #fff4de; color: var(--gold); }
+.layer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.layer { border: 1px solid #e4e5da; border-radius: 8px; background: #fffefa; padding: 9px; min-height: 74px; }
+.layer-name { font-size: 13px; font-weight: 800; margin-bottom: 4px; }
+.layer-status { color: var(--muted); font-size: 12px; line-height: 1.4; }
+
 /* App shell: top bar + left sidebar (Search/Scanner quick list/Most Active) + routed content */
 .app-shell {
   min-height: 100vh;

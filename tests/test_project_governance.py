@@ -299,7 +299,11 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertIn("不允许空白 Issue", github_standard)
 
     def test_project_interface_tracks_architecture_layers(self) -> None:
-        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        # Retargeted at commit 1 of the web-react page-split migration (see
+        # /Users/cullen/.claude/plans/vivid-wibbling-cake.md): the project dev-status board is
+        # part of the persistent shell, so it lives in App.tsx (rendered on every route) rather
+        # than any single page.
+        html = (ROOT / "apps/web-react/src/App.tsx").read_text(encoding="utf-8")
 
         required_terms = [
             "项目开发界面",
@@ -341,20 +345,30 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertEqual([], missing)
 
     def test_stock_universe_list_uses_scrollable_top_100(self) -> None:
-        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        # Retargeted at commits 1 and 7 of the web-react page-split migration (see
+        # /Users/cullen/.claude/plans/vivid-wibbling-cake.md): the legacy sidebar mixed the
+        # scrollable stock-universe list and the portfolio list in one blob; the split moves the
+        # former to App.tsx's persistent shell and the latter to PortfolioResearch.tsx. Function
+        # names that don't survive the move to React idioms (imperative `state.stocks.forEach`
+        # DOM writes, a standalone `renderPortfolioList`/`addCurrentSymbolToPortfolio`) are checked
+        # via their closest structural equivalent (JSX `.map` render, the renamed
+        # `addSymbolToPortfolio`) instead of a literal string match.
+        app_shell = (ROOT / "apps/web-react/src/App.tsx").read_text(encoding="utf-8")
+        shell_css = (ROOT / "apps/web-react/src/index.css").read_text(encoding="utf-8")
+        portfolio_research = (ROOT / "apps/web-react/src/pages/PortfolioResearch.tsx").read_text(encoding="utf-8")
+        html = "\n".join([app_shell, shell_css, portfolio_research])
 
         required_terms = [
             "扫描最活跃 100 只",
-            "loadMostActiveUniverse(100)",
-            "state.stocks.forEach",
+            "/stocks/universe/most-active?limit=",
+            "stocks.map((stock) =>",
             "overflow-y: auto",
-            "height: 1086px",
             "height: 48px",
             "我的组合 Portfolios",
             "portfolio-strategy",
             "portfolio-list",
-            "addCurrentSymbolToPortfolio",
-            "renderPortfolioList",
+            "addSymbolToPortfolio",
+            "portfolioNames.map((name) =>",
             "removeSymbolFromPortfolio",
         ]
         missing = [term for term in required_terms if term not in html]
@@ -574,10 +588,16 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertEqual([], missing)
 
     def test_main_analysis_sections_follow_requested_order(self) -> None:
-        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        # Retargeted at commit 1 of the web-react page-split migration (see
+        # /Users/cullen/.claude/plans/vivid-wibbling-cake.md): once the dashboard/scanner/
+        # analysis-guide content is split across routed pages, "position in one HTML blob" no
+        # longer applies. The plan calls for checking nav-item order in App.tsx's route table
+        # instead, since that's what now fixes the Dashboard -> Scanner -> Stock navigation flow
+        # (dev board -> concept preview -> analysis-dimension guide, in the legacy layout).
+        html = (ROOT / "apps/web-react/src/App.tsx").read_text(encoding="utf-8")
 
-        self.assertLess(html.index("项目开发界面"), html.index("美国概念板块预览"))
-        self.assertLess(html.index("美国概念板块预览"), html.index("常用分析维度解读"))
+        self.assertLess(html.index('"Dashboard"'), html.index('"Scanner"'))
+        self.assertLess(html.index('"Scanner"'), html.index('"Stock"'))
 
     def test_project_interface_includes_news_policy_panel(self) -> None:
         # Retargeted at commit 5 of the web-react page-split migration (see

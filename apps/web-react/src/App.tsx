@@ -114,6 +114,46 @@ export default function App() {
       <main className="app-content">
         <Outlet />
       </main>
+
+      <footer className="project-board">
+        <div className="project-head">
+          <div>
+            <div className="project-title">项目开发界面</div>
+            <div className="muted">OpenStock AI · v0.1.0 · 即开发即使用</div>
+          </div>
+          <span className="status-pill">MVP 可用</span>
+        </div>
+        <div className="layer-grid">
+          <div className="layer">
+            <div className="layer-name">Application</div>
+            <div className="layer-status">美股操作界面、报价、走势、推荐展示已接入。</div>
+          </div>
+          <div className="layer">
+            <div className="layer-name">Universe Layer</div>
+            <div className="layer-status">每日扫描美股最活跃 Top 100，作为候选池。</div>
+          </div>
+          <div className="layer">
+            <div className="layer-name">Algorithm Layer</div>
+            <div className="layer-status">algorithm-v0.1，趋势型推荐算法，可单独测试。</div>
+          </div>
+          <div className="layer">
+            <div className="layer-name">Model Layer</div>
+            <div className="layer-status">LiteLLM-compatible provider 已建立，真实模型待配置。</div>
+          </div>
+          <div className="layer">
+            <div className="layer-name">Data Layer</div>
+            <div className="layer-status">Yahoo Finance chart API 已接入，美股为主。</div>
+          </div>
+          <div className="layer">
+            <div className="layer-name">Workflow / Agent</div>
+            <div className="layer-status">标准已定义，后续接入 LangGraph 与 Agent SDK。</div>
+          </div>
+          <div className="layer">
+            <div className="layer-name">Governance</div>
+            <div className="layer-status">GitHub、版本、AI 工具协作、敏捷迭代标准已建立。</div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
