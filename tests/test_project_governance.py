@@ -315,7 +315,10 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertEqual([], missing)
 
     def test_project_interface_includes_analysis_dimension_guide(self) -> None:
-        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        # Retargeted at commit 5 of the web-react page-split migration (see
+        # /Users/cullen/.claude/plans/vivid-wibbling-cake.md): the screener guide moved onto
+        # the StockDetail route.
+        html = (ROOT / "apps/web-react/src/pages/StockDetail.tsx").read_text(encoding="utf-8")
 
         required_terms = [
             "常用分析维度解读",
@@ -560,7 +563,10 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertLess(html.index("美国概念板块预览"), html.index("常用分析维度解读"))
 
     def test_project_interface_includes_news_policy_panel(self) -> None:
-        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        # Retargeted at commit 5 of the web-react page-split migration (see
+        # /Users/cullen/.claude/plans/vivid-wibbling-cake.md): news/policy panel moved onto the
+        # StockDetail route.
+        html = (ROOT / "apps/web-react/src/pages/StockDetail.tsx").read_text(encoding="utf-8")
 
         required_terms = [
             "Policy & News",
@@ -572,7 +578,12 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertEqual([], missing)
 
     def test_chart_interface_has_sliding_crosshair_metrics(self) -> None:
-        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        # Retargeted at commit 5 of the web-react page-split migration (see
+        # /Users/cullen/.claude/plans/vivid-wibbling-cake.md): the OHLC chart + crosshair
+        # inspector moved onto StockDetail.tsx / components/charts/OhlcChart.tsx.
+        stock_detail = (ROOT / "apps/web-react/src/pages/StockDetail.tsx").read_text(encoding="utf-8")
+        ohlc_chart = (ROOT / "apps/web-react/src/components/charts/OhlcChart.tsx").read_text(encoding="utf-8")
+        html = "\n".join([stock_detail, ohlc_chart])
 
         required_terms = [
             "chart-inspector",

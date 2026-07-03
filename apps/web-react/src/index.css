@@ -309,6 +309,193 @@ a { color: inherit; }
 .report-detail h1, .report-detail h2, .report-detail h3 { margin: 8px 0 4px; }
 .report-detail p, .report-detail ul { margin: 6px 0; }
 
+/* StockDetail — ported from apps/web/index.html (lines ~683-1221, ~1360-1580) */
+.symbol { font-weight: 750; }
+
+.quote-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--teal);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.quote-symbol { font-size: 30px; font-weight: 800; }
+.quote-price { font-size: 30px; font-weight: 800; text-align: right; }
+
+.toolbar, .card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+
+.toolbar select, .toolbar button {
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: white;
+  padding: 0 10px;
+}
+
+.toolbar button {
+  background: var(--teal);
+  color: white;
+  border-color: var(--teal);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.chart-card {
+  padding: 14px;
+  border-top: 3px solid var(--teal);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 430px;
+  border: 1px solid #e3ebe7;
+  border-radius: 6px;
+  background: #fbfdfc;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.chart-inspector {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(168px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.chart-inspector .metric { min-width: 168px; min-height: 58px; padding: 8px; background: #f7faf8; }
+.chart-inspector .value { font-size: 14px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.metric {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 10px;
+  box-shadow: 0 6px 18px rgba(23, 33, 29, 0.04);
+}
+
+.metric .label { color: var(--muted); font-size: 12px; }
+.metric .value { margin-top: 5px; font-weight: 750; font-size: 16px; }
+
+.status { min-height: 20px; margin-top: 10px; color: var(--muted); font-size: 13px; }
+
+.analysis-guide {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--teal);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.guide-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.guide-item { border: 1px solid #dde8e4; border-radius: 8px; background: #fbfdfc; padding: 9px; min-height: 98px; }
+.guide-name { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 13px; font-weight: 800; }
+.guide-tag { color: var(--muted); font-size: 11px; font-weight: 700; white-space: nowrap; }
+.guide-text { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.guide-value { margin-bottom: 5px; font-size: 18px; font-weight: 850; }
+.guide-status {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  margin-bottom: 6px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 800;
+}
+.guide-status.positive { background: #e9f7ef; color: var(--green); }
+.guide-status.negative { background: #fff1f0; color: var(--red); }
+.guide-status.neutral { background: #f1f5f9; color: var(--muted); }
+
+.analysis { display: grid; gap: 10px; margin-top: 8px; margin-bottom: 12px; }
+
+.score {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfdfc;
+}
+
+.score-number {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #e9f7ef;
+  color: var(--green);
+  font-weight: 850;
+  font-size: 22px;
+}
+
+.note {
+  border: 1px solid #edd6a6;
+  background: #fffaf0;
+  color: var(--amber);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.factor-list { display: grid; gap: 8px; }
+.factor { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 9px; }
+.factor-head { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-weight: 750; }
+.factor-bar { height: 6px; margin: 7px 0; border-radius: 999px; background: #e5eaf2; overflow: hidden; }
+.factor-bar span { display: block; height: 100%; background: var(--teal); }
+
+.bullets { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+
+.news-list { display: grid; gap: 8px; max-height: 360px; overflow-y: auto; padding-right: 3px; margin-bottom: 8px; }
+.news-item { border: 1px solid var(--line); border-radius: 8px; background: #fbfdfc; padding: 9px; }
+.news-title { color: var(--text); font-size: 13px; font-weight: 800; line-height: 1.35; text-decoration: none; }
+.news-meta { margin-top: 5px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.news-summary { margin-top: 6px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+@media (max-width: 980px) {
+  .metrics, .guide-grid, .chart-inspector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* Market Scanner concept board — ported from apps/web/index.html (lines ~1305-1358) */
 .project-head {
   display: flex;
