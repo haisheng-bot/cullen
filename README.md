@@ -19,7 +19,7 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * **M2 数据源**：完成。yfinance 风格历史日线、SEC EDGAR 财报申报、FRED 宏观数据（需自备免费 Key）、Yahoo 实时走势均已接入并有测试覆盖。
 * **M3 AI 分析**：部分完成。Model Layer 统一接口、Output Validator、Agent 基类、SEC Filing Agent 和 Report Agent 已落地并端到端联调；News Agent（独立的 LLM 情绪分析）尚未开发。
 * **M4 评分与报告**：部分完成。独立 Algorithm Layer 提供可解释的规则化推荐评分（`algorithm-v0.2.2`，已接入 SEC 真实财务数据和真实技术指标：基本面（净利润率+ROC）/成长性/估值（P/E+EV/EBIT）/技术面（RSI/均线金死叉/动量）/风险五因子），并通过新增的 Workflow Layer（`stocks/screening`）实现批量选股排序；研究报告生成已由 Report Agent 落地，基于大模型的 AI Scoring Agent 尚未开发（`packages/scoring` 仍为空）。
-* **M5 前端展示**：部分完成。美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分、组合策略工作流、研究报告生成）已可用，独立的股票深度分析页和独立的研究报告页尚未开发。
+* **M5 前端展示**：部分完成。前端已从单文件 `apps/web/index.html` 迁移为 React + Vite + React Router 的 7 页应用（`apps/web-react/`，HashRouter）：Dashboard、Market Scanner、Stock Research（独立的股票深度分析页，含手绘 K 线图）、Portfolio Research（组合策略工作流）、Strategy Library、Reports（独立的研究报告页）、Settings；后端已切换为服务 `apps/web-react/dist/`，`apps/web/index.html` 保留在磁盘上作为回滚参考、未挂载。
 * **M6 Portfolio Strategy / Backtesting**：部分完成。`packages/backtesting` 已提供价格技术面回测（`signal_mode="technical"`）和按披露日期重建历史财报快照的 AI 评分回测（`signal_mode="ai_score"`，`backtesting-v0.2`，新闻情绪因子因无历史新闻归档暂不支持）、仓位分配、风险约束和 `/backtests/run` API；`packages/risk_engine` 已提供独立 Risk Engine v0.1；券商接口 `packages/brokers` 尚未开发。
 
 额外完成的扩展能力（超出原始路线图，但已落地并有测试）：
