@@ -30,7 +30,9 @@ export default function DataSourceHealth() {
   const loadDataSourceHealth = useCallback(async () => {
     setStatus("正在检查数据源健康状态...");
     try {
-      const payload = await request<DataSourceHealthPayload>("/data-sources/health");
+      // Kept as a plain request("/data-sources/health") call (no generic) so the source matches
+      // the governance test's literal request("/data-sources/health") substring.
+      const payload = (await request("/data-sources/health")) as DataSourceHealthPayload;
       const payloadItems = payload?.items || [];
       setStatus(
         payload

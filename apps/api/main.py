@@ -108,7 +108,10 @@ recommendation_algorithm = TrendRecommendationAlgorithm()
 universe_scanner = MostActiveUniverseScanner()
 model_router = build_default_router()
 sec_filing_agent = SECFilingAgent(model_router)
-WEB_ROOT = Path(__file__).resolve().parents[1] / "web"
+# Phase 1 cutover (page-split migration, commit 7): static serving flips from the legacy
+# apps/web/index.html single-page app to the built apps/web-react/dist/ React app. The legacy
+# file is left on disk unmounted/unrouted for rollback (plan Decision #2), not deleted.
+WEB_ROOT = Path(__file__).resolve().parents[1] / "web-react" / "dist"
 
 
 def _fetch_financial_factors(symbol: str) -> FinancialFactorsInput | None:
@@ -241,12 +244,26 @@ POPULAR_US_STOCKS = [
     {"symbol": "LLY", "name": "Eli Lilly and Company", "sector": "Health Care"},
 ]
 
-app.mount("/static", StaticFiles(directory=WEB_ROOT), name="static")
+# HashRouter (see apps/web-react/src/main.tsx) means every route lives under one served
+# index.html at "/" (e.g. "/#/stock/AAPL") — no backend SPA catch-all route needed (plan
+# Decision #3). Vite's build emits hashed JS/CSS under dist/assets/ referenced as /assets/... by
+# the built index.html (default base "/"), plus a couple of root-level static files.
+app.mount("/assets", StaticFiles(directory=WEB_ROOT / "assets"), name="web-assets")
 
 
 @app.get("/")
 def web_app() -> FileResponse:
     return FileResponse(WEB_ROOT / "index.html")
+
+
+@app.get("/favicon.svg")
+def web_favicon() -> FileResponse:
+    return FileResponse(WEB_ROOT / "favicon.svg")
+
+
+@app.get("/icons.svg")
+def web_icons() -> FileResponse:
+    return FileResponse(WEB_ROOT / "icons.svg")
 
 
 @app.get("/health")

@@ -365,7 +365,18 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertEqual([], present)
 
     def test_project_interface_includes_portfolio_strategy_workflow(self) -> None:
-        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        # Retargeted at commit 7 (final) of the web-react page-split migration (see
+        # /Users/cullen/.claude/plans/vivid-wibbling-cake.md): the workflow moved onto
+        # PortfolioResearch.tsx, with research-run/report-archive/daily-home/data-source-health
+        # terms now living on the pages that own them post-split (Reports.tsx, Dashboard.tsx,
+        # StockDetail.tsx, components/DataSourceHealth.tsx) — joined here the same way
+        # test_tiger_openapi_is_read_only_data_source already joins multiple files.
+        portfolio_research = (ROOT / "apps/web-react/src/pages/PortfolioResearch.tsx").read_text(encoding="utf-8")
+        reports = (ROOT / "apps/web-react/src/pages/Reports.tsx").read_text(encoding="utf-8")
+        dashboard = (ROOT / "apps/web-react/src/pages/Dashboard.tsx").read_text(encoding="utf-8")
+        stock_detail = (ROOT / "apps/web-react/src/pages/StockDetail.tsx").read_text(encoding="utf-8")
+        data_source_health = (ROOT / "apps/web-react/src/components/DataSourceHealth.tsx").read_text(encoding="utf-8")
+        html = "\n".join([portfolio_research, reports, dashboard, stock_detail, data_source_health])
         standard = (ROOT / "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md").read_text(encoding="utf-8")
 
         required_html_terms = [
@@ -487,7 +498,10 @@ class ProjectGovernanceTest(unittest.TestCase):
         self.assertEqual([], missing_standard)
 
     def test_project_interface_includes_portfolio_manager_v2(self) -> None:
-        html = (ROOT / "apps/web/index.html").read_text(encoding="utf-8")
+        # Retargeted at commit 7 (final) of the web-react page-split migration (see
+        # /Users/cullen/.claude/plans/vivid-wibbling-cake.md): portfolio manager v0.2 moved onto
+        # PortfolioResearch.tsx.
+        html = (ROOT / "apps/web-react/src/pages/PortfolioResearch.tsx").read_text(encoding="utf-8")
         standard = (ROOT / "docs/standards/PORTFOLIO_STRATEGY_STANDARD.md").read_text(encoding="utf-8")
 
         required_html_terms = [

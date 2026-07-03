@@ -21,6 +21,25 @@ if ! "$PYTHON_BIN" -c "import fastapi, uvicorn" >/dev/null 2>&1; then
   "$PYTHON_BIN" -m pip install -e .
 fi
 
+# Phase 1 cutover (page-split migration, commit 7): the backend now serves apps/web-react/dist/
+# instead of apps/web/index.html, so this needs a built frontend. Same self-healing pattern as the
+# Python venv check above: install/build only if missing.
+WEB_REACT_DIR="apps/web-react"
+if [ ! -d "$WEB_REACT_DIR/node_modules" ]; then
+  if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
+    echo "Node.js/npm not found. Please install Node.js (see apps/web-react/README.md) and re-run."
+    read -r "?Press Enter to close..."
+    exit 1
+  fi
+  echo "Installing OpenStock AI frontend dependencies..."
+  (cd "$WEB_REACT_DIR" && npm install)
+fi
+
+if [ ! -f "$WEB_REACT_DIR/dist/index.html" ]; then
+  echo "Building OpenStock AI frontend..."
+  (cd "$WEB_REACT_DIR" && npm run build)
+fi
+
 if lsof -nP -iTCP:${PORT} -sTCP:LISTEN >/dev/null 2>&1; then
   echo "OpenStock AI is already running at ${URL}"
 else

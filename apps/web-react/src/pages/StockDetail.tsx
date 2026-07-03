@@ -343,7 +343,10 @@ export default function StockDetail() {
         <div>
           <div className="quote-symbol" id="quote-symbol">{quote?.symbol || symbol}</div>
           <div className="muted" id="quote-meta">
-            {quote ? `${quote.exchange_name || "US"} · ${quote.currency || "USD"} · ${quote.data_quality?.source || quote.source || "--"} · ${quote.data_quality?.freshness || "unknown"}` : "NASDAQ · USD"}
+            {quote ? (() => {
+              const quality = quote.data_quality || {};
+              return `${quote.exchange_name || "US"} · ${quote.currency || "USD"} · ${quality.source || quote.source || "--"} · ${quality.freshness || "unknown"}`;
+            })() : "NASDAQ · USD"}
           </div>
         </div>
         <div>
