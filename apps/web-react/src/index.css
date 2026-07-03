@@ -309,6 +309,54 @@ a { color: inherit; }
 .report-detail h1, .report-detail h2, .report-detail h3 { margin: 8px 0 4px; }
 .report-detail p, .report-detail ul { margin: 6px 0; }
 
+/* Dashboard daily-home widgets — ported from apps/web/index.html (lines ~116-213) */
+.daily-home-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.daily-card {
+  min-width: 0;
+  border: 1px solid #dfe5f2;
+  border-radius: 8px;
+  background: #fbfdfc;
+  padding: 9px;
+}
+
+.daily-card-title { color: var(--muted); font-size: 11px; font-weight: 850; }
+.daily-card-value { margin-top: 5px; font-size: 18px; font-weight: 900; }
+
+.daily-lists {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.daily-list { display: grid; gap: 6px; margin-top: 8px; }
+
+.daily-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #e4ebe7;
+  border-radius: 6px;
+  background: white;
+  padding: 7px;
+  min-height: 38px;
+}
+
+.daily-rank { color: var(--muted); font-size: 11px; font-weight: 800; }
+.daily-symbol { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 900; }
+.daily-meta { color: var(--muted); font-size: 11px; }
+
+@media (max-width: 980px) {
+  .daily-home-grid, .daily-lists { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* Data Source Health (Settings page) — ported from apps/web/index.html (lines ~215-265) */
 .daily-home {
   border: 1px solid var(--line);
