@@ -42,6 +42,7 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * 数据质量标记：quote/trend/history/filings/news/macro/Tiger 响应新增 `data_quality`（source/as_of/freshness/missing_fields/fallback），前端报价区展示 source/freshness
 * Portfolio Manager v0.2：组合支持 JSON/CSV 导入导出和两两对比
 * 异步任务队列 Job Queue v0.1：`packages/job_queue`（APScheduler）+ `job_queue` 表，为 screening 和 Portfolio Research Workflow 提供 `POST /jobs/screening`、`POST /jobs/portfolio-research`、`GET /jobs/{job_id}`、`GET /jobs` 异步提交/轮询入口，同步接口保持不变
+* Strategy Library v0.2：策略支持 Clone/Save As、JSON 导入导出（前端复用既有 `PUT /strategies/{name}`，不新增 API）和绑定默认 `scoring_profile`（后端新增校验）
 
 ## 当前差距
 

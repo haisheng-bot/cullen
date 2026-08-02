@@ -40,7 +40,7 @@
 | M6 | Algorithm Layer | 独立推荐算法、评分因子、可解释输出 | algorithm-v0.3 已收敛为 1 年推荐算法，输出 `recommendation_horizon=1y`；已有财务、估值、技术、新闻规则情绪、风险因子；权重已从硬编码抽成 Scoring Profiles 模块 | verified | 近期不做多周期预测、不做复杂量化模型、不做自动交易算法 | 优先把 1 年推荐结果用于首页、复盘页和报告归档 | 调整评分权重或因子时 |
 | M7 | Stock Research | 单股实时价格、K 线、财务、新闻、评分、报告 | 报价、趋势、历史、SEC、新闻、推荐、报告接口已存在 | usable | 独立深度分析页未完成 | 做独立 Stock Research 页面 | 前端新增研究视图时 |
 | M8 | Portfolio | 多组合创建、删除、编辑、导入、导出、权重管理、对比 | 基础组合保存、增删股票、目标权重、现金比例已完成；选股加入组合改为跟随当前查看的股票（右边栏），不再绑定左边栏桶选择；`PortfolioConfig.strategy_config` 旧字段已删除，组合现在只管股票和权重，策略参数全部收敛到策略库；Portfolio Manager v0.2 已完成导入导出（JSON/CSV）和两两对比 | usable | 仍缺整组合创建/删除（当前是 5 个固定桶） | 评估是否需要自定义新建/删除组合 | 修改组合数据结构时 |
-| M9 | Strategy / Backtesting | 策略配置、约束、回测、收益风险指标 | `/backtests/run`、technical / ai_score 回测、交易明细和净值曲线已可用；策略库 Strategy Library v0.1 已完成（`packages/db/strategies.py`、`GET/PUT/DELETE /strategies`），策略与 Portfolio 完全解耦为独立可复用实体（旧的 `PortfolioConfig.strategy_config` 重叠字段已删除），前端支持新增/应用/更新/删除 | verified | 历史新闻情绪未接；策略库暂无导入导出/分享 | 接入历史新闻归档输入，评估策略市场（导入导出/分享）需求 | 新增策略或回测指标时 |
+| M9 | Strategy / Backtesting | 策略配置、约束、回测、收益风险指标 | `/backtests/run`、technical / ai_score 回测、交易明细和净值曲线已可用；策略库 Strategy Library v0.1 已完成（`packages/db/strategies.py`、`GET/PUT/DELETE /strategies`），策略与 Portfolio 完全解耦为独立可复用实体（旧的 `PortfolioConfig.strategy_config` 重叠字段已删除），前端支持新增/应用/更新/删除；Strategy Library v0.2 已完成 Clone/Save As、JSON 导入导出、scoring_profile 绑定与校验 | verified | 历史新闻情绪未接；策略市场/分享仍不做 | 接入历史新闻归档输入 | 新增策略或回测指标时 |
 | M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成；Portfolio Research Module v0.1 已作为前端统一入口接入 `/portfolio-research/run`；workflow run 支持按 trace_id 查询；`GET /research-runs` 历史列表 API 已接入前端 Research Run 复盘面板；Report Archive 可从 trace_id 生成报告 | verified | 后续缺更细的报告节点编排 | 做 Strategy Library v0.2 | 新增 workflow 或节点时 |
 | M11 | Risk Engine | VaR、CVaR、Beta、波动率、回撤、行业暴露、持仓集中度 | 独立 `packages/risk_engine` v0.1 已形成，支持 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure，接入 `POST /risk/portfolio` 和前端摘要 | verified | VaR/CVaR/Stress Test/Monte Carlo 未接 | 后续扩展 VaR、CVaR 和 Stress Test | 新增风险指标时 |
 | M12 | Portfolio Optimizer | Mean Variance、Risk Parity、HRP、Minimum Variance、Black-Litterman | 独立 `packages/portfolio_optimizer` v0.1 已完成，支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版，接入 `POST /optimizer/portfolio` 和前端摘要 | verified | HRP、Black-Litterman 和完整协方差求解器未接 | 后续做高级优化器求解器 | 新增优化器时 |
@@ -67,7 +67,7 @@
 | P6 | ~~数据源健康检查~~ | ~~Yahoo/SEC/FRED/Tiger 数据状态可观测~~ | 已完成：新增 `GET /data-sources/health` 和前端 Data Source Health 面板，展示配置、可用性、最近错误和 fallback 状态 |
 | P7 | ~~数据质量标记~~ | ~~让每个分析结果能看出数据是否完整可靠~~ | 已完成：quote/trend/history/filings/news/macro/Tiger 数据响应新增 `data_quality`，包含 source、as_of、freshness、missing_fields、fallback；前端报价区显示 source/freshness |
 | P8 | ~~Portfolio Manager v0.2~~ | ~~组合支持导入导出和组合对比~~ | 已完成：前端支持 JSON/CSV 导入导出（客户端直接生成/解析，复用既有增删股票和保存权重 API）；支持勾选两个组合对比持仓、权重、风险指标（Volatility/Beta/Max Drawdown/Concentration）和行业暴露（复用 `POST /risk/portfolio`） |
-| P9 | Strategy Library v0.2 | 策略支持版本、复制、导入导出和分类 | 策略可 Clone/Save As；支持 JSON 导入导出；策略可绑定默认 scoring_profile |
+| P9 | ~~Strategy Library v0.2~~ | ~~策略支持版本、复制、导入导出和分类~~ | 已完成：策略可 Clone/Save As（前端读现有策略后用新名字 `PUT`）；支持 JSON 导入导出（客户端生成/解析，复用既有 `PUT /strategies/{name}`）；策略可绑定 scoring_profile（`_save_strategy` 新增校验，未知值 400）；版本和分类不在验收标准内，本次不做 |
 | P10 | Stock Research 独立页 | 单只股票从工作台侧栏升级为完整研究页 | 展示行情、K 线、新闻/政策、SEC、评分历史、报告入口和风险提示 |
 | P11 | 1 年推荐算法打磨 | 只围绕 `recommendation_horizon=1y` 提升推荐解释、稳定性和复盘可用性 | 首页、单股页、复盘页和报告都明确展示 1 年推荐；不增加 3 年/5 年/10 年预测 |
 | P12 | Risk / Optimizer 高级能力 | 暂不做 | 仅保留远期设计，不进入当前开发 |
@@ -93,6 +93,8 @@
 14. 数据源健康检查
 15. 数据质量标记
 16. Portfolio Manager v0.2（导入导出/对比）
+17. Job Queue v0.1（M19，异步任务队列）
+18. Strategy Library v0.2（Clone/Save As、导入导出、scoring_profile 绑定）
 ```
 
 ## 6. 同步规则
@@ -107,6 +109,12 @@
 6. 运行测试并记录结果。
 
 ## 7. 最近一次同步
+
+```text
+日期：2026-08-02（本次）
+测试：261 tests OK（unittest discover，.venv311 / Python 3.11；新增 2 个后端测试）；`npm run build`（tsc -b + vite build）和 `npm run lint`（oxlint，无新增警告）通过；Playwright headless 验证：打开 `/#/strategy` → 保存 Equal Weight 模板（卡片摘要展示 `scoring_profile=balanced`）→ 点击「另存为」输入新名称 → 新策略出现在列表 → 点击「导出 JSON」下载文件，内容含 `preferences.scoring_profile` → 修改导出文件的 `name`/`scoring_profile` 后通过隐藏 file input 触发「导入策略 JSON」→ 新策略出现且 `scoring_profile=growth` 生效；全程无 console error；测试产生的临时策略记录（Cloned/Imported Strategy Test）已通过 `DELETE /strategies/{name}` 清理，未污染本地库。
+状态：完成 P9 Strategy Library v0.2——后端 `_save_strategy` 新增 `scoring_profile` 校验（复用 `packages/scoring_profiles/profiles.py::get_profile()`，未知值 400，对齐 `optimizer_method`/`backtest_mode`/`rebalance_frequency` 已有的校验方式）；前端 `StrategyLibrary.tsx` 新增：`scoring_profile` 加入 `StrategyPreferences` 类型和默认模板 payload、卡片摘要展示；「另存为」（Clone/Save As，读现有策略 `preferences`/`constraints` 后用新名字 `PUT`，重名前置拦截）；导出 JSON（客户端把 `{name, preferences, constraints}` 序列化下载）；导入 JSON（隐藏 file input + 顶部「导入策略 JSON」按钮，解析后 `PUT`）。三者均未新增后端接口，复用既有 `PUT /strategies/{name}`，与 Portfolio Manager v0.2（P8）确立的"导入导出走客户端"模式一致。验收标准里的"版本"和"分类"不在本次范围（P9 验收标准列只要求 Clone/Save As、JSON 导入导出、scoring_profile 绑定三项）。同步 `docs/api/api-design-v0.1.md` §4.9、M9 行、CHANGELOG、README。下一步：P10 Stock Research 独立页。
+```
 
 ```text
 日期：2026-08-01（本次）

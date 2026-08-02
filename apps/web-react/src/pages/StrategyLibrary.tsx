@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { deleteJson, putJson, request } from "../lib/api";
-import { escapeHtml } from "../lib/format";
+import { downloadTextFile, escapeHtml } from "../lib/format";
 
 // Carved out of the Portfolio Research code per commit 6 of the page-split migration: strategy
 // CRUD + modal (loadStrategies/renderStrategyList/applyStrategy/saveCurrentFormAsStrategy/
@@ -46,6 +46,7 @@ interface StrategyPreferences {
   backtest_mode?: string;
   optimizer_method?: string;
   rebalance_frequency?: string;
+  scoring_profile?: string;
 }
 
 interface StrategyRecord {
@@ -61,6 +62,7 @@ function defaultPayloadForOption(option: StrategyOption) {
       backtest_mode: option.name === "AI Momentum" ? "ai_score" : "technical",
       optimizer_method: option.method,
       rebalance_frequency: "monthly",
+      scoring_profile: "balanced",
     },
     constraints: {
       max_position_weight: 0.25,
@@ -79,6 +81,7 @@ export default function StrategyLibrary() {
   const [modalStatus, setModalStatus] = useState("");
   const [modalSubmitting, setModalSubmitting] = useState(false);
   const navigate = useNavigate();
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   // Uncontrolled select read via getElementById, same idiom the legacy app used for this element
   // (`const strategyModalName = document.getElementById("strategy-modal-name")`) — kept so the
@@ -137,6 +140,60 @@ export default function StrategyLibrary() {
       return next;
     });
     setAppliedStrategyName((current) => (current === name ? null : current));
+  }
+
+  async function cloneStrategy(strategy: StrategyRecord) {
+    const newName = window.prompt(`另存为新策略名称（复制自「${strategy.name}」）：`, `${strategy.name} Copy`)?.trim();
+    if (!newName) return;
+    if (strategies[newName]) {
+      window.alert(`策略「${newName}」已存在，请换一个名称。`);
+      return;
+    }
+    try {
+      const saved = await putJson<StrategyRecord>(`/strategies/${encodeURIComponent(newName)}`, {
+        preferences: strategy.preferences || {},
+        constraints: strategy.constraints || {},
+      });
+      setStrategies((prev) => ({ ...prev, [saved.name]: saved }));
+      setAppliedStrategyName(saved.name);
+    } catch (error) {
+      window.alert(`另存为失败：${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  function exportStrategy(strategy: StrategyRecord) {
+    const payload = {
+      name: strategy.name,
+      preferences: strategy.preferences || {},
+      constraints: strategy.constraints || {},
+    };
+    downloadTextFile(`${strategy.name}.json`, JSON.stringify(payload, null, 2), "application/json");
+  }
+
+  function openStrategyImport() {
+    if (importInputRef.current) {
+      importInputRef.current.value = "";
+      importInputRef.current.click();
+    }
+  }
+
+  async function onImportFileChange() {
+    const file = importInputRef.current?.files?.[0];
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      const name = String(data.name || "").trim();
+      if (!name) throw new Error("导入文件缺少策略名称 (name)");
+      const saved = await putJson<StrategyRecord>(`/strategies/${encodeURIComponent(name)}`, {
+        preferences: data.preferences || {},
+        constraints: data.constraints || {},
+      });
+      setStrategies((prev) => ({ ...prev, [saved.name]: saved }));
+      setAppliedStrategyName(saved.name);
+      window.alert(`已导入策略「${saved.name}」。`);
+    } catch (error) {
+      window.alert(`导入失败：${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   function openStrategyModal() {
@@ -199,6 +256,7 @@ export default function StrategyLibrary() {
       const optimizer = prefs.optimizer_method || option.method;
       const backtestMode = prefs.backtest_mode || "technical";
       const rebalance = prefs.rebalance_frequency || "monthly";
+      const scoringProfile = prefs.scoring_profile || "balanced";
       return (
         <div className={`strategy-item${isSelected ? " selected" : ""}`} key={option.name}>
           <div className="strategy-item-head">
@@ -208,12 +266,14 @@ export default function StrategyLibrary() {
               <span className="strategy-badge">{isSaved ? "已保存" : "待保存"}</span>
             </span>
           </div>
-          <div className="strategy-item-summary">{escapeHtml(optimizer)} · {escapeHtml(backtestMode)} · {escapeHtml(rebalance)}</div>
+          <div className="strategy-item-summary">{escapeHtml(optimizer)} · {escapeHtml(backtestMode)} · {escapeHtml(rebalance)} · {escapeHtml(scoringProfile)}</div>
           <div className="strategy-item-summary">{escapeHtml(option.summary)}</div>
           <div className="strategy-item-actions">
             {isSaved && <button type="button" onClick={() => applyStrategy(option.name)}>应用</button>}
             <button type="button" onClick={() => generateStrategyResearchPortfolio(option.name)}>推荐组合</button>
             <button type="button" onClick={() => saveCurrentFormAsStrategy(option.name, option)}>{isSaved ? "更新" : "保存"}</button>
+            {isSaved && <button type="button" onClick={() => cloneStrategy(strategy)}>另存为</button>}
+            {isSaved && <button type="button" onClick={() => exportStrategy(strategy)}>导出 JSON</button>}
             {isSaved && <button type="button" onClick={() => deleteStrategyByName(option.name)}>删除</button>}
           </div>
         </div>
@@ -228,8 +288,12 @@ export default function StrategyLibrary() {
           <div className="page-title">Strategy Library</div>
           <div className="muted">策略管理——新建、编辑、复制、删除、运行策略。</div>
         </div>
-        <button id="add-strategy-button" type="button" onClick={openStrategyModal}>新增策略</button>
+        <div>
+          <button id="add-strategy-button" type="button" onClick={openStrategyModal}>新增策略</button>
+          <button type="button" onClick={openStrategyImport}>导入策略 JSON</button>
+        </div>
       </div>
+      <input type="file" id="strategy-import-input" ref={importInputRef} accept=".json" hidden onChange={onImportFileChange} />
       <div className="muted" id="strategy-list-meta">
         当前策略组合：{selectedLabel} · 固定已保存 {fixedSavedCount}/{STRATEGY_LIBRARY_OPTIONS.length} · 自定义 {customSavedCount}
       </div>

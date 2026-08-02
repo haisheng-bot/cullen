@@ -4,6 +4,7 @@
 
 ### Added
 
+* Strategy Library v0.2（P9）：策略可 Clone/Save As（读现有策略后用新名字 `PUT`）；支持 JSON 导入导出（客户端生成/解析，复用既有 `PUT /strategies/{name}`，不新增 API）；`_save_strategy` 新增 `scoring_profile` 校验（复用 `get_profile()`，未知值 400），策略卡片展示当前绑定的 scoring_profile
 * 异步任务队列 Job Queue v0.1（M19）：新增 `packages/job_queue`（APScheduler `BackgroundScheduler`）+ `job_queue` 表 + `POST /jobs/screening`、`POST /jobs/portfolio-research`、`GET /jobs/{job_id}`、`GET /jobs`，为 screening 和 Portfolio Research Workflow 提供提交后轮询的异步入口；同步接口保持不变；`packages/workflow_layer/portfolio_research.py` 新增 `build_response()`，供同步端点和 job queue 共用同一套响应构造逻辑
 * 前端 Phase 1 页面拆分迁移：`apps/web/index.html`（单文件 4463 行）迁移为 `apps/web-react/`（React + Vite + React Router，HashRouter，Vite dev proxy 代理到 127.0.0.1:8000，零业务逻辑改动、零新增后端接口）的 7 页应用——Dashboard、Market Scanner、Stock Research（含手绘 canvas K 线图 `OhlcChart` 和滑动十字光标）、Portfolio Research（组合管理 + 6 步工作流 + 手绘 `EquityCurveChart` + 导入导出/对比）、Strategy Library、Reports、Settings；顶部导航 + 左侧栏（搜索 + Most Active）作为常驻外壳；后端 `apps/api/main.py` 静态托管切换到 `apps/web-react/dist/`，`apps/web/index.html` 保留在磁盘上未挂载作为回滚参考；`open-app.command` 新增 Node/npm 自愈构建步骤
 * Portfolio Manager v0.2（P8）：组合支持导出（JSON/CSV，客户端直接从已加载状态生成下载）、导入（复用既有 `/portfolios/{name}/symbols` 增删和 `/portfolios/{name}/config` 保存权重，不新增 API）和两两对比（复用既有 `POST /risk/portfolio` 分别计算，前端并排展示持仓/风险指标/行业暴露差异）；前端「我的组合 Portfolios」面板每个组合卡片新增导出/导入按钮和对比勾选框

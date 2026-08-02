@@ -905,6 +905,21 @@ class ApiEndpointsTest(unittest.TestCase):
 
         self.assertEqual(400, context.exception.status_code)
 
+    def test_update_strategy_endpoint_rejects_unknown_scoring_profile(self) -> None:
+        with self.assertRaises(main.HTTPException) as context:
+            main.update_strategy(
+                "Broken", main.StrategyRequest(preferences={"scoring_profile": "not-a-profile"})
+            )
+
+        self.assertEqual(400, context.exception.status_code)
+
+    def test_update_strategy_endpoint_accepts_known_scoring_profile(self) -> None:
+        payload = main.update_strategy(
+            "Growth Profile Strategy", main.StrategyRequest(preferences={"scoring_profile": "growth"})
+        )
+
+        self.assertEqual("growth", payload["preferences"]["scoring_profile"])
+
     def test_get_strategies_endpoint_includes_saved_strategy(self) -> None:
         main.update_strategy("List Me", main.StrategyRequest(preferences={"optimizer_method": "equal_weight"}))
 

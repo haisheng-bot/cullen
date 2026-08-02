@@ -876,7 +876,8 @@ DELETE /strategies/{name}
     "scoring_mode": "algorithm_v0.3",
     "backtest_mode": "ai_score",
     "optimizer_method": "minimum_variance",
-    "rebalance_frequency": "monthly"
+    "rebalance_frequency": "monthly",
+    "scoring_profile": "growth"
   },
   "constraints": {
     "max_position_weight": 0.3,
@@ -891,9 +892,10 @@ DELETE /strategies/{name}
 说明：
 
 * 按 `name` upsert：已存在则更新，不存在则新增
-* `optimizer_method`/`backtest_mode`/`rebalance_frequency` 校验落在已知枚举内，否则返回 400
+* `optimizer_method`/`backtest_mode`/`rebalance_frequency`/`scoring_profile` 校验落在已知枚举内，否则返回 400（`scoring_profile` 复用 `packages/scoring_profiles/profiles.py::get_profile()`，与推荐、选股、回测、Portfolio Research 四个入口同一套校验）
 * `DELETE /strategies/{name}` 不存在时返回 404
 * 不参与运行时编排——运行回测仍由前端把当前表单值（可能是刚应用的某个策略）通过 `POST /portfolio-research/run` 提交
+* Strategy Library v0.2（P9）：Clone/Save As 和 JSON 导入导出均为前端复用 `PUT /strategies/{name}`（另存为=读现有策略后用新名字 PUT；导出=客户端把 `{name, preferences, constraints}` 序列化成文件下载；导入=解析上传文件后 PUT），未新增接口
 
 ### 4.10 Research Run History
 

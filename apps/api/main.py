@@ -590,6 +590,9 @@ def _save_strategy(name: str, request: StrategyRequest) -> dict:
     rebalance_frequency = request.preferences.get("rebalance_frequency")
     if rebalance_frequency is not None and rebalance_frequency not in REBALANCE_FREQUENCIES:
         raise ValueError(f"unknown rebalance_frequency: {rebalance_frequency}")
+    scoring_profile = request.preferences.get("scoring_profile")
+    if scoring_profile is not None:
+        get_profile(scoring_profile)
 
     with session_scope() as session:
         strategy = save_strategy(session, name, request.preferences, request.constraints)
