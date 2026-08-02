@@ -1,4 +1,5 @@
 import importlib.util
+import time
 import unittest
 import uuid
 from datetime import date
@@ -1087,6 +1088,87 @@ class ApiEndpointsTest(unittest.TestCase):
         self.assertEqual(["AAPL", "MSFT"], payload["symbols"])
         self.assertEqual({"AAPL": 0.45, "MSFT": 0.45}, payload["target_weights"])
         self.assertEqual(RISK_DISCLAIMER, payload["risk_disclaimer"])
+
+    def _poll_job(self, job_id: str, attempts: int = 30, delay: float = 0.05):
+        # Jobs run on a real APScheduler background thread even in tests
+        # (main.screening_workflow / main.portfolio_research_workflow are
+        # swapped for fakes above, so completion is near-instant).
+        detail = main.get_job_detail(job_id)
+        for _ in range(attempts):
+            if detail.status in ("completed", "failed"):
+                return detail
+            time.sleep(delay)
+            detail = main.get_job_detail(job_id)
+        return detail
+
+    def test_submit_screening_job_endpoint(self) -> None:
+        submission = main.submit_screening_job(limit=5, scoring_profile="balanced")
+
+        self.assertEqual("screening", submission.job_type)
+        self.assertEqual("pending", submission.status)
+
+        detail = self._poll_job(submission.job_id)
+
+        self.assertEqual("completed", detail.status)
+        self.assertEqual("AAPL", detail.result["candidates"][0]["symbol"])
+
+        # The job queue archives via the real write_screening_result (not
+        # the main._persist_screening_result test double), so verify
+        # against the real table like the workflow-run job test does.
+        with main.session_scope() as session:
+            history = main.get_score_history(session, "AAPL", limit=5)
+        self.assertTrue(any(item.algorithm_version == "algorithm-v0.3" for item in history))
+
+    def test_submit_screening_job_endpoint_rejects_unknown_scoring_profile(self) -> None:
+        with self.assertRaises(main.HTTPException) as context:
+            main.submit_screening_job(limit=5, scoring_profile="not-a-profile")
+
+        self.assertEqual(400, context.exception.status_code)
+
+    def test_submit_portfolio_research_job_endpoint(self) -> None:
+        request = main.PortfolioResearchWorkflowRequest(
+            portfolio_name="Job API Workflow",
+            universe_limit=2,
+            selected_symbols=["aapl", "msft"],
+            backtest=main.BacktestRunRequest(
+                strategy_name="Job API Portfolio Workflow",
+                symbols=["nvda"],
+                start_date="2023-01-01",
+                end_date="2023-12-31",
+            ),
+        )
+
+        submission = main.submit_portfolio_research_job(request)
+        detail = self._poll_job(submission.job_id)
+
+        self.assertEqual("completed", detail.status)
+        self.assertEqual(submission.job_id, detail.result["trace_id"])
+        self.assertEqual("Job API Workflow", detail.result["portfolio"]["name"])
+        self.assertEqual("research_candidate", detail.result["portfolio_recommendation"]["action"])
+
+        # The job queue archives via the real write_workflow_run (not the
+        # main._persist_workflow_run test double), so verify against the
+        # real table like _seed_workflow_run does elsewhere in this suite.
+        with main.session_scope() as session:
+            archived = main.get_workflow_run_by_trace_id(session, submission.job_id)
+        self.assertIsNotNone(archived)
+        self.assertEqual("portfolio_research_workflow", archived.workflow_name)
+
+    def test_get_job_detail_endpoint_404_for_missing_job(self) -> None:
+        with self.assertRaises(main.HTTPException) as context:
+            main.get_job_detail("does-not-exist")
+
+        self.assertEqual(404, context.exception.status_code)
+
+    def test_list_jobs_endpoint_filters_by_job_type(self) -> None:
+        submission = main.submit_screening_job(limit=5, scoring_profile="balanced")
+        self._poll_job(submission.job_id)
+
+        payload = main.list_jobs_endpoint(job_type="screening", status=None, limit=20, offset=0)
+
+        job_ids = [item.job_id for item in payload.items]
+        self.assertIn(submission.job_id, job_ids)
+        self.assertGreaterEqual(payload.total_count, 1)
 
 
 if __name__ == "__main__":

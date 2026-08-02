@@ -43,6 +43,7 @@ from packages.data_sources.sec_financials import SECFinancialsClient, SECFinanci
 from packages.data_sources.tiger_openapi import TigerOpenAPIClient, TigerOpenAPIError
 from packages.db.backtest_runs import write_backtest_run
 from packages.db.financial_facts_cache import get_or_fetch_annual_series
+from packages.db.job_queue import count_jobs, get_job, list_jobs
 from packages.db.models import Portfolio
 from packages.db.portfolios import (
     add_symbol,
@@ -58,6 +59,8 @@ from packages.db.session import check_database_connection, session_scope
 from packages.db.stock_scores import get_score_history, write_screening_result
 from packages.db.strategies import delete_strategy, get_strategy, list_strategies, save_strategy
 from packages.db.workflow_runs import get_workflow_run_by_trace_id, list_workflow_runs, write_workflow_run
+from packages.job_queue.engine import job_queue
+from packages.job_queue.schemas import JobDetailResponse, JobListResponse, JobSubmissionResponse
 from packages.model_layer.factory import build_default_router
 from packages.model_layer.validator import OutputValidationError
 from packages.news_layer.news_policy import NewsPolicyClient, NewsPolicyError
@@ -79,6 +82,7 @@ from packages.universe_layer.most_active import MostActiveUniverseScanner
 from packages.workflow_layer.portfolio_research import (
     PortfolioResearchRequest,
     PortfolioResearchWorkflow,
+    build_response as _portfolio_research_response,
 )
 from packages.workflow_layer.stock_screening import StockScreeningWorkflow
 
@@ -1035,30 +1039,6 @@ def _run_portfolio_research_module(request: PortfolioResearchRunRequest) -> dict
     return engine.run(module_request)
 
 
-def _portfolio_research_response(run_result) -> dict:
-    payload = run_result.payload
-    strategy_config = payload.get("final_strategy_config")
-    backtest_result = payload.get("backtest_result")
-    return {
-        "workflow_name": run_result.workflow_name,
-        "workflow_version": run_result.workflow_version,
-        "trace_id": run_result.trace_id,
-        "state": run_result.state.value,
-        "started_at": run_result.started_at,
-        "completed_at": run_result.completed_at,
-        "node_results": [node.to_dict() for node in run_result.node_results],
-        "universe": payload.get("universe"),
-        "portfolio": payload.get("portfolio"),
-        "strategy": payload.get("strategy"),
-        "constraints": payload.get("constraints"),
-        "backtest": backtest_result.to_dict() if backtest_result else payload.get("backtest"),
-        "ai_summary": payload.get("ai_summary"),
-        "portfolio_recommendation": payload.get("portfolio_recommendation"),
-        "strategy_config": strategy_config.to_dict() if strategy_config else None,
-        "risk_disclaimer": run_result.risk_disclaimer,
-    }
-
-
 @app.post("/backtests/run")
 def run_backtest(request: BacktestRunRequest) -> dict:
     config = _to_strategy_config(request)
@@ -1230,3 +1210,99 @@ def get_portfolio_research_workflow_run(trace_id: str) -> dict:
     if response is None:
         raise HTTPException(status_code=404, detail="workflow run not found")
     return response
+
+
+def _job_to_detail(record) -> JobDetailResponse:
+    return JobDetailResponse(
+        job_id=record.id,
+        job_type=record.job_type,
+        status=record.status,
+        payload=record.payload,
+        result=record.result,
+        error_message=record.error_message,
+        progress_percent=record.progress_percent,
+        created_at=record.created_at,
+        started_at=record.started_at,
+        completed_at=record.completed_at,
+    )
+
+
+def _fetch_job(job_id: str):
+    with session_scope() as session:
+        return get_job(session, job_id)
+
+
+def _fetch_job_list(
+    *, job_type: str | None, status: str | None, limit: int, offset: int
+) -> tuple[list, int]:
+    with session_scope() as session:
+        records = list_jobs(session, job_type=job_type, status=status, limit=limit, offset=offset)
+        total_count = count_jobs(session, job_type=job_type, status=status)
+        return records, total_count
+
+
+@app.post("/jobs/screening")
+def submit_screening_job(
+    limit: int = Query(20, ge=1, le=50), scoring_profile: str = "balanced"
+) -> JobSubmissionResponse:
+    try:
+        profile = get_profile(scoring_profile)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    record = job_queue.submit_screening(
+        screening_workflow,
+        limit=limit,
+        profile=profile,
+        payload={"limit": limit, "scoring_profile": scoring_profile},
+    )
+    return JobSubmissionResponse(
+        job_id=record.id, job_type=record.job_type, status=record.status, created_at=record.created_at
+    )
+
+
+@app.post("/jobs/portfolio-research")
+def submit_portfolio_research_job(request: PortfolioResearchWorkflowRequest) -> JobSubmissionResponse:
+    config = _to_strategy_config(request.backtest)
+    workflow_request = PortfolioResearchRequest(
+        strategy_config=config,
+        universe_limit=request.universe_limit,
+        portfolio_name=request.portfolio_name,
+        selected_symbols=request.selected_symbols,
+    )
+    record = job_queue.submit_portfolio_research(
+        portfolio_research_workflow,
+        request=workflow_request,
+        payload=request.model_dump(),
+    )
+    return JobSubmissionResponse(
+        job_id=record.id, job_type=record.job_type, status=record.status, created_at=record.created_at
+    )
+
+
+@app.get("/jobs/{job_id}")
+def get_job_detail(job_id: str) -> JobDetailResponse:
+    record = _fetch_job(job_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    return _job_to_detail(record)
+
+
+@app.get("/jobs")
+def list_jobs_endpoint(
+    job_type: str | None = None,
+    status: str | None = None,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> JobListResponse:
+    records, total_count = _fetch_job_list(job_type=job_type, status=status, limit=limit, offset=offset)
+    return JobListResponse(
+        items=[_job_to_detail(record) for record in records],
+        total_count=total_count,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@app.on_event("shutdown")
+def _shutdown_job_queue() -> None:
+    job_queue.shutdown(wait=False)

@@ -41,6 +41,7 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 * 数据源健康检查：`GET /data-sources/health` 和前端 Data Source Health 面板展示 Yahoo/SEC/FRED/Tiger 的配置、可用性、最近错误和 fallback 状态
 * 数据质量标记：quote/trend/history/filings/news/macro/Tiger 响应新增 `data_quality`（source/as_of/freshness/missing_fields/fallback），前端报价区展示 source/freshness
 * Portfolio Manager v0.2：组合支持 JSON/CSV 导入导出和两两对比
+* 异步任务队列 Job Queue v0.1：`packages/job_queue`（APScheduler）+ `job_queue` 表，为 screening 和 Portfolio Research Workflow 提供 `POST /jobs/screening`、`POST /jobs/portfolio-research`、`GET /jobs/{job_id}`、`GET /jobs` 异步提交/轮询入口，同步接口保持不变
 
 ## 当前差距
 

@@ -152,6 +152,35 @@ class PortfolioResearchWorkflow:
         }
 
 
+def build_response(run_result) -> dict[str, Any]:
+    """Convert a `WorkflowRunResult` into the API-facing response dict.
+
+    Shared by the sync `/workflows/portfolio-research` endpoint and the
+    async job queue so both paths produce an identical response shape.
+    """
+    payload = run_result.payload
+    strategy_config = payload.get("final_strategy_config")
+    backtest_result = payload.get("backtest_result")
+    return {
+        "workflow_name": run_result.workflow_name,
+        "workflow_version": run_result.workflow_version,
+        "trace_id": run_result.trace_id,
+        "state": run_result.state.value,
+        "started_at": run_result.started_at,
+        "completed_at": run_result.completed_at,
+        "node_results": [node.to_dict() for node in run_result.node_results],
+        "universe": payload.get("universe"),
+        "portfolio": payload.get("portfolio"),
+        "strategy": payload.get("strategy"),
+        "constraints": payload.get("constraints"),
+        "backtest": backtest_result.to_dict() if backtest_result else payload.get("backtest"),
+        "ai_summary": payload.get("ai_summary"),
+        "portfolio_recommendation": payload.get("portfolio_recommendation"),
+        "strategy_config": strategy_config.to_dict() if strategy_config else None,
+        "risk_disclaimer": run_result.risk_disclaimer,
+    }
+
+
 def _build_ai_summary(result: BacktestResult) -> dict[str, Any]:
     findings = [
         f"回测总收益 {result.total_return_percent}%，年化收益 {result.annualized_return_percent}%。",

@@ -7,6 +7,7 @@ from packages.data_sources.sec_financials import AnnualFinancials
 from packages.db.audit import write_audit_log
 from packages.db.backtest_runs import write_backtest_run
 from packages.db.financial_facts_cache import get_or_fetch_annual_series
+from packages.db.job_queue import count_jobs, create_job, get_job, list_jobs, update_job_status
 from packages.db.models import AuditLog, Base
 from packages.db.portfolios import (
     add_symbol,
@@ -536,6 +537,115 @@ class WorkflowRunPersistenceTest(unittest.TestCase):
 
         self.assertEqual(["trace-module"], [r.trace_id for r in module_only])
         self.assertEqual(["trace-workflow"], [r.trace_id for r in failed_only])
+
+
+class JobQueuePersistenceTest(unittest.TestCase):
+    def test_create_and_get_job_round_trips(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            create_job(session, "job-1", "screening", {"limit": 5})
+            session.commit()
+
+        with Session(engine) as session:
+            record = get_job(session, "job-1")
+
+        self.assertEqual("screening", record.job_type)
+        self.assertEqual("pending", record.status)
+        self.assertEqual({"limit": 5}, record.payload)
+        self.assertEqual(0, record.progress_percent)
+        self.assertIsNone(record.started_at)
+
+    def test_get_job_returns_none_for_missing_id(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            record = get_job(session, "missing")
+
+        self.assertIsNone(record)
+
+    def test_update_job_status_sets_started_and_completed_timestamps(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            create_job(session, "job-2", "screening", {})
+            session.commit()
+
+        with Session(engine) as session:
+            update_job_status(session, "job-2", "running", progress_percent=10)
+            session.commit()
+        with Session(engine) as session:
+            running = get_job(session, "job-2")
+        self.assertIsNotNone(running.started_at)
+        self.assertIsNone(running.completed_at)
+        self.assertEqual(10, running.progress_percent)
+
+        with Session(engine) as session:
+            update_job_status(session, "job-2", "completed", result={"ok": True}, progress_percent=100)
+            session.commit()
+        with Session(engine) as session:
+            completed = get_job(session, "job-2")
+        self.assertIsNotNone(completed.completed_at)
+        self.assertEqual({"ok": True}, completed.result)
+        self.assertEqual(100, completed.progress_percent)
+
+    def test_update_job_status_records_error_message_on_failure(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            create_job(session, "job-3", "portfolio_research", {})
+            session.commit()
+
+        with Session(engine) as session:
+            update_job_status(session, "job-3", "failed", error_message="boom")
+            session.commit()
+
+        with Session(engine) as session:
+            record = get_job(session, "job-3")
+
+        self.assertEqual("failed", record.status)
+        self.assertEqual("boom", record.error_message)
+        self.assertIsNotNone(record.completed_at)
+
+    def test_update_job_status_returns_none_for_missing_job(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            result = update_job_status(session, "missing", "running")
+
+        self.assertIsNone(result)
+
+    def test_list_jobs_orders_newest_first_and_filters(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            create_job(session, "job-old", "screening", {})
+            create_job(session, "job-new", "portfolio_research", {})
+            update_job_status(session, "job-new", "completed")
+            session.commit()
+
+        with Session(engine) as session:
+            all_jobs = list_jobs(session)
+            screening_only = list_jobs(session, job_type="screening")
+            completed_only = list_jobs(session, status="completed")
+
+        self.assertEqual(["job-new", "job-old"], [j.id for j in all_jobs])
+        self.assertEqual(["job-old"], [j.id for j in screening_only])
+        self.assertEqual(["job-new"], [j.id for j in completed_only])
+
+    def test_count_jobs_matches_filters(self) -> None:
+        engine = make_sqlite_engine()
+
+        with Session(engine) as session:
+            create_job(session, "job-a", "screening", {})
+            create_job(session, "job-b", "screening", {})
+            create_job(session, "job-c", "portfolio_research", {})
+            session.commit()
+
+        with Session(engine) as session:
+            self.assertEqual(3, count_jobs(session))
+            self.assertEqual(2, count_jobs(session, job_type="screening"))
+            self.assertEqual(0, count_jobs(session, status="completed"))
 
 
 if __name__ == "__main__":

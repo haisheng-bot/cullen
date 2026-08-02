@@ -50,6 +50,7 @@
 | M16 | Broker Layer | 未来可接券商 API，人工确认后交易 | `packages/brokers` 仍为空 | planned | 第一阶段不做交易 | 暂只保留接口边界，不开发自动交易 | 开始券商接口设计时 |
 | M17 | 数据可追溯 / 审计 | AI 输出写 audit_logs，结论有数据来源和时间 | Agent 基类和 ModelResponse 审计路径已建立，Portfolio Research Workflow run 已按 trace_id 持久化；数据源健康状态和 `data_quality` 已可见 | partial | 普通算法输出审计还需增强 | 做普通算法输出审计增强 | 新增 AI/Workflow 输出时 |
 | M18 | Git / 发布管理 | develop 开发、main 稳定、功能拆分提交 | SSH key 已配置到 GitHub；origin 已切换为 `git@github.com:haisheng-bot/cullen.git`；`develop` 已成功推送到 GitHub | usable | 远端 main 是独立初始提交，仍需从 develop 发起 PR 合并 main | 从 `develop` 发起 PR 合并到 `main`，后续继续按功能提交并推送 | 准备 PR 或发布时 |
+| M19 | 异步任务队列 Job Queue | 耗时操作（screening、Portfolio Research）支持提交后轮询，不阻塞 HTTP worker | `packages/job_queue`（APScheduler `BackgroundScheduler`）+ `job_queue` 表 + `POST /jobs/screening`、`POST /jobs/portfolio-research`、`GET /jobs/{job_id}`、`GET /jobs` 已接入；同步入口保持不动，`/jobs/*` 为新增并行入口 | usable | 无鉴权、无取消接口、无重试/超时策略；仅覆盖 screening 和 portfolio-research 两类任务 | 评估是否需要取消接口和更细的进度上报 | 新增异步任务类型时 |
 
 ## 5. 下一阶段执行顺序
 
@@ -106,6 +107,12 @@
 6. 运行测试并记录结果。
 
 ## 7. 最近一次同步
+
+```text
+日期：2026-08-01（本次）
+测试：259 tests OK（unittest discover，.venv311 / Python 3.11；新增 16 个：`tests/test_db.py::JobQueuePersistenceTest` 7 个、新文件 `tests/test_job_queue.py` 4 个、`tests/test_api_endpoints.py` 5 个）。
+状态：新增 M19 异步任务队列 Job Queue v0.1——`packages/job_queue`（`engine.py` 基于 APScheduler `BackgroundScheduler`，`schemas.py` 定义 Job* Pydantic 模型）+ `packages/db/job_queue.py`（`JobRecord` CRUD，`session: Session` 参数化，与 `packages/db/workflow_runs.py` 等其余持久化模块写法一致）+ `job_queue` 表（`JobRecord` 模型收编进 `packages/db/models.py`，与其余表定义方式一致）；新增 `POST /jobs/screening`、`POST /jobs/portfolio-research`、`GET /jobs/{job_id}`、`GET /jobs`，同步入口 `/stocks/screening`、`/workflows/portfolio-research` 原样保留。修复接入前发现的问题：`packages/job_queue/engine.py` 原先对 `write_workflow_run` 的调用签名与实际实现（仅接受 `session, request, response` 三个位置参数）不符，会在真实调用时抛 `TypeError`；修复方式是把 `apps/api/main.py` 里原有的 `_portfolio_research_response` 抽成 `packages/workflow_layer/portfolio_research.py::build_response`，同步端点和 job queue 共用同一个响应构造函数，保证两条路径产出一致，也顺带把重复逻辑收敛成单一来源。`pyproject.toml` 新增 `apscheduler>=3.10` 依赖（已在 `.venv311` 安装）。`apps/api/main.py` 新增 `@app.on_event("shutdown")` 关闭 scheduler。同步 `docs/api/api-design-v0.1.md` §4.12。下一步：评估是否需要取消接口和更细的进度上报，之后回到 P9 Strategy Library v0.2。
+```
 
 ```text
 日期：2026-07-03（本次，收尾）

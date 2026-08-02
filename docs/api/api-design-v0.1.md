@@ -990,6 +990,59 @@ GET /reports/{trace_id}
 * 未找到 `trace_id` 返回 404；未找到报告详情返回 404
 * HTML 由服务端从受控 Markdown 生成，用于本地工作台展示；后续 PDF/Dashboard 输出另行扩展
 
+### 4.12 异步任务队列 Job Queue
+
+```text
+POST /jobs/screening?limit=20&scoring_profile=balanced
+POST /jobs/portfolio-research
+GET /jobs/{job_id}
+GET /jobs?job_type=&status=&limit=20&offset=0
+```
+
+用途：
+
+* 为耗时较长的操作（候选池 screening、Portfolio Research Workflow）提供异步入口：提交后立即返回 `job_id`，客户端轮询 `GET /jobs/{job_id}` 获取状态、进度和最终结果
+* 同步入口 `/stocks/screening`、`/workflows/portfolio-research` 保持不变，供不需要异步的调用方继续使用；`/jobs/*` 是新增的并行入口，不替换
+* 由 `packages/job_queue`（APScheduler `BackgroundScheduler`）在后台线程执行，执行结果与同步入口共享同一套持久化（`stock_scores`/`backtest_runs`/`workflow_runs`），保证两条路径产出一致
+
+请求体（`POST /jobs/portfolio-research`）与 `POST /workflows/portfolio-research` 相同（`PortfolioResearchWorkflowRequest`：`portfolio_name`/`strategy_library_name`/`universe_limit`/`selected_symbols`/`backtest`）。
+
+响应示例（提交）：
+
+```json
+{
+  "job_id": "8653b3f9-2b89-4048-870e-2134aeabd5ff",
+  "job_type": "screening",
+  "status": "pending",
+  "created_at": "2026-08-01T15:06:05.993139+00:00",
+  "message": "Job submitted successfully."
+}
+```
+
+响应示例（`GET /jobs/{job_id}`）：
+
+```json
+{
+  "job_id": "8653b3f9-2b89-4048-870e-2134aeabd5ff",
+  "job_type": "screening",
+  "status": "completed",
+  "payload": {"limit": 20, "scoring_profile": "balanced"},
+  "result": {"market": "US", "candidates": ["..."]},
+  "error_message": null,
+  "progress_percent": 100,
+  "created_at": "2026-08-01T15:06:05.993139+00:00",
+  "started_at": "2026-08-01T15:06:06.010000+00:00",
+  "completed_at": "2026-08-01T15:06:07.500000+00:00"
+}
+```
+
+说明：
+
+* `status` 取值：`pending`/`running`/`completed`/`failed`/`cancelled`；`GET /jobs/{job_id}` 未找到返回 404
+* `result` 与对应同步接口的响应体同构（screening 复用 `ScreeningResult.to_dict()`；portfolio-research 复用 `/workflows/portfolio-research` 的响应结构，`trace_id` 即 `job_id`）
+* `job_type` 未知时会在提交阶段以 400 拒绝（`scoring_profile` 不合法同理）
+* 当前无鉴权、无取消接口、无重试策略；`v0.1` 仅覆盖 screening 和 portfolio-research 两类任务
+
 ## 5. 响应要求
 
 所有 AI 分析接口必须返回：
