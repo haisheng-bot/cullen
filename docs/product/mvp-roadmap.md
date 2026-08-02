@@ -75,7 +75,7 @@
 
 * 美股操作工作台（关注列表、搜索、报价、走势、候选池、推荐评分、项目状态面板） [usable]
 * 实时走势图页面 [usable]
-* 股票分析页面（独立深度分析页，区别于操作工作台） [planned]
+* 股票分析页面（独立深度分析页，区别于操作工作台，`StockDetail.tsx`）[usable]，SEC 披露和评分历史两块仍待接入
 * 研究报告面板（工作台右侧「生成研究报告」按钮，接入 `/stocks/{symbol}/report`） [verified]，独立的研究报告页面仍为 [planned]
 
 ### M6 Portfolio Strategy / Backtesting
@@ -114,6 +114,7 @@
 * `GET/PUT/DELETE /strategies` API [verified]
 * 前端「策略库」面板支持新增/应用/更新/删除已保存策略，选股加入组合的动作改为跟随当前查看的股票（右边栏），不再绑定在左边栏的桶选择上 [verified]
 * Portfolio Manager v0.2：组合导出（JSON/CSV，前端直接从已加载状态生成下载）、导入（复用既有增删股票和保存权重 API）、两两对比（复用既有 `POST /risk/portfolio`，前端展示持仓/风险指标/行业暴露差异）[verified]
+* Strategy Library v0.2：Clone/Save As、JSON 导入导出（同样复用既有 `PUT /strategies/{name}`，不新增 API）、绑定并校验 `scoring_profile` [verified]
 
 ### 额外扩展（超出原路线图）
 
@@ -122,6 +123,7 @@
 * News / Policy Layer：原始新闻、监管披露和公司治理事件抓取（`packages/news_layer`，区别于 News Agent 的 AI 分析） [verified]
 * 一键启动脚本 `open-app.command` [usable]
 * 项目开发界面：展示版本、架构层和当前状态 [usable]
+* 异步任务队列 Job Queue v0.1（`packages/job_queue`，APScheduler）：`POST /jobs/screening`、`POST /jobs/portfolio-research`、`GET /jobs/{job_id}`、`GET /jobs`，同步接口保持不变 [usable]
 
 ## 4. 当前差距
 
@@ -145,10 +147,9 @@
 下一阶段优先级：
 
 ```text
-1. Strategy Library v0.2
-2. Stock Research 独立页
-3. News Agent / Risk Agent v0.1
-4. PDF/Dashboard 报告
+1. Stock Research 页补齐 SEC 披露和评分历史
+2. News Agent / Risk Agent v0.1
+3. PDF/Dashboard 报告
 ```
 
 已完成并从下一阶段移除：
@@ -168,5 +169,7 @@ Portfolio 权重管理
 Risk Engine v0.1
 Portfolio Optimizer v0.1
 Strategy Library v0.1
+Strategy Library v0.2
 Portfolio Research Module v0.1
+异步任务队列 Job Queue v0.1
 ```

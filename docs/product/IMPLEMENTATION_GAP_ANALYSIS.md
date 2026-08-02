@@ -11,10 +11,12 @@ OpenStock AI 已经从概念文档进入可运行 MVP 骨架阶段。
 按当前代码和测试覆盖判断：
 
 ```text
-MVP 架构骨架完成度：约 80% - 85%
-个人股票研究生产力工具完成度：约 65% - 75%
-AI Portfolio Operating System 完成度：约 25% - 35%
+MVP 架构骨架完成度：约 91%
+个人股票研究生产力工具完成度：约 83% - 88%
+AI Portfolio Operating System 完成度：约 35% - 40%
 ```
+
+（与 `docs/product/PROJECT_PLAN_PROGRESS.md` §3 保持一致，以该文件为准；本文件的完成度数字应随之同步刷新，不单独维护。）
 
 本系统仅用于投资研究辅助，不构成任何投资建议。
 
@@ -32,10 +34,11 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 | Portfolio Research Module | 已完成 | `packages/portfolio_research`，`POST /portfolio-research/run` 统一整合 Workflow/Risk/Optimizer/AI Summary/Recommendation，支持按 `trace_id` 复盘 |
 | Risk Engine v0.1 | 已完成 | `packages/risk_engine`，`POST /risk/portfolio`，输出 Volatility/Beta/Max Drawdown/Correlation/Concentration/Sector Exposure |
 | Portfolio Optimizer v0.1 | 已完成 | `packages/portfolio_optimizer`，`POST /optimizer/portfolio`，支持 Equal Weight/Market Cap/Minimum Variance/Risk Parity 初版 |
-| 策略库 Strategy Library | 已完成 | `GET/PUT/DELETE /strategies`，策略与 Portfolio 解耦的独立可复用实体，前端支持新增/应用/更新/删除 |
+| 策略库 Strategy Library | 已完成 | `GET/PUT/DELETE /strategies`，策略与 Portfolio 解耦的独立可复用实体，前端支持新增/应用/更新/删除；v0.2 已完成 Clone/Save As、JSON 导入导出、scoring_profile 绑定与校验 |
 | Portfolio | 已完成 | 基础组合保存、增删股票、目标权重、现金比例、Portfolio Manager v0.2（导入导出/对比）已可用 |
 | Report Agent | 初版完成 | 单股研究报告 Agent 已接入 |
 | Tiger OpenAPI | 骨架完成 | 只读 quote/history 接口边界已定义，真实 SDK adapter 仍待完善 |
+| 异步任务队列 Job Queue | 已完成 | `packages/job_queue`（APScheduler），`POST /jobs/screening`、`POST /jobs/portfolio-research`、`GET /jobs/{job_id}`、`GET /jobs`，同步接口保持不变 |
 
 ## 3. 主要差距
 
@@ -189,7 +192,7 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 4. ~~Portfolio Optimizer v0.1~~ [已完成]
 ```
 
-额外完成（超出原计划）：策略库 Strategy Library v0.1（策略与 Portfolio 解耦）、Portfolio Research Module v0.1（统一入口）、workflow run 持久化（按 trace_id 复盘）、Scoring Profiles v0.1、Research Run History API v0.1。
+额外完成（超出原计划）：策略库 Strategy Library v0.1（策略与 Portfolio 解耦）、Portfolio Research Module v0.1（统一入口）、workflow run 持久化（按 trace_id 复盘）、Scoring Profiles v0.1、Research Run History API v0.1、异步任务队列 Job Queue v0.1。
 
 建议顺序（下一批）：
 
@@ -199,8 +202,8 @@ AI Portfolio Operating System 完成度：约 25% - 35%
 3. ~~数据源健康检查~~ [已完成]
 4. ~~数据质量标记~~ [已完成]
 5. ~~Portfolio Manager v0.2~~ [已完成]
-6. Strategy Library v0.2
-7. Stock Research 独立页
+6. ~~Strategy Library v0.2~~ [已完成]
+7. Stock Research 独立页补齐 SEC 披露和评分历史（页面本身已存在）
 8. 1 年推荐算法打磨
 9. Risk/Optimizer 高级能力暂缓
 10. Model Center / Agent Center 暂缓

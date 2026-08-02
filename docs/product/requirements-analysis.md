@@ -278,11 +278,9 @@ AI Report 必须支持：
 下一阶段优先收口：
 
 ```text
-1. Portfolio Manager v0.2
-2. Strategy Library v0.2
-3. Stock Research 独立页
-4. News Agent / Risk Agent v0.1
-5. PDF/Dashboard 报告
+1. Stock Research 页补齐 SEC 披露和评分历史
+2. News Agent / Risk Agent v0.1
+3. PDF/Dashboard 报告
 ```
 
 已完成并从下一阶段移除：
@@ -296,6 +294,10 @@ Report Archive v0.1
 每日研究首页
 数据源健康检查
 数据质量标记
+Portfolio Manager v0.2
+Strategy Library v0.2
+Stock Research 独立页（页面本身）
+异步任务队列 Job Queue v0.1
 ```
 
 ## 9. 成功标准

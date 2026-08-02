@@ -23,7 +23,7 @@
 
 | 项目维度 | 目标 | 当前判断 | 差异 |
 |---|---|---|---|
-| MVP 架构骨架 | 支撑股票研究、组合、回测、AI 报告和 Workflow | 约 91% | 仍缺正式 PDF/Dashboard 报告输出和组合导入导出 |
+| MVP 架构骨架 | 支撑股票研究、组合、回测、AI 报告和 Workflow | 约 91% | 仍缺正式 PDF/Dashboard 报告输出 |
 | 个人股票研究生产力工具 | 支撑 Cullen 每日选股、研究、回测、报告和复盘 | 约 83%-88% | 日常闭环还缺更自动化的每日复盘和组合管理增强 |
 | AI Portfolio Operating System | Workflow 驱动组合研究、风险、优化、报告和再平衡 | 约 35%-40% | Risk/Optimizer、Research Run 复盘和 Report Archive 初版已成型；仍缺多 Agent、Rebalance Engine 和高级风险/优化能力 |
 
@@ -38,14 +38,14 @@
 | M4 | AI Agent Layer | Research、News、Financial、Risk、Strategy、Portfolio、Macro、Report、Decision Agents | SEC Filing Agent、Report Agent 已落地 | partial | 多数 Agent 未实现，多 Agent workflow 未成型 | 先做 News Agent 和 Risk Agent v0.1 | 新增 Agent 或 AI 输出时 |
 | M5 | Universe / Screener | 每日扫描美股最活跃 100 只票，支持主题和自定义股票池 | Most Active Top 100 已可用，概念板块预览已接入页面 | usable | 主题筛选和自定义股票池不完整 | 增加 AI、Semiconductor、Growth、Dividend 等主题 universe | 新增筛选维度时 |
 | M6 | Algorithm Layer | 独立推荐算法、评分因子、可解释输出 | algorithm-v0.3 已收敛为 1 年推荐算法，输出 `recommendation_horizon=1y`；已有财务、估值、技术、新闻规则情绪、风险因子；权重已从硬编码抽成 Scoring Profiles 模块 | verified | 近期不做多周期预测、不做复杂量化模型、不做自动交易算法 | 优先把 1 年推荐结果用于首页、复盘页和报告归档 | 调整评分权重或因子时 |
-| M7 | Stock Research | 单股实时价格、K 线、财务、新闻、评分、报告 | 报价、趋势、历史、SEC、新闻、推荐、报告接口已存在 | usable | 独立深度分析页未完成 | 做独立 Stock Research 页面 | 前端新增研究视图时 |
+| M7 | Stock Research | 单股实时价格、K 线、财务、新闻、评分、报告 | 报价、趋势、历史、SEC、新闻、推荐、报告接口已存在；独立 Stock Research 页面（`StockDetail.tsx`）已完成，含手绘 K 线图、AI 评分、新闻、报告生成 | usable | 页面上还未接入 SEC 披露和评分历史（`GET /stocks/{symbol}/sec-summary`、`GET /stocks/{symbol}/score-history` 后端已存在，前端未调用）；行业相对强弱因子暂缺跨股票池数据（`ponytail:` 标注） | 补齐 P10：Stock Research 页接入 SEC 披露和评分历史 | 前端新增研究视图时 |
 | M8 | Portfolio | 多组合创建、删除、编辑、导入、导出、权重管理、对比 | 基础组合保存、增删股票、目标权重、现金比例已完成；选股加入组合改为跟随当前查看的股票（右边栏），不再绑定左边栏桶选择；`PortfolioConfig.strategy_config` 旧字段已删除，组合现在只管股票和权重，策略参数全部收敛到策略库；Portfolio Manager v0.2 已完成导入导出（JSON/CSV）和两两对比 | usable | 仍缺整组合创建/删除（当前是 5 个固定桶） | 评估是否需要自定义新建/删除组合 | 修改组合数据结构时 |
 | M9 | Strategy / Backtesting | 策略配置、约束、回测、收益风险指标 | `/backtests/run`、technical / ai_score 回测、交易明细和净值曲线已可用；策略库 Strategy Library v0.1 已完成（`packages/db/strategies.py`、`GET/PUT/DELETE /strategies`），策略与 Portfolio 完全解耦为独立可复用实体（旧的 `PortfolioConfig.strategy_config` 重叠字段已删除），前端支持新增/应用/更新/删除；Strategy Library v0.2 已完成 Clone/Save As、JSON 导入导出、scoring_profile 绑定与校验 | verified | 历史新闻情绪未接；策略市场/分享仍不做 | 接入历史新闻归档输入 | 新增策略或回测指标时 |
-| M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成；Portfolio Research Module v0.1 已作为前端统一入口接入 `/portfolio-research/run`；workflow run 支持按 trace_id 查询；`GET /research-runs` 历史列表 API 已接入前端 Research Run 复盘面板；Report Archive 可从 trace_id 生成报告 | verified | 后续缺更细的报告节点编排 | 做 Strategy Library v0.2 | 新增 workflow 或节点时 |
+| M10 | Workflow Engine | 统一编排 Universe、Portfolio、Strategy、Backtesting、AI Summary、Recommendation | 通用 engine + PortfolioResearchWorkflow v0.1 已完成；Portfolio Research Module v0.1 已作为前端统一入口接入 `/portfolio-research/run`；workflow run 支持按 trace_id 查询；`GET /research-runs` 历史列表 API 已接入前端 Research Run 复盘面板；Report Archive 可从 trace_id 生成报告；Job Queue v0.1 新增 `/jobs/portfolio-research` 异步入口，共用同一套 `build_response()` | verified | 后续缺更细的报告节点编排 | 评估更细的报告节点编排 | 新增 workflow 或节点时 |
 | M11 | Risk Engine | VaR、CVaR、Beta、波动率、回撤、行业暴露、持仓集中度 | 独立 `packages/risk_engine` v0.1 已形成，支持 Volatility、Beta、Max Drawdown、Average Correlation、Concentration、Sector Exposure，接入 `POST /risk/portfolio` 和前端摘要 | verified | VaR/CVaR/Stress Test/Monte Carlo 未接 | 后续扩展 VaR、CVaR 和 Stress Test | 新增风险指标时 |
 | M12 | Portfolio Optimizer | Mean Variance、Risk Parity、HRP、Minimum Variance、Black-Litterman | 独立 `packages/portfolio_optimizer` v0.1 已完成，支持 Equal Weight、Market Cap、Minimum Variance、Risk Parity 初版，接入 `POST /optimizer/portfolio` 和前端摘要 | verified | HRP、Black-Litterman 和完整协方差求解器未接 | 后续做高级优化器求解器 | 新增优化器时 |
 | M13 | AI Report / Archive | PDF、Markdown、HTML、Dashboard、报告归档、每日复盘 | Report Archive v0.1 已完成：新增 `report_archives` 表、`POST /reports/from-trace/{trace_id}`、`GET /reports`、`GET /reports/{trace_id}`，可从 Portfolio Research trace 生成 Markdown/HTML 报告并归档 | usable | 缺 PDF、Dashboard 和更丰富报告模板 | 后续扩展 PDF/Dashboard 报告 | 新增报告模板时 |
-| M14 | 前端工作台 | 操作界面可完成查询、筛选、组合、回测、报告 | 前端已从单文件 `apps/web/index.html` 迁移为 React + Vite + React Router 的 7 页应用（`apps/web-react/`）：Dashboard、Stock Research（独立页，含手绘 K 线图和分析维度指南）、Market Scanner（Most Active 扫描 + 概念板块预览独立页）、Portfolio Research（工作流 + 组合管理 + 导入导出/对比）、Strategy Library（独立页）、Reports（Research Run 复盘 + Report Archive）、Settings（Data Source Health）；顶部导航 + 左侧栏（搜索 + Most Active）常驻；后端已切换为服务 `apps/web-react/dist/`，`apps/web/index.html` 保留在磁盘上作为回滚参考、未挂载 | usable | Strategy Library 仍是 v0.1（无导入导出/分享）；Stock Research 独立页已完成，但行业相对强弱因子暂缺跨股票池数据 | 评估 Strategy Library v0.2（导入导出/分享），补齐 Stock Research 页的跨候选池行业对比 | 修改页面 workflow 时 |
+| M14 | 前端工作台 | 操作界面可完成查询、筛选、组合、回测、报告 | 前端已从单文件 `apps/web/index.html` 迁移为 React + Vite + React Router 的 7 页应用（`apps/web-react/`）：Dashboard、Stock Research（独立页，含手绘 K 线图和分析维度指南）、Market Scanner（Most Active 扫描 + 概念板块预览独立页）、Portfolio Research（工作流 + 组合管理 + 导入导出/对比）、Strategy Library（独立页，v0.2 支持 Clone/Save As、JSON 导入导出、scoring_profile）、Reports（Research Run 复盘 + Report Archive）、Settings（Data Source Health）；顶部导航 + 左侧栏（搜索 + Most Active）常驻；后端已切换为服务 `apps/web-react/dist/`，`apps/web/index.html` 保留在磁盘上作为回滚参考、未挂载 | usable | Stock Research 独立页已完成，但未接入 SEC 披露和评分历史，行业相对强弱因子暂缺跨股票池数据 | 补齐 Stock Research 页的 SEC 披露、评分历史和跨候选池行业对比 | 修改页面 workflow 时 |
 | M15 | Tiger OpenAPI | 官方只读行情数据接入，不抓 App，不自动交易 | status、quote、history 接口骨架和标准已完成 | usable | 真实 SDK adapter 未完整接通 | 完成官方 SDK adapter 和凭证联调 | 修改 Tiger 接入时 |
 | M16 | Broker Layer | 未来可接券商 API，人工确认后交易 | `packages/brokers` 仍为空 | planned | 第一阶段不做交易 | 暂只保留接口边界，不开发自动交易 | 开始券商接口设计时 |
 | M17 | 数据可追溯 / 审计 | AI 输出写 audit_logs，结论有数据来源和时间 | Agent 基类和 ModelResponse 审计路径已建立，Portfolio Research Workflow run 已按 trace_id 持久化；数据源健康状态和 `data_quality` 已可见 | partial | 普通算法输出审计还需增强 | 做普通算法输出审计增强 | 新增 AI/Workflow 输出时 |
@@ -68,7 +68,7 @@
 | P7 | ~~数据质量标记~~ | ~~让每个分析结果能看出数据是否完整可靠~~ | 已完成：quote/trend/history/filings/news/macro/Tiger 数据响应新增 `data_quality`，包含 source、as_of、freshness、missing_fields、fallback；前端报价区显示 source/freshness |
 | P8 | ~~Portfolio Manager v0.2~~ | ~~组合支持导入导出和组合对比~~ | 已完成：前端支持 JSON/CSV 导入导出（客户端直接生成/解析，复用既有增删股票和保存权重 API）；支持勾选两个组合对比持仓、权重、风险指标（Volatility/Beta/Max Drawdown/Concentration）和行业暴露（复用 `POST /risk/portfolio`） |
 | P9 | ~~Strategy Library v0.2~~ | ~~策略支持版本、复制、导入导出和分类~~ | 已完成：策略可 Clone/Save As（前端读现有策略后用新名字 `PUT`）；支持 JSON 导入导出（客户端生成/解析，复用既有 `PUT /strategies/{name}`）；策略可绑定 scoring_profile（`_save_strategy` 新增校验，未知值 400）；版本和分类不在验收标准内，本次不做 |
-| P10 | Stock Research 独立页 | 单只股票从工作台侧栏升级为完整研究页 | 展示行情、K 线、新闻/政策、SEC、评分历史、报告入口和风险提示 |
+| P10 | Stock Research 独立页补全 | 页面已存在（`StockDetail.tsx`），补齐 SEC 披露和评分历史两块 | 展示行情、K 线、新闻/政策、SEC、评分历史、报告入口和风险提示；行业相对强弱因子的跨候选池数据缺口维持现状不做 |
 | P11 | 1 年推荐算法打磨 | 只围绕 `recommendation_horizon=1y` 提升推荐解释、稳定性和复盘可用性 | 首页、单股页、复盘页和报告都明确展示 1 年推荐；不增加 3 年/5 年/10 年预测 |
 | P12 | Risk / Optimizer 高级能力 | 暂不做 | 仅保留远期设计，不进入当前开发 |
 | P13 | Model / Agent Center | 暂不做 | 仅保留远期设计，不进入当前开发 |
@@ -109,6 +109,20 @@
 6. 运行测试并记录结果。
 
 ## 7. 最近一次同步
+
+```text
+日期：2026-08-02（本次，文档全面核查）
+测试：261 tests OK（无代码改动，仅文档）。
+状态：对全部文档（`docs/`、`.ai/`、根目录 *.md）做了一次系统性核查，找出并修正了 M19 Job Queue 和 P9 Strategy Library v0.2 上线后遗留的过时描述，覆盖面比单个模块的例行同步更广：
+1. `PROJECT_PLAN_PROGRESS.md` 本身：M7 行"独立深度分析页未完成"与 M14 行矛盾（M14 早已记录页面已完成），已改为与 M14 一致，并标注页面实际缺的是 SEC 披露和评分历史两块（前端未接，后端接口已存在）；连带修正 M10/M14 的"下一步"列（不再指向已完成的 Strategy Library v0.2）、§3 总览表 MVP 骨架差异列（不再声称组合导入导出未完成）、P10 行（从"做独立页面"改为"补齐页面里缺的两块"）。
+2. `docs/standards/PORTFOLIO_STRATEGY_STANDARD.md` §5.1：`preferences` 字段列表补 `scoring_profile`，新增 §5.1.1 描述 Clone/Save As 和 JSON 导入导出的实现方式（对齐 §5.2 Portfolio Manager v0.2 的写法）。
+3. 新增 `docs/standards/JOB_QUEUE_STANDARD.md`——`packages/job_queue` 之前没有对应的模块标准文档，违反 `.ai/AI_DEVELOPMENT_PLAYBOOK.md` §3.1"模块必须有设计文档"的规则，属于真实缺口而非例行更新。
+4. `docs/product/mvp-roadmap.md`、`PRD.md`、`requirements-analysis.md`、`IMPLEMENTATION_GAP_ANALYSIS.md`：四份文档的"下一阶段优先级/建议顺序"列表都还把 Portfolio Manager v0.2、Strategy Library v0.2、Stock Research 独立页当作待办（部分文档甚至同一功能在两个不同 Phase 里各出现一次），且都没提过 Job Queue；已同步移入各自的"已完成"列表，Job Queue v0.1 补充为额外完成项。`IMPLEMENTATION_GAP_ANALYSIS.md` 的完成度百分比（80-85% / 65-75% / 25-35%）比本文件 §3 的当前数字（91% / 83-88% / 35-40%）明显滞后，已同步并注明以本文件为准。
+5. `README.md`：「下一阶段优先收口」列表同样还列着已完成的 Strategy Library v0.2（与同一文件里几行之上刚宣布"已完成"的扩展能力条目自相矛盾）；「主要接口」清单补齐了原本缺失的 `/data-sources/health`、`/stocks/{symbol}/score-history`、`/research-runs`、`/reports/*`、`/jobs/*`。
+6. `docs/api/api-design-v0.1.md` §1（第一阶段 API 列表）：`POST /reports/generate` 是改名前的旧端点名，实际是 `POST /reports/from-trace/{trace_id}`（§4.11 和代码都已是新名字），已修正。
+7. `docs/standards/SCORING_PROFILES_STANDARD.md` §6：一条"不支持用户自定义权重组保存"的备注引用了"P6 Strategy Library v0.2"，但当前 P6 已经是别的功能（数据源健康检查），P9 Strategy Library v0.2 实际做的也不是自定义权重组——是历史 P 编号重排后留下的错误交叉引用，已改为不依赖具体 P 编号的描述，并说明两者不是一回事。
+检查方法：先用一个只读 Explore agent 通读 `docs/`、`.ai/`、根目录文档并逐条核对代码现状（`packages/job_queue/`、`apps/api/main.py` 路由表、`StrategyLibrary.tsx`），产出带文件+行号的具体发现列表，再逐条人工核实后修正；历史「最近一次同步」日志条目（如本节 2026-07-03 记录里"下一步：评估 Strategy Library v0.2"）保持原样不改——那是当时状态的真实记录，不是需要保持最新的当前状态声明。
+```
 
 ```text
 日期：2026-08-02（本次）

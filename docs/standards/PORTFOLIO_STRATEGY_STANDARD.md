@@ -166,12 +166,21 @@ DELETE /strategies/{name}
 
 * `GET /strategies` 返回全部已保存策略：`items: [{name, preferences, constraints, updated_at}]`。
 * `PUT /strategies/{name}` 新增或更新（按名字 upsert）：
-  * `preferences`：`scoring_mode`、`backtest_mode`（`"technical"` 或 `"ai_score"`）、`optimizer_method`（`equal_weight`/`market_cap`/`minimum_variance`/`risk_parity`）、`rebalance_frequency`（`weekly`/`monthly`/`quarterly`）。
+  * `preferences`：`scoring_mode`、`backtest_mode`（`"technical"` 或 `"ai_score"`）、`optimizer_method`（`equal_weight`/`market_cap`/`minimum_variance`/`risk_parity`）、`rebalance_frequency`（`weekly`/`monthly`/`quarterly`）、`scoring_profile`（`balanced`/`growth`/`value`/`defensive`/`momentum`）。
   * `constraints`：`max_position_weight`、`min_cash_weight`、`max_drawdown`、`benchmark_symbol`、`backtest_years`。
   * 这组字段直接对应 Portfolio Research Workbench 表单当前值（`packages/portfolio_research/schemas.py` 的 `StrategyPreferences`/`ResearchConstraints`），不是另一套独立定义。
+  * `optimizer_method`/`backtest_mode`/`rebalance_frequency`/`scoring_profile` 均校验落在已知枚举内，未知值返回 400（`scoring_profile` 复用 `packages/scoring_profiles/profiles.py::get_profile()`，与推荐、选股、回测、Portfolio Research 四个入口同一套校验）。
 * `DELETE /strategies/{name}` 删除一个已保存策略，不存在时返回 404。
 
-前端「策略库 Strategy Library」面板（左边栏）提供新增/应用/更新/删除：应用会把已保存策略的参数写回表单（不自动运行），调整后可以「更新」覆盖保存，或用新名字「新增策略」存成一个克隆变体；运行回测时仍然是表单当前值通过 `POST /portfolio-research/run` 提交，策略库只负责参数的保存与复用，不参与运行时编排。
+前端「策略库 Strategy Library」面板（左边栏）提供新增/应用/更新/删除：应用会把已保存策略的参数写回表单（不自动运行），调整后可以「更新」覆盖保存；运行回测时仍然是表单当前值通过 `POST /portfolio-research/run` 提交，策略库只负责参数的保存与复用，不参与运行时编排。
+
+### 5.1.1 Clone/Save As 与 JSON 导入导出（Strategy Library v0.2）
+
+和 §5.2 的组合导入导出一样，不新增 API，全部复用 `PUT /strategies/{name}`：
+
+* Clone/Save As（前端「另存为」）：读取已保存策略的 `preferences`/`constraints`，弹出输入新名称，检查新名称未被占用后用新名字 `PUT`；这是 v0.1 里"用新名字「新增策略」存成一个克隆变体"这个副作用行为的正式化，取代了原本靠手动重填表单实现克隆的方式。
+* 导出：客户端把 `{name, preferences, constraints}` 序列化成 JSON 文件下载，不经过后端。
+* 导入：解析上传的 JSON 文件（同样的 `{name, preferences, constraints}` 形状）后，用文件里的 `name` 直接 `PUT /strategies/{name}`。
 
 ### 5.2 组合导入导出与对比（Portfolio Manager v0.2）
 

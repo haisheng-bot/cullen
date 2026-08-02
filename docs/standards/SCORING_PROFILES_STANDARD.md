@@ -46,7 +46,7 @@ packages/scoring_profiles/
 
 ## 6. 不在 v0.1 范围内
 
-* 不支持用户自定义权重组保存（评估中，见 `docs/product/PROJECT_PLAN_PROGRESS.md` P6 Strategy Library v0.2）。
+* 不支持用户自定义权重组保存——仍是 5 个内置只读 profile；注意这和 Strategy Library v0.2（已完成，见 `docs/product/PROJECT_PLAN_PROGRESS.md` P9）不是一回事：v0.2 只是让策略可以绑定并校验某个*已有*的 profile 名字，不涉及创建自定义权重组，该能力目前未排期。
 * 不在前端加 profile 选择 UI（本次只做 API 层，前端选择器留作后续任务）。
 
 ## 7. 版本管理

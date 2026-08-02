@@ -433,14 +433,16 @@ Application Layer
 * Portfolio Research Module v0.1
 * Scoring Profiles / 模型权重模块 v0.1
 * Research Run History API v0.1
+* Portfolio Manager v0.2（已完成，导入导出/对比）
+* Strategy Library v0.2（已完成，Clone/Save As、导入导出、scoring_profile）
+* Stock Research 独立页（已完成，`StockDetail.tsx`；SEC 披露和评分历史仍待接入）
+* 异步任务队列 Job Queue v0.1（已完成，`packages/job_queue`）
 
 ### Phase 2
 
 当前优先收口：
 
-* Portfolio Manager v0.2
-* Strategy Library v0.2
-* Stock Research 独立页
+* Stock Research 页补齐 SEC 披露和评分历史
 * News Agent / Risk Agent v0.1
 * PDF/Dashboard 报告
 
@@ -448,8 +450,6 @@ Application Layer
 
 增加：
 
-* Strategy Library v0.2
-* Portfolio Manager v0.2
 * Risk Engine v0.2
 * Portfolio Optimizer v0.2
 * Monte Carlo

@@ -30,7 +30,7 @@ PUT /portfolios/{name}/config
 POST /risk/portfolio
 POST /optimizer/portfolio
 POST /portfolio-research/run
-POST /reports/generate
+POST /reports/from-trace/{trace_id}
 POST /backtests/run
 POST /workflows/portfolio-research
 ```

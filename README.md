@@ -61,13 +61,12 @@ OpenStock AI 是一个开源 AI Investment Research Platform，核心能力是 A
 下一阶段优先收口：
 
 ```text
-1. Strategy Library v0.2
-2. Stock Research 独立页
-3. News Agent / Risk Agent v0.1
-4. PDF/Dashboard 报告
+1. Stock Research 页补齐 SEC 披露和评分历史
+2. News Agent / Risk Agent v0.1
+3. PDF/Dashboard 报告
 ```
 
-已完成：PRD v0.3 / Roadmap 对齐、Scoring Profiles / 模型权重模块 v0.1、Research Run History API、Research Run 复盘页、Report Archive v0.1、每日研究首页、数据源健康检查、数据质量标记、Portfolio Manager v0.2。
+已完成：PRD v0.3 / Roadmap 对齐、Scoring Profiles / 模型权重模块 v0.1、Research Run History API、Research Run 复盘页、Report Archive v0.1、每日研究首页、数据源健康检查、数据质量标记、Portfolio Manager v0.2、Strategy Library v0.2、异步任务队列 Job Queue v0.1。
 
 ## 文档入口
 
@@ -149,6 +148,7 @@ GET http://127.0.0.1:8000/stocks/universe/most-active?limit=100
 GET http://127.0.0.1:8000/stocks/screening?limit=20
 GET http://127.0.0.1:8000/stocks/AAPL/quote
 GET http://127.0.0.1:8000/stocks/AAPL/recommendation
+GET http://127.0.0.1:8000/stocks/AAPL/score-history?limit=10
 GET http://127.0.0.1:8000/stocks/AAPL/news?years=3&limit=30
 GET http://127.0.0.1:8000/stocks/AAPL/trend?range=1d&interval=1m
 GET http://127.0.0.1:8000/stocks/AAPL/history?range=10y&interval=1d
@@ -156,6 +156,7 @@ GET http://127.0.0.1:8000/stocks/AAPL/filings?forms=10-K,10-Q,8-K&limit=10
 GET http://127.0.0.1:8000/stocks/AAPL/sec-summary
 GET http://127.0.0.1:8000/macro/FEDFUNDS/observations?limit=10
 GET http://127.0.0.1:8000/integrations/tiger/status
+GET http://127.0.0.1:8000/data-sources/health
 GET http://127.0.0.1:8000/stocks/AAPL/tiger/quote
 GET http://127.0.0.1:8000/stocks/AAPL/tiger/history?years=3&period=day
 PUT http://127.0.0.1:8000/portfolios/Core%20Watch/config
@@ -164,11 +165,19 @@ PUT http://127.0.0.1:8000/strategies/Momentum%20Aggressive
 DELETE http://127.0.0.1:8000/strategies/Momentum%20Aggressive
 POST http://127.0.0.1:8000/portfolio-research/run
 GET http://127.0.0.1:8000/portfolio-research/{trace_id}
+GET http://127.0.0.1:8000/research-runs
+POST http://127.0.0.1:8000/reports/from-trace/{trace_id}
+GET http://127.0.0.1:8000/reports
+GET http://127.0.0.1:8000/reports/{trace_id}
 POST http://127.0.0.1:8000/risk/portfolio
 POST http://127.0.0.1:8000/optimizer/portfolio
 POST http://127.0.0.1:8000/backtests/run
 POST http://127.0.0.1:8000/workflows/portfolio-research
 GET http://127.0.0.1:8000/workflows/portfolio-research/{trace_id}
+POST http://127.0.0.1:8000/jobs/screening
+POST http://127.0.0.1:8000/jobs/portfolio-research
+GET http://127.0.0.1:8000/jobs/{job_id}
+GET http://127.0.0.1:8000/jobs
 ```
 
 FRED 接口需要先在 `.env` 设置免费的 `FRED_API_KEY`（注册地址：https://fred.stlouisfed.org/docs/api/api_key.html），否则返回 503。
